@@ -1,0 +1,31 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE0MzA5MjQsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhDMkNFZjEwOUViOTFCRkQ3MzMxYURFQ0YyQUE5YjIwMzg0ZDg1Y2VEIn0",
+    "payload": "eyJkb21haW4iOiJnZXRjbGF5ZWQuaW8ifQ",
+    "signature": "z0qqOW/KK1LXNMgm0BXzwRJRNF0ceEj0qsw8BAgbRx8v08gd6zAcd+Vlb9ar/of8wVkaP5YqsmWqJcout7Zumxw="
+  },
+  "baseBuilder": {
+    "ownerAddress": "0x33fc4fb3Dd41fe94dc96825a63f9dAA509a0b83F"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "GetClayed",
+    "subtitle": "Clay creation made simple",
+    "description": "Squish and stretch your way to digital art and if you played with clay as a kid you are already a pro and can turn your inner child into an onchain artist",
+    "iconUrl": "https://getclayed.io/animated-logo.png",
+    "homeUrl": "https://getclayed.io",
+    "imageUrl": "https://getclayed.io/animated-logo.png",
+    "buttonTitle": "No Blender, Just Clay",
+    "splashImageUrl": "https://getclayed.io/animated-logo.png",
+    "splashBackgroundColor": "#000000",
+    "webhookUrl": "https://getclayed.io/api/farcaster/webhook",
+    "primaryCategory": "art-creativity",
+    "tags": ["clay", "art", "nft", "creative", "onchain"],
+    "screenshotUrls": [],
+    "heroImageUrl": "https://getclayed.io/og-image.png",
+    "tagline": "No Blender, Just Clay",
+    "ogTitle": "GetClayed",
+    "ogDescription": "Create digital art onchain with the simplicity of childhood play",
+    "ogImageUrl": "https://getclayed.io/og-image.png"
+  }
+}
