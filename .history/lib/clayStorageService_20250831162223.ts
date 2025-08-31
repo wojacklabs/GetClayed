@@ -73,7 +73,7 @@ export function serializeClayProject(
       },
       shape: clay.shape,
       thickness: clay.thickness,
-      controlPoints: clay.controlPoints?.map((p: any) => 
+      controlPoints: clay.controlPoints?.map(p => 
         p?.clone ? p.clone() : 
         p ? new THREE.Vector3(p.x, p.y, p.z) : 
         new THREE.Vector3()
@@ -272,7 +272,7 @@ export function restoreClayObjects(project: ClayProject): any[] {
       geometry,
       shape: clayData.shape,
       thickness: clayData.thickness,
-      controlPoints: clayData.controlPoints?.map((p: any) => 
+      controlPoints: clayData.controlPoints?.map(p => 
         p?.clone ? p.clone() : 
         p ? new THREE.Vector3(p.x, p.y, p.z) : 
         new THREE.Vector3()

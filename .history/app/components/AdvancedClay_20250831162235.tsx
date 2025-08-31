@@ -1220,8 +1220,7 @@ export default function AdvancedClay() {
       geometry: geometry,
       position: new THREE.Vector3(0, 2, 0), // Start at y=2 so sphere sits on ground
       color: currentColor,
-      shape: 'sphere',
-      scale: new THREE.Vector3(1, 1, 1)
+      shape: 'sphere'
     }
     setClayObjects([initialClay])
     addToHistory([initialClay])
@@ -1397,7 +1396,6 @@ export default function AdvancedClay() {
       color: currentColor,
       shape: selectedShape,
       rotation: rotation,
-      scale: new THREE.Vector3(1, 1, 1),
       controlPoints: controlPoints
     }
     setClayObjects(prev => {
@@ -1442,9 +1440,7 @@ export default function AdvancedClay() {
     }
 
     try {
-      console.log('Saving project:', projectName)
-      console.log('Clay objects:', clayObjects)
-      console.log('First clay object structure:', clayObjects[0])
+      console.log('Saving project:', projectName, clayObjects)
       
       // Step 1: Pay for upload via smart contract
       const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
