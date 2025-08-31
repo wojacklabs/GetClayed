@@ -1,32 +1,25 @@
 import { WebUploader } from '@irys/web-upload';
-import { WebEthereum } from '@irys/web-upload-ethereum';
-import { EthersV6Adapter } from '@irys/web-upload-ethereum-ethers-v6';
-import { ethers } from 'ethers';
+import { WebBaseEth } from '@irys/web-upload-ethereum';
+import { providers } from 'ethers';
 
 export async function createIrysUploader(provider?: any) {
   try {
     if (!provider) {
       // For read-only operations without wallet
-      return await WebUploader(WebEthereum);
+      return await WebUploader(WebBaseEth);
     }
     
-    console.log('[createIrysUploader] Creating Irys uploader...');
+    // Create ethers provider and get signer
+    const ethersProvider = new providers.Web3Provider(provider);
+    const signer = ethersProvider.getSigner();
     
-    // Create ethers provider
-    const ethersProvider = new ethers.BrowserProvider(provider);
+    // Create uploader with the provider
+    const irysUploader = await WebUploader(WebBaseEth)
+      .withProvider(provider)
+      .withRpc('https://testnet-rpc.irys.xyz/v1/execution-rpc');
     
-    // Create adapter
-    const adapter = EthersV6Adapter(ethersProvider);
-    
-    // Create uploader with adapter
-    const uploader = await WebUploader(WebEthereum).withAdapter(adapter);
-    
-    // Call ready() to complete initialization
-    console.log('[createIrysUploader] Calling uploader.ready()...');
-    await uploader.ready();
-    
-    console.log(`[createIrysUploader] Connected to Irys from ${uploader.address}`);
-    return uploader;
+    console.log(`[createIrysUploader] Connected to Irys from ${irysUploader.address}`);
+    return irysUploader;
   } catch (error) {
     console.error('Error connecting to Irys:', error);
     throw new Error('Error connecting to Irys');
