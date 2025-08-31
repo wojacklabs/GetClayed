@@ -73,7 +73,7 @@ export function serializeClayProject(
       },
       shape: clay.shape,
       thickness: clay.thickness,
-      controlPoints: clay.controlPoints?.map((p: any) => 
+      controlPoints: clay.controlPoints?.map(p => 
         p?.clone ? p.clone() : 
         p ? new THREE.Vector3(p.x, p.y, p.z) : 
         new THREE.Vector3()
@@ -262,21 +262,14 @@ export function restoreClayObjects(project: ClayProject): any[] {
     // Restore clay object
     return {
       id: clayData.id,
-      position: clayData.position?.clone ? clayData.position.clone() : 
-               new THREE.Vector3(clayData.position?.x || 0, clayData.position?.y || 0, clayData.position?.z || 0),
-      rotation: clayData.rotation?.clone ? clayData.rotation.clone() :
-               new THREE.Euler(clayData.rotation?.x || 0, clayData.rotation?.y || 0, clayData.rotation?.z || 0),
-      scale: clayData.scale?.clone ? clayData.scale.clone() :
-              new THREE.Vector3(clayData.scale?.x || 1, clayData.scale?.y || 1, clayData.scale?.z || 1),
+      position: clayData.position.clone(),
+      rotation: clayData.rotation.clone(),
+      scale: clayData.scale.clone(),
       color: clayData.color,
       geometry,
       shape: clayData.shape,
       thickness: clayData.thickness,
-      controlPoints: clayData.controlPoints?.map((p: any) => 
-        p?.clone ? p.clone() : 
-        p ? new THREE.Vector3(p.x, p.y, p.z) : 
-        new THREE.Vector3()
-      )
+      controlPoints: clayData.controlPoints?.map(p => p.clone())
     };
   });
 }

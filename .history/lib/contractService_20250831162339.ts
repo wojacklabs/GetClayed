@@ -32,8 +32,7 @@ export async function payForUpload(provider: any): Promise<string> {
     
     // Wait for confirmation
     const receipt = await tx.wait();
-    console.log('[ContractService] Payment receipt:', receipt);
-    console.log('[ContractService] Payment confirmed:', tx.hash);
+    console.log('[ContractService] Payment confirmed:', receipt.hash);
     
     // Verify payment event
     const paymentEvent = receipt.logs.find((log: any) => {
@@ -52,7 +51,7 @@ export async function payForUpload(provider: any): Promise<string> {
       throw new Error('Payment verification failed');
     }
     
-    return tx.hash;
+    return receipt.hash;
   } catch (error) {
     console.error('[ContractService] Error paying for upload:', error);
     throw error;
