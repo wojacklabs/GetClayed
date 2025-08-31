@@ -27,7 +27,7 @@ import { ConnectWallet } from '../../components/ConnectWallet'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageService'
 import { payForUpload, getUploadPrice } from '../../lib/contractService'
-import { ethers } from 'ethers'
+import { ethers, providers } from 'ethers'
 
 interface ClayObject {
   id: string
@@ -1448,7 +1448,7 @@ export default function AdvancedClay() {
         return
       }
       
-              const ethersProvider = new ethers.BrowserProvider(provider)
+      const ethersProvider = new providers.Web3Provider(provider)
       
       // Get upload price
       const price = await getUploadPrice(ethersProvider)
