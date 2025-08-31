@@ -14,8 +14,7 @@ export async function createIrysUploader(provider?: any) {
     
     // Create uploader with the adapted wallet
     const irysUploader = await WebUploader(WebBaseEth)
-      .withProvider(irysWallet)
-      .withRpc('https://testnet-rpc.irys.xyz/v1/execution-rpc');
+      .withProvider(irysWallet);
     
     console.log(`[createIrysUploader] Connected to Irys from ${irysUploader.address}`);
     return irysUploader;

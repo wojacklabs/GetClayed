@@ -1446,9 +1446,6 @@ export default function AdvancedClay() {
       
       // Step 1: Pay for upload via smart contract
       const wallet = wallets[0]
-      
-      // Switch to Irys testnet for payment
-      await wallet.switchChain(1270) // Irys testnet
       const provider = await wallet.getEthereumProvider()
       
       // Get upload price
