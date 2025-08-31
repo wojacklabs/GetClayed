@@ -28,7 +28,6 @@ import FolderStructure from '../../components/FolderStructure'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageService'
-import { payForUpload, getUploadPrice } from '../../lib/contractService'
 
 interface ClayObject {
   id: string
@@ -1192,8 +1191,7 @@ function DynamicGridHelper() {
 }
 
 export default function AdvancedClay() {
-  const { authenticated, user } = usePrivy()
-  const { wallets } = useWallets()
+  const { authenticated } = usePrivy()
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
   const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
@@ -1209,7 +1207,6 @@ export default function AdvancedClay() {
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
   const [projects, setProjects] = useState<Array<{ id: string; tags: Record<string, string> }>>([])
   const [currentFolder, setCurrentFolder] = useState('')
-  const [irysUploader, setIrysUploader] = useState<any>(null)
   
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   
@@ -1226,24 +1223,6 @@ export default function AdvancedClay() {
     setClayObjects([initialClay])
     addToHistory([initialClay])
   }, [])
-
-  // Initialize Irys when wallet is available
-  useEffect(() => {
-    async function initIrys() {
-      if (authenticated && wallets && wallets.length > 0) {
-        try {
-          const wallet = wallets[0]
-          await wallet.switchChain(80001) // Mumbai testnet
-          const provider = await wallet.getEthereumProvider()
-          const uploader = await createIrysUploader(provider)
-          setIrysUploader(uploader)
-        } catch (error) {
-          console.error('Failed to initialize Irys:', error)
-        }
-      }
-    }
-    initIrys()
-  }, [authenticated, wallets])
   
   const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
@@ -1435,62 +1414,9 @@ export default function AdvancedClay() {
   }
 
   const handleSaveProject = async (projectName: string) => {
-    if (!irysUploader || !wallets || wallets.length === 0) {
-      alert('Please wait for wallet initialization or login first')
-      return
-    }
-
-    try {
-      console.log('Saving project:', projectName, clayObjects)
-      
-      // Step 1: Pay for upload via smart contract
-      const wallet = wallets[0]
-      const provider = await wallet.getEthereumProvider()
-      
-      // Get upload price
-      const price = await getUploadPrice(provider)
-      console.log('Upload price:', price, 'IRYS')
-      
-      // Show payment confirmation
-      if (!confirm(`This will cost ${price} IRYS. Continue?`)) {
-        return
-      }
-      
-      console.log('Processing payment...')
-      const paymentTx = await payForUpload(provider)
-      console.log('Payment successful:', paymentTx)
-      
-      // Step 2: Serialize the clay objects
-      const serialized = serializeClayProject(
-        clayObjects,
-        projectName,
-        '', // description
-        user?.email?.address || user?.wallet?.address || 'Anonymous',
-        [] // tags
-      )
-
-      // Step 3: Upload to Irys
-      const transactionId = await uploadClayProject(
-        irysUploader,
-        serialized,
-        currentFolder
-      )
-
-      console.log('Project saved with ID:', transactionId)
-      alert(`Project saved successfully!\nPayment TX: ${paymentTx}\nIrys ID: ${transactionId}`)
-      
-      // Refresh projects list
-      // TODO: Implement project listing
-    } catch (error: any) {
-      console.error('Failed to save project:', error)
-      if (error?.message?.includes('User rejected')) {
-        alert('Transaction cancelled by user')
-      } else if (error?.message?.includes('Insufficient')) {
-        alert('Insufficient balance. Please add IRYS tokens to your wallet.')
-      } else {
-        alert('Failed to save project. Please try again.')
-      }
-    }
+    // This will be implemented to save to Irys
+    // For now, just log
+    console.log('Saving project:', projectName, clayObjects)
   }
 
   const handleProjectSelect = (projectId: string) => {
