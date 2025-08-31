@@ -21,14 +21,14 @@ import {
   Minus,
   Spline
 } from 'lucide-react'
+import LoginButton from '../../components/LoginButton'
 import ClayStorage from '../../components/ClayStorage'
 import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
-import { ConnectWallet } from '../../components/ConnectWallet'
+import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageService'
 import { payForUpload, getUploadPrice } from '../../lib/contractService'
-import { ethers, providers } from 'ethers'
 
 interface ClayObject {
   id: string
@@ -1192,7 +1192,8 @@ function DynamicGridHelper() {
 }
 
 export default function AdvancedClay() {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const { authenticated, user } = usePrivy()
+  const { wallets } = useWallets()
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
   const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
@@ -1226,24 +1227,24 @@ export default function AdvancedClay() {
     addToHistory([initialClay])
   }, [])
 
-  // Initialize Irys when wallet is connected
+  // Initialize Irys when wallet is available
   useEffect(() => {
     async function initIrys() {
-      if (walletAddress) {
+      if (authenticated && wallets && wallets.length > 0) {
         try {
-          const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
-          if (provider) {
-            const ethersProvider = new providers.Web3Provider(provider)
-            const uploader = await createIrysUploader(ethersProvider)
-            setIrysUploader(uploader)
-          }
+          const wallet = wallets[0]
+          const provider = await wallet.getEthereumProvider()
+          
+          // Use current chain - Privy will handle the chain
+          const uploader = await createIrysUploader(provider)
+          setIrysUploader(uploader)
         } catch (error) {
           console.error('Failed to initialize Irys:', error)
         }
       }
     }
     initIrys()
-  }, [walletAddress])
+  }, [authenticated, wallets])
   
   const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
@@ -1435,46 +1436,24 @@ export default function AdvancedClay() {
   }
 
   const handleSaveProject = async (projectName: string) => {
-    if (!irysUploader || !walletAddress) {
-      alert('Please connect your wallet first')
+    if (!irysUploader) {
+      alert('Please wait for wallet initialization or login first')
       return
     }
 
     try {
       console.log('Saving project:', projectName, clayObjects)
       
-      // Step 1: Pay for upload via smart contract
-      const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
-      if (!provider) {
-        alert('No wallet provider found')
-        return
-      }
-      
-      const ethersProvider = new providers.Web3Provider(provider)
-      
-      // Get upload price
-      const price = await getUploadPrice(ethersProvider)
-      console.log('Upload price:', price, 'IRYS')
-      
-      // Show payment confirmation
-      if (!confirm(`This will cost ${price} IRYS. Continue?`)) {
-        return
-      }
-      
-      console.log('Processing payment...')
-      const paymentTx = await payForUpload(ethersProvider)
-      console.log('Payment successful:', paymentTx)
-      
-      // Step 2: Serialize the clay objects
+      // Serialize the clay objects
       const serialized = serializeClayProject(
         clayObjects,
         projectName,
         '', // description
-        walletAddress,
+        user?.email?.address || user?.wallet?.address || 'Anonymous',
         [] // tags
       )
 
-      // Step 3: Upload to Irys
+      // Upload to Irys
       const transactionId = await uploadClayProject(
         irysUploader,
         serialized,
@@ -1482,7 +1461,7 @@ export default function AdvancedClay() {
       )
 
       console.log('Project saved with ID:', transactionId)
-      alert(`Project saved successfully!\nPayment TX: ${paymentTx}\nIrys ID: ${transactionId}`)
+      alert(`Project saved successfully! ID: ${transactionId}`)
       
       // Refresh projects list
       // TODO: Implement project listing
@@ -1491,7 +1470,7 @@ export default function AdvancedClay() {
       if (error?.message?.includes('User rejected')) {
         alert('Transaction cancelled by user')
       } else if (error?.message?.includes('Insufficient')) {
-        alert('Insufficient balance. Please add IRYS tokens to your wallet.')
+        alert('Insufficient balance. Please try again.')
       } else {
         alert('Failed to save project. Please try again.')
       }
@@ -1603,8 +1582,8 @@ export default function AdvancedClay() {
   
   return (
     <div className="h-screen bg-gray-100 relative flex flex-col">
-      {/* Folder Structure - Only show when wallet connected */}
-      {walletAddress && (
+      {/* Folder Structure - Only show when authenticated */}
+      {authenticated && (
         <FolderStructure
           projects={projects}
           onProjectSelect={handleProjectSelect}
@@ -1686,15 +1665,9 @@ export default function AdvancedClay() {
       <div className="fixed bottom-0 left-0 right-0 bg-white backdrop-blur-sm shadow-lg z-50 border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Connect Wallet */}
+          {/* Left side - Login */}
           <div className="flex items-center gap-2">
-            <ConnectWallet 
-              onConnect={(address) => setWalletAddress(address)}
-              onDisconnect={() => {
-                setWalletAddress(null)
-                setIrysUploader(null)
-              }}
-            />
+            <LoginButton />
           </div>
           
           {/* Center - Main tools */}
@@ -1826,7 +1799,7 @@ export default function AdvancedClay() {
           <div className="w-px h-10 bg-gray-300" />
           
           {/* Save Button */}
-                      <SaveButton onSave={handleSaveProject} isConnected={!!walletAddress} />
+          <SaveButton onSave={handleSaveProject} />
         </div>
             {/* Right side - Background Color */}
             <div className="flex items-center gap-2 pr-4" style={{ minWidth: '200px' }}>

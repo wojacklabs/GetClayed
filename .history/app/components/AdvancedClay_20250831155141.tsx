@@ -1444,7 +1444,7 @@ export default function AdvancedClay() {
       console.log('Saving project:', projectName, clayObjects)
       
       // Step 1: Pay for upload via smart contract
-      const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+      const provider = window.ethereum || window.okxwallet || (window.web3 && window.web3.currentProvider)
       if (!provider) {
         alert('No wallet provider found')
         return

@@ -28,7 +28,7 @@ import { ConnectWallet } from '../../components/ConnectWallet'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageService'
 import { payForUpload, getUploadPrice } from '../../lib/contractService'
-import { ethers, providers } from 'ethers'
+import { ethers } from 'ethers'
 
 interface ClayObject {
   id: string
@@ -1231,9 +1231,9 @@ export default function AdvancedClay() {
     async function initIrys() {
       if (walletAddress) {
         try {
-          const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+          const provider = window.ethereum || window.okxwallet || (window.web3 && window.web3.currentProvider)
           if (provider) {
-            const ethersProvider = new providers.Web3Provider(provider)
+            const ethersProvider = new ethers.BrowserProvider(provider)
             const uploader = await createIrysUploader(ethersProvider)
             setIrysUploader(uploader)
           }
@@ -1444,13 +1444,13 @@ export default function AdvancedClay() {
       console.log('Saving project:', projectName, clayObjects)
       
       // Step 1: Pay for upload via smart contract
-      const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+      const provider = window.ethereum || window.okxwallet || (window.web3 && window.web3.currentProvider)
       if (!provider) {
         alert('No wallet provider found')
         return
       }
       
-      const ethersProvider = new providers.Web3Provider(provider)
+      const ethersProvider = new ethers.BrowserProvider(provider)
       
       // Get upload price
       const price = await getUploadPrice(ethersProvider)
@@ -1603,8 +1603,8 @@ export default function AdvancedClay() {
   
   return (
     <div className="h-screen bg-gray-100 relative flex flex-col">
-      {/* Folder Structure - Only show when wallet connected */}
-      {walletAddress && (
+      {/* Folder Structure - Only show when authenticated */}
+      {authenticated && (
         <FolderStructure
           projects={projects}
           onProjectSelect={handleProjectSelect}
@@ -1686,15 +1686,9 @@ export default function AdvancedClay() {
       <div className="fixed bottom-0 left-0 right-0 bg-white backdrop-blur-sm shadow-lg z-50 border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Connect Wallet */}
+          {/* Left side - Login */}
           <div className="flex items-center gap-2">
-            <ConnectWallet 
-              onConnect={(address) => setWalletAddress(address)}
-              onDisconnect={() => {
-                setWalletAddress(null)
-                setIrysUploader(null)
-              }}
-            />
+            <LoginButton />
           </div>
           
           {/* Center - Main tools */}
@@ -1826,7 +1820,7 @@ export default function AdvancedClay() {
           <div className="w-px h-10 bg-gray-300" />
           
           {/* Save Button */}
-                      <SaveButton onSave={handleSaveProject} isConnected={!!walletAddress} />
+          <SaveButton onSave={handleSaveProject} />
         </div>
             {/* Right side - Background Color */}
             <div className="flex items-center gap-2 pr-4" style={{ minWidth: '200px' }}>
