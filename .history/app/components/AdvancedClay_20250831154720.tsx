@@ -28,7 +28,7 @@ import { ConnectWallet } from '../../components/ConnectWallet'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageService'
 import { payForUpload, getUploadPrice } from '../../lib/contractService'
-import { ethers, providers } from 'ethers'
+import { ethers } from 'ethers'
 
 interface ClayObject {
   id: string
@@ -1226,24 +1226,24 @@ export default function AdvancedClay() {
     addToHistory([initialClay])
   }, [])
 
-  // Initialize Irys when wallet is connected
+  // Initialize Irys when wallet is available
   useEffect(() => {
     async function initIrys() {
-      if (walletAddress) {
+      if (authenticated && wallets && wallets.length > 0) {
         try {
-          const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
-          if (provider) {
-            const ethersProvider = new providers.Web3Provider(provider)
-            const uploader = await createIrysUploader(ethersProvider)
-            setIrysUploader(uploader)
-          }
+          const wallet = wallets[0]
+          // Irys testnet chain ID: 1270 (0x4f6 in hex)
+          await wallet.switchChain(1270)
+          const provider = await wallet.getEthereumProvider()
+          const uploader = await createIrysUploader(provider)
+          setIrysUploader(uploader)
         } catch (error) {
           console.error('Failed to initialize Irys:', error)
         }
       }
     }
     initIrys()
-  }, [walletAddress])
+  }, [authenticated, wallets])
   
   const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
@@ -1435,8 +1435,8 @@ export default function AdvancedClay() {
   }
 
   const handleSaveProject = async (projectName: string) => {
-    if (!irysUploader || !walletAddress) {
-      alert('Please connect your wallet first')
+    if (!irysUploader || !wallets || wallets.length === 0) {
+      alert('Please wait for wallet initialization or login first')
       return
     }
 
@@ -1444,16 +1444,14 @@ export default function AdvancedClay() {
       console.log('Saving project:', projectName, clayObjects)
       
       // Step 1: Pay for upload via smart contract
-      const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
-      if (!provider) {
-        alert('No wallet provider found')
-        return
-      }
+      const wallet = wallets[0]
       
-      const ethersProvider = new providers.Web3Provider(provider)
+      // Switch to Irys testnet for payment
+      await wallet.switchChain(1270) // Irys testnet
+      const provider = await wallet.getEthereumProvider()
       
       // Get upload price
-      const price = await getUploadPrice(ethersProvider)
+      const price = await getUploadPrice(provider)
       console.log('Upload price:', price, 'IRYS')
       
       // Show payment confirmation
@@ -1462,7 +1460,7 @@ export default function AdvancedClay() {
       }
       
       console.log('Processing payment...')
-      const paymentTx = await payForUpload(ethersProvider)
+      const paymentTx = await payForUpload(provider)
       console.log('Payment successful:', paymentTx)
       
       // Step 2: Serialize the clay objects
@@ -1470,7 +1468,7 @@ export default function AdvancedClay() {
         clayObjects,
         projectName,
         '', // description
-        walletAddress,
+        user?.email?.address || user?.wallet?.address || 'Anonymous',
         [] // tags
       )
 
@@ -1603,8 +1601,8 @@ export default function AdvancedClay() {
   
   return (
     <div className="h-screen bg-gray-100 relative flex flex-col">
-      {/* Folder Structure - Only show when wallet connected */}
-      {walletAddress && (
+      {/* Folder Structure - Only show when authenticated */}
+      {authenticated && (
         <FolderStructure
           projects={projects}
           onProjectSelect={handleProjectSelect}
@@ -1686,15 +1684,9 @@ export default function AdvancedClay() {
       <div className="fixed bottom-0 left-0 right-0 bg-white backdrop-blur-sm shadow-lg z-50 border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Connect Wallet */}
+          {/* Left side - Login */}
           <div className="flex items-center gap-2">
-            <ConnectWallet 
-              onConnect={(address) => setWalletAddress(address)}
-              onDisconnect={() => {
-                setWalletAddress(null)
-                setIrysUploader(null)
-              }}
-            />
+            <LoginButton />
           </div>
           
           {/* Center - Main tools */}
@@ -1826,7 +1818,7 @@ export default function AdvancedClay() {
           <div className="w-px h-10 bg-gray-300" />
           
           {/* Save Button */}
-                      <SaveButton onSave={handleSaveProject} isConnected={!!walletAddress} />
+          <SaveButton onSave={handleSaveProject} />
         </div>
             {/* Right side - Background Color */}
             <div className="flex items-center gap-2 pr-4" style={{ minWidth: '200px' }}>

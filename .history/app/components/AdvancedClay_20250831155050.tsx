@@ -30,6 +30,14 @@ import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageSe
 import { payForUpload, getUploadPrice } from '../../lib/contractService'
 import { ethers, providers } from 'ethers'
 
+declare global {
+  interface Window {
+    ethereum?: any
+    okxwallet?: any
+    web3?: any
+  }
+}
+
 interface ClayObject {
   id: string
   geometry: THREE.BufferGeometry
@@ -1231,7 +1239,7 @@ export default function AdvancedClay() {
     async function initIrys() {
       if (walletAddress) {
         try {
-          const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+          const provider = window.ethereum || window.okxwallet || (window.web3 && window.web3.currentProvider)
           if (provider) {
             const ethersProvider = new providers.Web3Provider(provider)
             const uploader = await createIrysUploader(ethersProvider)
@@ -1444,7 +1452,7 @@ export default function AdvancedClay() {
       console.log('Saving project:', projectName, clayObjects)
       
       // Step 1: Pay for upload via smart contract
-      const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+      const provider = window.ethereum || window.okxwallet || (window.web3 && window.web3.currentProvider)
       if (!provider) {
         alert('No wallet provider found')
         return
