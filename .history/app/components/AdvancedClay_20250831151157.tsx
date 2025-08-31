@@ -1481,11 +1481,11 @@ export default function AdvancedClay() {
       
       // Refresh projects list
       // TODO: Implement project listing
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save project:', error)
-      if (error?.message?.includes('User rejected')) {
+      if (error.message?.includes('User rejected')) {
         alert('Transaction cancelled by user')
-      } else if (error?.message?.includes('Insufficient')) {
+      } else if (error.message?.includes('Insufficient')) {
         alert('Insufficient balance. Please add IRYS tokens to your wallet.')
       } else {
         alert('Failed to save project. Please try again.')

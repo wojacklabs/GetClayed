@@ -26,9 +26,9 @@ import ClayStorage from '../../components/ClayStorage'
 import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { createIrysUploader, uploadToIrys } from '../../lib/irys'
+import { createIrysUploader, uploadToIrys, getBalance } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageService'
-import { payForUpload, getUploadPrice } from '../../lib/contractService'
+import { claimIrysTokens, checkCanClaim } from '../../lib/contractService'
 
 interface ClayObject {
   id: string
@@ -1435,7 +1435,7 @@ export default function AdvancedClay() {
   }
 
   const handleSaveProject = async (projectName: string) => {
-    if (!irysUploader || !wallets || wallets.length === 0) {
+    if (!irysUploader) {
       alert('Please wait for wallet initialization or login first')
       return
     }
@@ -1443,24 +1443,36 @@ export default function AdvancedClay() {
     try {
       console.log('Saving project:', projectName, clayObjects)
       
-      // Step 1: Pay for upload via smart contract
-      const wallet = wallets[0]
-      const provider = await wallet.getEthereumProvider()
+      // Check Irys balance
+      const balance = await getBalance(irysUploader)
+      console.log('Current Irys balance:', balance)
       
-      // Get upload price
-      const price = await getUploadPrice(provider)
-      console.log('Upload price:', price, 'IRYS')
-      
-      // Show payment confirmation
-      if (!confirm(`This will cost ${price} IRYS. Continue?`)) {
-        return
+      // If balance is low, try to claim from faucet
+      if (parseFloat(balance) < 0.01) {
+        try {
+          const wallet = wallets[0]
+          const provider = await wallet.getEthereumProvider()
+          
+          // Check if can claim
+          const canClaim = await checkCanClaim(provider)
+          if (canClaim) {
+            console.log('Claiming 0.1 IRYS from faucet...')
+            const claimTx = await claimIrysTokens(provider)
+            console.log('Claim successful:', claimTx)
+            alert('Successfully claimed 0.1 IRYS tokens!')
+            
+            // Wait a bit for balance to update
+            await new Promise(resolve => setTimeout(resolve, 3000))
+          } else {
+            console.log('Cannot claim from faucet (already claimed today)')
+          }
+        } catch (claimError) {
+          console.error('Failed to claim from faucet:', claimError)
+          // Continue with upload attempt anyway
+        }
       }
       
-      console.log('Processing payment...')
-      const paymentTx = await payForUpload(provider)
-      console.log('Payment successful:', paymentTx)
-      
-      // Step 2: Serialize the clay objects
+      // Serialize the clay objects
       const serialized = serializeClayProject(
         clayObjects,
         projectName,
@@ -1469,7 +1481,7 @@ export default function AdvancedClay() {
         [] // tags
       )
 
-      // Step 3: Upload to Irys
+      // Upload to Irys
       const transactionId = await uploadClayProject(
         irysUploader,
         serialized,
@@ -1477,19 +1489,13 @@ export default function AdvancedClay() {
       )
 
       console.log('Project saved with ID:', transactionId)
-      alert(`Project saved successfully!\nPayment TX: ${paymentTx}\nIrys ID: ${transactionId}`)
+      alert(`Project saved successfully! ID: ${transactionId}`)
       
       // Refresh projects list
       // TODO: Implement project listing
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save project:', error)
-      if (error?.message?.includes('User rejected')) {
-        alert('Transaction cancelled by user')
-      } else if (error?.message?.includes('Insufficient')) {
-        alert('Insufficient balance. Please add IRYS tokens to your wallet.')
-      } else {
-        alert('Failed to save project. Please try again.')
-      }
+      alert('Failed to save project. Please try again.')
     }
   }
 
