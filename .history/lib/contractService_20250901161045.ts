@@ -44,34 +44,20 @@ export async function payForUpload(provider: any): Promise<string> {
   try {
     console.log('[ContractService] Paying service fee for upload');
     
-    // Get the underlying provider (MetaMask, etc)
-    let rawProvider;
-    if (provider.provider) {
-      rawProvider = provider.provider;
-    } else if ((window as any).ethereum) {
-      rawProvider = (window as any).ethereum;
-    } else if ((window as any).okxwallet) {
-      rawProvider = (window as any).okxwallet;
-    } else {
-      throw new Error('No wallet provider found');
-    }
-    
     // Switch to Irys testnet first
+    const rawProvider = provider._provider || provider;
     await switchToIrysTestnet(rawProvider);
     
-    // Re-create provider after network switch
-    const newProvider = new ethers.BrowserProvider(rawProvider);
-    
     // Check network after switch
-    const network = await newProvider.getNetwork();
+    const network = await provider.getNetwork();
     console.log('[ContractService] Current network after switch:', network);
     
     if (network.chainId !== BigInt(1270)) {
       throw new Error('Failed to switch to Irys testnet');
     }
     
-    // Create signer from new provider
-    const signer = await newProvider.getSigner();
+    // Create signer from provider
+    const signer = provider.getSigner ? await provider.getSigner() : provider;
     
     // Connect to payment contract
     const contract = new Contract(PAYMENT_CONTRACT_ADDRESS, PAYMENT_CONTRACT_ABI, signer);
