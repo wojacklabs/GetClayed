@@ -39,6 +39,7 @@ import {
   getMutableReference,
   generateProjectId
 } from '../../lib/mutableStorageService'
+import { debugQueryAllProjects } from '../../lib/debugQuery'
 
 interface ClayObject {
   id: string
@@ -166,10 +167,7 @@ function Clay({
     initialClickPoint: new THREE.Vector3(),
     initialObjectPos: new THREE.Vector3(),
     dragOffset: new THREE.Vector3(),
-    currentDepth: 0,  // Store current depth adjustment from scroll
-    // For push/pull
-    hitPoint: new THREE.Vector3(),
-    hitNormal: new THREE.Vector3()
+    currentDepth: 0  // Store current depth adjustment from scroll
   })
   
   useEffect(() => {
@@ -261,7 +259,7 @@ function Clay({
         return
       }
       
-      if (tool !== 'push' && tool !== 'pull') return
+      if (tool !== 'push') return
       if (!meshRef.current) return
       
       updateMousePosition(e)
@@ -284,13 +282,39 @@ function Clay({
       // Convert hit point to local coordinates
       const hitPoint = meshRef.current.worldToLocal(intersection.point.clone())
       
-      // Store the exact hit point instead of finding closest vertex
-      dragState.current.hitPoint = hitPoint.clone()
-      dragState.current.hitNormal = intersection.face ? intersection.face.normal.clone() : new THREE.Vector3(0, 1, 0)
+      // Find closest vertex
+      let closestIdx = -1
       
-      // Find affected vertices based on distance from hit point
+      if (intersection.face) {
+        const face = intersection.face
+        const baryCoord = new THREE.Vector3()
+        
+        THREE.Triangle.getBarycoord(
+          hitPoint,
+          new THREE.Vector3(positions.getX(face.a), positions.getY(face.a), positions.getZ(face.a)),
+          new THREE.Vector3(positions.getX(face.b), positions.getY(face.b), positions.getZ(face.b)),
+          new THREE.Vector3(positions.getX(face.c), positions.getY(face.c), positions.getZ(face.c)),
+          baryCoord
+        )
+        
+        if (baryCoord.x > baryCoord.y && baryCoord.x > baryCoord.z) {
+          closestIdx = face.a
+        } else if (baryCoord.y > baryCoord.z) {
+          closestIdx = face.b
+        } else {
+          closestIdx = face.c
+        }
+      }
+      
+      if (closestIdx === -1) return
+      
+      // Find affected vertices
       dragState.current.vertices = []
-      const centerPos = hitPoint // Use hit point as center, not closest vertex
+      const centerPos = new THREE.Vector3(
+        positions.getX(closestIdx),
+        positions.getY(closestIdx),
+        positions.getZ(closestIdx)
+      )
       
       for (let i = 0; i < positions.count; i++) {
         const pos = new THREE.Vector3(
@@ -311,7 +335,7 @@ function Clay({
       }
       
       dragState.current.active = true
-      dragState.current.targetVertex = 0 // We don't need a specific vertex anymore
+      dragState.current.targetVertex = closestIdx
       onDeformingChange(true)
     }
     
@@ -426,27 +450,34 @@ function Clay({
       return
     }
     
+    if (dragState.current.targetVertex === -1) return
+    
     const geometry = meshRef.current.geometry
     const positions = geometry.attributes.position
     
     // Create ray from mouse position
     raycaster.setFromCamera(dragState.current.mousePos, camera)
     
-    // Get hit point world position
-    const hitPointWorld = meshRef.current.localToWorld(dragState.current.hitPoint.clone())
+    // Get target vertex world position
+    const targetWorldPos = new THREE.Vector3(
+      positions.getX(dragState.current.targetVertex),
+      positions.getY(dragState.current.targetVertex),
+      positions.getZ(dragState.current.targetVertex)
+    )
+    meshRef.current.localToWorld(targetWorldPos)
     
-    // Create plane perpendicular to camera at hit point
+    // Create plane perpendicular to camera
     const cameraDir = new THREE.Vector3()
     camera.getWorldDirection(cameraDir)
     const plane = new THREE.Plane()
-    plane.setFromNormalAndCoplanarPoint(cameraDir, hitPointWorld)
+    plane.setFromNormalAndCoplanarPoint(cameraDir, targetWorldPos)
     
     // Get intersection point
     const intersection = new THREE.Vector3()
     const hasIntersection = raycaster.ray.intersectPlane(plane, intersection)
     
     if (!hasIntersection) {
-      const distance = camera.position.distanceTo(hitPointWorld)
+      const distance = camera.position.distanceTo(targetWorldPos)
       intersection.copy(raycaster.ray.origin).add(
         raycaster.ray.direction.clone().multiplyScalar(distance)
       )
@@ -455,17 +486,23 @@ function Clay({
     // Convert to local coordinates
     const targetLocal = meshRef.current.worldToLocal(intersection)
     
-    // Calculate movement delta from original hit point
-    const movementDelta = targetLocal.clone().sub(dragState.current.hitPoint)
-    
-    // Update vertices based on their distance from hit point
+    // Update vertices
     for (const v of dragState.current.vertices) {
-      if (tool === 'push' || tool === 'pull') {
-        // For pull, reverse the movement direction
-        const direction = tool === 'pull' ? -1 : 1
-        const movement = movementDelta.clone().multiplyScalar(v.weight * direction)
-        const newPos = v.startPos.clone().add(movement)
-        positions.setXYZ(v.index, newPos.x, newPos.y, newPos.z)
+      if (tool === 'push') {
+        if (v.index === dragState.current.targetVertex) {
+          positions.setXYZ(v.index, targetLocal.x, targetLocal.y, targetLocal.z)
+        } else {
+          const mainStartPos = dragState.current.vertices.find(
+            vertex => vertex.index === dragState.current.targetVertex
+          )?.startPos
+          
+          if (mainStartPos) {
+            const delta = targetLocal.clone().sub(mainStartPos)
+            const movement = delta.multiplyScalar(v.weight)
+            const newPos = v.startPos.clone().add(movement)
+            positions.setXYZ(v.index, newPos.x, newPos.y, newPos.z)
+          }
+        }
       }
     }
     

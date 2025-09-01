@@ -261,7 +261,7 @@ function Clay({
         return
       }
       
-      if (tool !== 'push' && tool !== 'pull') return
+      if (tool !== 'push') return
       if (!meshRef.current) return
       
       updateMousePosition(e)
@@ -311,7 +311,7 @@ function Clay({
       }
       
       dragState.current.active = true
-      dragState.current.targetVertex = 0 // We don't need a specific vertex anymore
+      dragState.current.targetVertex = closestIdx
       onDeformingChange(true)
     }
     
@@ -426,27 +426,34 @@ function Clay({
       return
     }
     
+    if (dragState.current.targetVertex === -1) return
+    
     const geometry = meshRef.current.geometry
     const positions = geometry.attributes.position
     
     // Create ray from mouse position
     raycaster.setFromCamera(dragState.current.mousePos, camera)
     
-    // Get hit point world position
-    const hitPointWorld = meshRef.current.localToWorld(dragState.current.hitPoint.clone())
+    // Get target vertex world position
+    const targetWorldPos = new THREE.Vector3(
+      positions.getX(dragState.current.targetVertex),
+      positions.getY(dragState.current.targetVertex),
+      positions.getZ(dragState.current.targetVertex)
+    )
+    meshRef.current.localToWorld(targetWorldPos)
     
-    // Create plane perpendicular to camera at hit point
+    // Create plane perpendicular to camera
     const cameraDir = new THREE.Vector3()
     camera.getWorldDirection(cameraDir)
     const plane = new THREE.Plane()
-    plane.setFromNormalAndCoplanarPoint(cameraDir, hitPointWorld)
+    plane.setFromNormalAndCoplanarPoint(cameraDir, targetWorldPos)
     
     // Get intersection point
     const intersection = new THREE.Vector3()
     const hasIntersection = raycaster.ray.intersectPlane(plane, intersection)
     
     if (!hasIntersection) {
-      const distance = camera.position.distanceTo(hitPointWorld)
+      const distance = camera.position.distanceTo(targetWorldPos)
       intersection.copy(raycaster.ray.origin).add(
         raycaster.ray.direction.clone().multiplyScalar(distance)
       )
@@ -455,17 +462,23 @@ function Clay({
     // Convert to local coordinates
     const targetLocal = meshRef.current.worldToLocal(intersection)
     
-    // Calculate movement delta from original hit point
-    const movementDelta = targetLocal.clone().sub(dragState.current.hitPoint)
-    
-    // Update vertices based on their distance from hit point
+    // Update vertices
     for (const v of dragState.current.vertices) {
-      if (tool === 'push' || tool === 'pull') {
-        // For pull, reverse the movement direction
-        const direction = tool === 'pull' ? -1 : 1
-        const movement = movementDelta.clone().multiplyScalar(v.weight * direction)
-        const newPos = v.startPos.clone().add(movement)
-        positions.setXYZ(v.index, newPos.x, newPos.y, newPos.z)
+      if (tool === 'push') {
+        if (v.index === dragState.current.targetVertex) {
+          positions.setXYZ(v.index, targetLocal.x, targetLocal.y, targetLocal.z)
+        } else {
+          const mainStartPos = dragState.current.vertices.find(
+            vertex => vertex.index === dragState.current.targetVertex
+          )?.startPos
+          
+          if (mainStartPos) {
+            const delta = targetLocal.clone().sub(mainStartPos)
+            const movement = delta.multiplyScalar(v.weight)
+            const newPos = v.startPos.clone().add(movement)
+            positions.setXYZ(v.index, newPos.x, newPos.y, newPos.z)
+          }
+        }
       }
     }
     

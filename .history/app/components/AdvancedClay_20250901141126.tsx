@@ -460,10 +460,9 @@ function Clay({
     
     // Update vertices based on their distance from hit point
     for (const v of dragState.current.vertices) {
-      if (tool === 'push' || tool === 'pull') {
-        // For pull, reverse the movement direction
-        const direction = tool === 'pull' ? -1 : 1
-        const movement = movementDelta.clone().multiplyScalar(v.weight * direction)
+      if (tool === 'push') {
+        // Move vertex based on its weight and the movement delta
+        const movement = movementDelta.clone().multiplyScalar(v.weight)
         const newPos = v.startPos.clone().add(movement)
         positions.setXYZ(v.index, newPos.x, newPos.y, newPos.z)
       }
