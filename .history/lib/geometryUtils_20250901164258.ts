@@ -8,9 +8,57 @@ export function createDetailedGeometry(shape: string, size: number, thickness: n
   
   switch (shape) {
     case 'tetrahedron':
-      // Use TetrahedronGeometry with higher detail level for more vertices
-      // detail parameter controls subdivision - 0 gives basic tetrahedron, higher values add more vertices
-      geometry = new THREE.TetrahedronGeometry(size, 3); // detail level 3 for smooth deformation
+      // Create a basic tetrahedron first
+      geometry = new THREE.TetrahedronGeometry(size);
+      
+      // Subdivide the geometry to add more vertices for smooth deformation
+      // We'll use a custom subdivision approach to maintain the tetrahedron shape
+      const positionAttribute = geometry.attributes.position;
+      const positions: number[] = [];
+      const subdivisionLevel = 3; // Higher = more vertices
+      
+      // Get the original vertices
+      const vertices = [];
+      for (let i = 0; i < positionAttribute.count; i++) {
+        vertices.push(new THREE.Vector3(
+          positionAttribute.getX(i),
+          positionAttribute.getY(i),
+          positionAttribute.getZ(i)
+        ));
+      }
+      
+      // Get faces (tetrahedron has 4 triangular faces)
+      const indices = geometry.index ? geometry.index.array : [];
+      const faces = [];
+      for (let i = 0; i < indices.length; i += 3) {
+        faces.push([indices[i], indices[i + 1], indices[i + 2]]);
+      }
+      
+      // Subdivide each face
+      const newVertices: THREE.Vector3[] = [];
+      const newFaces: number[][] = [];
+      
+      faces.forEach(face => {
+        subdivideTriangle(
+          vertices[face[0]],
+          vertices[face[1]], 
+          vertices[face[2]],
+          subdivisionLevel,
+          newVertices,
+          newFaces
+        );
+      });
+      
+      // Create new geometry from subdivided vertices
+      const newPositions = new Float32Array(newVertices.length * 3);
+      newVertices.forEach((v, i) => {
+        newPositions[i * 3] = v.x;
+        newPositions[i * 3 + 1] = v.y;
+        newPositions[i * 3 + 2] = v.z;
+      });
+      
+      geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(newPositions, 3));
       
       // Apply thickness scaling
       geometry.scale(1, thickness, 1);
