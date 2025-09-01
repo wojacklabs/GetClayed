@@ -1403,10 +1403,7 @@ export default function AdvancedClay() {
       shape: selectedShape,
       rotation: rotation,
       scale: new THREE.Vector3(1, 1, 1),
-      controlPoints: controlPoints,
-      size: size,
-      thickness: thickness,
-      detail: selectedShape === 'sphere' ? detail : undefined
+      controlPoints: controlPoints
     }
     setClayObjects(prev => {
       const newClays = [...prev, newClay]

@@ -119,26 +119,23 @@ export async function uploadClayProject(
   project: ClayProject,
   folder?: string
 ): Promise<string> {
-  // Convert to JSON without compression
-  const jsonString = JSON.stringify(project);
-  const data = Buffer.from(jsonString, 'utf-8');
+  const compressed = compressClayProject(project);
   
   // Log data size
-  const sizeInKB = data.byteLength / 1024;
-  console.log(`[uploadClayProject] JSON data size: ${sizeInKB.toFixed(2)} KB`);
+  const sizeInKB = compressed.byteLength / 1024;
+  console.log(`[uploadClayProject] Compressed data size: ${sizeInKB.toFixed(2)} KB`);
   if (sizeInKB < 100) {
     console.log('[uploadClayProject] Data is under 100KB - Irys upload will be free!');
   }
   
   const tags = [
-    { name: 'Content-Type', value: 'application/json' },
+    { name: 'Content-Type', value: 'application/gzip' },
     { name: 'App-Name', value: 'GetClayed' },
     { name: 'Data-Type', value: 'clay-project' },
     { name: 'Project-Name', value: project.name },
     { name: 'Author', value: project.author },
     { name: 'Created-At', value: project.createdAt.toString() },
-    { name: 'Version', value: '2.0' },
-    { name: 'File-Extension', value: '.clay.json' }
+    { name: 'Version', value: '1.0' }
   ];
   
   // Add folder tag if specified
@@ -153,7 +150,7 @@ export async function uploadClayProject(
     });
   }
   
-  const receipt = await uploadToIrys(irysUploader, data, tags);
+  const receipt = await uploadToIrys(irysUploader, compressed, tags);
   return receipt.id;
 }
 
@@ -168,8 +165,10 @@ export async function downloadClayProject(transactionId: string): Promise<ClayPr
     throw new Error(`Failed to download project: ${response.statusText}`);
   }
   
-  const jsonString = await response.text();
-  return JSON.parse(jsonString);
+  const arrayBuffer = await response.arrayBuffer();
+  const data = new Uint8Array(arrayBuffer);
+  
+  return decompressClayProject(data);
 }
 
 /**

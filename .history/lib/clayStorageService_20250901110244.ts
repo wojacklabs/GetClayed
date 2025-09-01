@@ -119,26 +119,23 @@ export async function uploadClayProject(
   project: ClayProject,
   folder?: string
 ): Promise<string> {
-  // Convert to JSON without compression
-  const jsonString = JSON.stringify(project);
-  const data = Buffer.from(jsonString, 'utf-8');
+  const compressed = compressClayProject(project);
   
   // Log data size
-  const sizeInKB = data.byteLength / 1024;
-  console.log(`[uploadClayProject] JSON data size: ${sizeInKB.toFixed(2)} KB`);
+  const sizeInKB = compressed.byteLength / 1024;
+  console.log(`[uploadClayProject] Compressed data size: ${sizeInKB.toFixed(2)} KB`);
   if (sizeInKB < 100) {
     console.log('[uploadClayProject] Data is under 100KB - Irys upload will be free!');
   }
   
   const tags = [
-    { name: 'Content-Type', value: 'application/json' },
+    { name: 'Content-Type', value: 'application/gzip' },
     { name: 'App-Name', value: 'GetClayed' },
     { name: 'Data-Type', value: 'clay-project' },
     { name: 'Project-Name', value: project.name },
     { name: 'Author', value: project.author },
     { name: 'Created-At', value: project.createdAt.toString() },
-    { name: 'Version', value: '2.0' },
-    { name: 'File-Extension', value: '.clay.json' }
+    { name: 'Version', value: '1.0' }
   ];
   
   // Add folder tag if specified
@@ -153,7 +150,7 @@ export async function uploadClayProject(
     });
   }
   
-  const receipt = await uploadToIrys(irysUploader, data, tags);
+  const receipt = await uploadToIrys(irysUploader, compressed, tags);
   return receipt.id;
 }
 
@@ -168,8 +165,10 @@ export async function downloadClayProject(transactionId: string): Promise<ClayPr
     throw new Error(`Failed to download project: ${response.statusText}`);
   }
   
-  const jsonString = await response.text();
-  return JSON.parse(jsonString);
+  const arrayBuffer = await response.arrayBuffer();
+  const data = new Uint8Array(arrayBuffer);
+  
+  return decompressClayProject(data);
 }
 
 /**
@@ -251,119 +250,39 @@ export async function queryClayProjects(
 }
 
 /**
- * Download project as JSON file
- */
-export function downloadProjectAsJSON(project: ClayProject) {
-  const jsonString = JSON.stringify(project, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${project.name.replace(/[^a-z0-9]/gi, '_')}.clay.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  
-  URL.revokeObjectURL(url);
-}
-
-/**
  * Restore clay objects from project data
  */
-export function restoreClayObjects(project: ClayProject, detail: number = 48): any[] {
+export function restoreClayObjects(project: ClayProject): any[] {
   return project.clays.map((clayData) => {
-    let geometry: THREE.BufferGeometry;
+    // Create BufferGeometry
+    const geometry = new THREE.BufferGeometry();
     
-    // Recreate geometry based on shape
-    switch (clayData.shape) {
-      case 'sphere':
-        geometry = new THREE.SphereGeometry(
-          clayData.size || 2,
-          clayData.detail || detail,
-          clayData.detail || detail
-        );
-        break;
-        
-      case 'tetrahedron':
-        geometry = new THREE.TetrahedronGeometry(clayData.size || 2);
-        break;
-        
-      case 'cube':
-        geometry = new THREE.BoxGeometry(
-          clayData.size || 2,
-          clayData.size || 2,
-          (clayData.size || 2) * (clayData.thickness || 1)
-        );
-        break;
-        
-      case 'line':
-      case 'curve':
-        if (clayData.controlPoints && clayData.controlPoints.length >= 2) {
-          const points = clayData.controlPoints.map(p => new THREE.Vector3(p.x, p.y, p.z));
-          
-          if (clayData.shape === 'line') {
-            const curve = new THREE.LineCurve3(points[0], points[1]);
-            geometry = new THREE.TubeGeometry(curve, 20, clayData.thickness || 0.1, 8, false);
-          } else {
-            // Curve
-            const midPoint = clayData.controlPoints[2] ? 
-              new THREE.Vector3(clayData.controlPoints[2].x, clayData.controlPoints[2].y, clayData.controlPoints[2].z) :
-              points[0].clone().add(points[1]).multiplyScalar(0.5);
-            const curve = new THREE.QuadraticBezierCurve3(points[0], midPoint, points[1]);
-            geometry = new THREE.TubeGeometry(curve, 20, clayData.thickness || 0.1, 8, false);
-          }
-        } else {
-          geometry = new THREE.SphereGeometry(1, detail, detail); // Fallback
-        }
-        break;
-        
-      case 'rectangle':
-      case 'triangle':
-      case 'circle':
-        // 2D shapes
-        let shape;
-        if (clayData.shape === 'rectangle') {
-          shape = new THREE.Shape();
-          const width = clayData.size || 2;
-          const height = clayData.size || 2;
-          shape.moveTo(-width/2, -height/2);
-          shape.lineTo(width/2, -height/2);
-          shape.lineTo(width/2, height/2);
-          shape.lineTo(-width/2, height/2);
-          shape.closePath();
-          geometry = new THREE.ShapeGeometry(shape);
-        } else if (clayData.shape === 'triangle') {
-          shape = new THREE.Shape();
-          const size = clayData.size || 2;
-          shape.moveTo(0, -size/2);
-          shape.lineTo(-size/2, size/2);
-          shape.lineTo(size/2, size/2);
-          shape.closePath();
-          geometry = new THREE.ShapeGeometry(shape);
-        } else {
-          geometry = new THREE.CircleGeometry(clayData.size || 1, 32);
-        }
-        break;
-        
-      default:
-        geometry = new THREE.SphereGeometry(clayData.size || 2, detail, detail);
-        break;
+    // Set attributes
+    geometry.setAttribute('position', new THREE.BufferAttribute(clayData.geometry.vertices, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(clayData.geometry.normals, 3));
+    
+    if (clayData.geometry.indices) {
+      geometry.setIndex(new THREE.BufferAttribute(clayData.geometry.indices, 1));
     }
     
     // Restore clay object
     return {
       id: clayData.id,
-      position: new THREE.Vector3(clayData.position.x, clayData.position.y, clayData.position.z),
-      rotation: new THREE.Euler(clayData.rotation.x, clayData.rotation.y, clayData.rotation.z),
-      scale: new THREE.Vector3(clayData.scale.x, clayData.scale.y, clayData.scale.z),
+      position: clayData.position?.clone ? clayData.position.clone() : 
+               new THREE.Vector3(clayData.position?.x || 0, clayData.position?.y || 0, clayData.position?.z || 0),
+      rotation: clayData.rotation?.clone ? clayData.rotation.clone() :
+               new THREE.Euler(clayData.rotation?.x || 0, clayData.rotation?.y || 0, clayData.rotation?.z || 0),
+      scale: clayData.scale?.clone ? clayData.scale.clone() :
+              new THREE.Vector3(clayData.scale?.x || 1, clayData.scale?.y || 1, clayData.scale?.z || 1),
       color: clayData.color,
       geometry,
       shape: clayData.shape,
-      size: clayData.size,
       thickness: clayData.thickness,
-      detail: clayData.detail,
-      controlPoints: clayData.controlPoints?.map(p => new THREE.Vector3(p.x, p.y, p.z))
+      controlPoints: clayData.controlPoints?.map((p: any) => 
+        p?.clone ? p.clone() : 
+        p ? new THREE.Vector3(p.x, p.y, p.z) : 
+        new THREE.Vector3()
+      )
     };
   });
 }
