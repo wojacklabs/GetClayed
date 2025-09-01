@@ -40,6 +40,7 @@ import {
   getMutableReference,
   generateProjectId
 } from '../../lib/mutableStorageService'
+import { prepareGeometryForDeformation } from '../../lib/geometryUtils'
 
 interface ClayObject {
   id: string
@@ -1339,10 +1340,14 @@ export default function AdvancedClay() {
         geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
         geometry.setIndex(new THREE.BufferAttribute(indices, 1))
         geometry.computeVertexNormals()
+        // Apply subdivision for better deformation
+        geometry = prepareGeometryForDeformation(geometry, 'tetrahedron')
         break
       case 'cube':
         // For cube, use dimensions directly from click points
         geometry = new THREE.BoxGeometry(size, size * thickness, size)
+        // Apply subdivision for better deformation
+        geometry = prepareGeometryForDeformation(geometry, 'cube')
         break
       
       case 'rectangle':
@@ -1356,6 +1361,8 @@ export default function AdvancedClay() {
         } else {
           geometry = new THREE.PlaneGeometry(size, size)
         }
+        // Apply subdivision for better deformation
+        geometry = prepareGeometryForDeformation(geometry, 'rectangle')
         break
       
       case 'triangle':
@@ -1382,6 +1389,8 @@ export default function AdvancedClay() {
           
           geometry = new THREE.ShapeGeometry(shape)
         }
+        // Apply subdivision for better deformation
+        geometry = prepareGeometryForDeformation(geometry, 'triangle')
         break
       
       case 'circle':
@@ -1510,34 +1519,40 @@ export default function AdvancedClay() {
       )
       serialized.id = projectId; // Ensure project has the correct ID
       
-      // Check project size (just for logging, assuming always <100KB)
+      // Check project size
       const jsonString = JSON.stringify(serialized);
       const sizeInKB = Buffer.from(jsonString).byteLength / 1024;
       console.log(`Project size: ${sizeInKB.toFixed(2)} KB`);
+      
+      if (sizeInKB >= 100) {
+        if (!confirm(`Your project is ${sizeInKB.toFixed(2)} KB, which exceeds the 100KB free tier.\nPayment will be required. Continue?`)) {
+          return;
+        }
+      }
 
-      // Step 2: Pay service fee via smart contract (0.1 IRYS)
+      // Step 2: Pay for upload (0.1 IRYS service fee)
       try {
         const provider = new ethers.BrowserProvider(
           (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
         )
+        const signer = await provider.getSigner()
         
-        console.log('Paying service fee via smart contract...')
-        const paymentTx = await payForUpload(provider)
-        console.log('Service fee payment transaction:', paymentTx)
+        console.log('Getting upload price...')
+        const price = await getUploadPrice(signer)
+        console.log('Price:', price.toString())
         
-        alert(`Service fee paid successfully! TX: ${paymentTx}`)
-      } catch (error: any) {
-        console.error('Service fee payment failed:', error)
-        if (error?.message?.includes('User rejected')) {
-          alert('Transaction cancelled by user')
-          return
-        } else {
-          alert('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.')
-          return
-        }
+        console.log('Paying for upload...')
+        const paymentTx = await payForUpload(signer, price)
+        console.log('Payment transaction:', paymentTx)
+        
+        alert(`Payment successful! TX: ${paymentTx}`)
+      } catch (error) {
+        console.error('Payment failed:', error)
+        alert('Payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.')
+        return
       }
 
-      // Step 3: Upload to Irys for free (under 100KB)
+      // Step 3: Upload to Irys with mutable reference support
       const result = await uploadClayProject(
         uploader,
         serialized,

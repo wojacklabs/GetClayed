@@ -1510,34 +1510,18 @@ export default function AdvancedClay() {
       )
       serialized.id = projectId; // Ensure project has the correct ID
       
-      // Check project size (just for logging, assuming always <100KB)
+      // Check project size
       const jsonString = JSON.stringify(serialized);
       const sizeInKB = Buffer.from(jsonString).byteLength / 1024;
       console.log(`Project size: ${sizeInKB.toFixed(2)} KB`);
-
-      // Step 2: Pay service fee via smart contract (0.1 IRYS)
-      try {
-        const provider = new ethers.BrowserProvider(
-          (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
-        )
-        
-        console.log('Paying service fee via smart contract...')
-        const paymentTx = await payForUpload(provider)
-        console.log('Service fee payment transaction:', paymentTx)
-        
-        alert(`Service fee paid successfully! TX: ${paymentTx}`)
-      } catch (error: any) {
-        console.error('Service fee payment failed:', error)
-        if (error?.message?.includes('User rejected')) {
-          alert('Transaction cancelled by user')
-          return
-        } else {
-          alert('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.')
-          return
+      
+      if (sizeInKB >= 100) {
+        if (!confirm(`Your project is ${sizeInKB.toFixed(2)} KB, which exceeds the 100KB free tier.\nPayment will be required. Continue?`)) {
+          return;
         }
       }
 
-      // Step 3: Upload to Irys for free (under 100KB)
+      // Step 2: Upload to Irys with mutable reference support
       const result = await uploadClayProject(
         uploader,
         serialized,
