@@ -177,12 +177,11 @@ export async function uploadClayProject(
   // Log data size
   const sizeInKB = data.byteLength / 1024;
   console.log(`[uploadClayProject] JSON data size: ${sizeInKB.toFixed(2)} KB`);
+  if (sizeInKB < 100) {
+    console.log('[uploadClayProject] Data is under 100KB - Irys upload will be free!');
   
   const isUpdate = !!rootTxId;
   let wasChunked = false;
-  
-  if (sizeInKB < 100) {
-    console.log('[uploadClayProject] Data is under 100KB - Irys upload will be free!');
   
   const tags = [
     { name: 'Content-Type', value: 'application/json' },
@@ -230,8 +229,8 @@ export async function uploadClayProject(
     };
   } else {
     // Chunked upload for large files
-    wasChunked = true;
     console.log(`[uploadClayProject] Data is ${sizeInKB.toFixed(2)} KB - Using chunked upload`);
+    wasChunked = true;
     
     // Generate chunk set ID
     const chunkSetId = uuidv4();

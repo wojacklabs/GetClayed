@@ -177,12 +177,11 @@ export async function uploadClayProject(
   // Log data size
   const sizeInKB = data.byteLength / 1024;
   console.log(`[uploadClayProject] JSON data size: ${sizeInKB.toFixed(2)} KB`);
+  if (sizeInKB < 100) {
+    console.log('[uploadClayProject] Data is under 100KB - Irys upload will be free!');
   
   const isUpdate = !!rootTxId;
   let wasChunked = false;
-  
-  if (sizeInKB < 100) {
-    console.log('[uploadClayProject] Data is under 100KB - Irys upload will be free!');
   
   const tags = [
     { name: 'Content-Type', value: 'application/json' },
@@ -230,8 +229,8 @@ export async function uploadClayProject(
     };
   } else {
     // Chunked upload for large files
-    wasChunked = true;
     console.log(`[uploadClayProject] Data is ${sizeInKB.toFixed(2)} KB - Using chunked upload`);
+    wasChunked = true;
     
     // Generate chunk set ID
     const chunkSetId = uuidv4();
@@ -306,21 +305,6 @@ export async function downloadClayProject(transactionId: string): Promise<ClayPr
     const data = JSON.parse(jsonString);
     console.log('[downloadClayProject] Downloaded data:', data)
     
-    // Check if this is a chunk manifest
-    if (data.chunkSetId && data.totalChunks && data.chunks) {
-      console.log('[downloadClayProject] Detected chunk manifest, downloading chunks...');
-      console.log('[downloadClayProject] Chunk set ID:', data.chunkSetId);
-      console.log('[downloadClayProject] Total chunks:', data.totalChunks);
-      
-      // Download and reassemble chunks
-      const reassembled = await downloadChunks(data.chunkSetId, data.totalChunks);
-      const project = JSON.parse(reassembled);
-      
-      console.log('[downloadClayProject] Successfully reassembled chunked project');
-      return project;
-    }
-    
-    // Regular project data
     return data as ClayProject;
   } catch (error) {
     console.error('[downloadClayProject] Error:', error)
@@ -598,7 +582,7 @@ export async function queryUserProjects(
     // First, query all projects
     const projectTags = [
       { name: 'App-Name', values: ['GetClayed'] },
-      { name: 'Data-Type', values: ['clay-project', 'clay-project-manifest'] },
+      { name: 'Data-Type', values: ['clay-project'] },
       { name: 'Author', values: [walletAddress] }
     ];
     
