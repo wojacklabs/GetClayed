@@ -92,36 +92,12 @@ export async function payForUpload(rawProvider: any): Promise<string> {
       value: requiredFee
     });
     console.log('[ContractService] Payment transaction sent:', tx.hash);
-    console.log('[ContractService] Check transaction status at: https://testnet.irysScan.io/tx/' + tx.hash);
     
     // Wait for confirmation
     console.log('[ContractService] Waiting for transaction confirmation...');
-    let receipt;
-    try {
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Transaction confirmation timeout after 60 seconds')), 60000);
-      });
-      
-      // Race between tx.wait() and timeout
-      receipt = await Promise.race([
-        tx.wait(),
-        timeoutPromise
-      ]);
-      
-      console.log('[ContractService] Payment receipt:', receipt);
-      console.log('[ContractService] Payment confirmed:', tx.hash);
-    } catch (waitError) {
-      console.error('[ContractService] Error waiting for transaction:', waitError);
-      // Check if transaction was actually mined
-      const txReceipt = await provider.getTransactionReceipt(tx.hash);
-      if (txReceipt) {
-        console.log('[ContractService] Transaction was mined:', txReceipt);
-        receipt = txReceipt;
-      } else {
-        throw new Error(`Transaction timeout. TX hash: ${tx.hash}`);
-      }
-    }
+    const receipt = await tx.wait();
+    console.log('[ContractService] Payment receipt:', receipt);
+    console.log('[ContractService] Payment confirmed:', tx.hash);
     
     // Verify payment event
     const paymentEvent = receipt.logs.find((log: any) => {

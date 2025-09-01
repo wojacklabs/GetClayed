@@ -92,23 +92,13 @@ export async function payForUpload(rawProvider: any): Promise<string> {
       value: requiredFee
     });
     console.log('[ContractService] Payment transaction sent:', tx.hash);
-    console.log('[ContractService] Check transaction status at: https://testnet.irysScan.io/tx/' + tx.hash);
     
-    // Wait for confirmation
+    // Wait for confirmation with timeout
     console.log('[ContractService] Waiting for transaction confirmation...');
     let receipt;
     try {
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Transaction confirmation timeout after 60 seconds')), 60000);
-      });
-      
-      // Race between tx.wait() and timeout
-      receipt = await Promise.race([
-        tx.wait(),
-        timeoutPromise
-      ]);
-      
+      // Wait for 1 confirmation with 60 second timeout
+      receipt = await tx.wait(1, 60000);
       console.log('[ContractService] Payment receipt:', receipt);
       console.log('[ContractService] Payment confirmed:', tx.hash);
     } catch (waitError) {
