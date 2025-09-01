@@ -1512,38 +1512,9 @@ export default function AdvancedClay() {
     }
   }
 
-  const handleProjectSelect = async (projectId: string) => {
-    try {
-      console.log('Loading project:', projectId)
-      
-      // Show loading state
-      const loadingAlert = alert('Loading project...')
-      
-      // Download project from Irys
-      const project = await downloadClayProject(projectId)
-      console.log('Downloaded project:', project)
-      
-      // Restore clay objects
-      const restoredObjects = restoreClayObjects(project, detail)
-      console.log('Restored objects:', restoredObjects)
-      
-      // Clear current objects and set new ones
-      setClayObjects(restoredObjects)
-      
-      // Reset history with new state
-      addToHistory(restoredObjects)
-      
-      // Update current folder if project has folder info
-      if (project.tags?.includes('Folder')) {
-        const folderIndex = project.tags.indexOf('Folder')
-        setCurrentFolder(project.tags[folderIndex + 1] || '/')
-      }
-      
-      alert(`Project "${project.name}" loaded successfully!`)
-    } catch (error) {
-      console.error('Failed to load project:', error)
-      alert('Failed to load project. Please try again.')
-    }
+  const handleProjectSelect = (projectId: string) => {
+    // Load project
+    console.log('Loading project:', projectId)
   }
 
   const handleProjectMove = (projectId: string, folderPath: string) => {

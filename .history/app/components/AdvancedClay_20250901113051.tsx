@@ -1524,14 +1524,15 @@ export default function AdvancedClay() {
       console.log('Downloaded project:', project)
       
       // Restore clay objects
-      const restoredObjects = restoreClayObjects(project, detail)
+      const restoredObjects = restoreClayObjects(project.clayData)
       console.log('Restored objects:', restoredObjects)
       
       // Clear current objects and set new ones
       setClayObjects(restoredObjects)
       
       // Reset history with new state
-      addToHistory(restoredObjects)
+      setHistory([restoredObjects])
+      setCurrentStep(0)
       
       // Update current folder if project has folder info
       if (project.tags?.includes('Folder')) {
