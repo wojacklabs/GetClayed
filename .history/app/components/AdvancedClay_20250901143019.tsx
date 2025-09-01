@@ -473,9 +473,6 @@ function Clay({
     geometry.computeBoundingSphere()
     
     // Mark geometry as deformed for serialization
-    if (!geometry.userData.originalShape) {
-      geometry.userData.originalShape = clay.shape || 'unknown';
-    }
     geometry.userData.deformed = true
   })
   
@@ -1398,9 +1395,6 @@ export default function AdvancedClay() {
         geometry = new THREE.SphereGeometry(size, detail, detail)
         break
     }
-    
-    // Ensure clean userData for new geometries
-    geometry.userData = { deformed: false };
     
     const newClay: ClayObject = {
       id: `clay-${Date.now()}`,

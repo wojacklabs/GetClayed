@@ -83,43 +83,29 @@ export function serializeClayProject(
     
     // Save deformed vertices if geometry has been modified by push/pull
     if (clay.geometry && clay.geometry.attributes && clay.geometry.attributes.position) {
-      // Double check if this is truly a deformed geometry
-      const isDeformed = clay.geometry.userData?.deformed === true && 
-                        clay.geometry.userData?.originalShape !== undefined;
+      // Check if this is a deformed geometry by looking for userData flag
+      const isDeformed = clay.geometry.userData?.deformed === true;
       
       if (isDeformed) {
-        console.log(`[serializeClayProject] Clay ${clay.id} is marked as deformed, checking if vertices changed...`);
-        
-        // Additional check: only save vertices if they're actually different from original
-        // For now, trust the deformed flag but log for debugging
+        console.log(`[serializeClayProject] Clay ${clay.id} is marked as deformed, saving vertices...`);
         const positions = clay.geometry.attributes.position.array;
-        const vertexCount = positions.length / 3;
+        const vertices = [];
         
-        // Only save vertices for reasonably sized geometries
-        if (vertexCount > 10000) {
-          console.warn(`[serializeClayProject] Clay ${clay.id} has ${vertexCount} vertices - too large, skipping vertex data`);
-          // You might want to implement vertex reduction or compression here
-        } else {
-          const vertices = [];
-          
-          // Save vertices with reduced precision
-          for (let i = 0; i < positions.length; i += 3) {
-            vertices.push({
-              x: Math.round(positions[i] * 1000) / 1000,
-              y: Math.round(positions[i + 1] * 1000) / 1000,
-              z: Math.round(positions[i + 2] * 1000) / 1000
-            });
-          }
-          clayData.vertices = vertices;
-          console.log(`[serializeClayProject] Saved ${vertices.length} deformed vertices for clay ${clay.id}`);
+        // For large geometries, we could implement compression here
+        // For now, save all vertices for deformed objects
+        for (let i = 0; i < positions.length; i += 3) {
+          // Round to reduce precision and file size
+          vertices.push({
+            x: Math.round(positions[i] * 10000) / 10000,
+            y: Math.round(positions[i + 1] * 10000) / 10000,
+            z: Math.round(positions[i + 2] * 10000) / 10000
+          });
         }
+        clayData.vertices = vertices;
+        console.log(`[serializeClayProject] Saved ${vertices.length} deformed vertices for clay ${clay.id}`);
       } else {
         // For non-deformed geometries, just save the parameters
-        if (clay.geometry.userData?.deformed === true) {
-          console.warn(`[serializeClayProject] Clay ${clay.id} has deformed flag but missing originalShape - treating as non-deformed`);
-          // Clear the incorrect flag
-          clay.geometry.userData.deformed = false;
-        }
+        console.log(`[serializeClayProject] Clay ${clay.id} is not deformed, saving only parameters`);
       }
     }
     

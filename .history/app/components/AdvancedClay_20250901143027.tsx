@@ -473,9 +473,6 @@ function Clay({
     geometry.computeBoundingSphere()
     
     // Mark geometry as deformed for serialization
-    if (!geometry.userData.originalShape) {
-      geometry.userData.originalShape = clay.shape || 'unknown';
-    }
     geometry.userData.deformed = true
   })
   
