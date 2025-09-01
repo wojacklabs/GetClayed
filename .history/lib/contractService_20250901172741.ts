@@ -92,7 +92,6 @@ export async function payForUpload(rawProvider: any): Promise<string> {
       value: requiredFee
     });
     console.log('[ContractService] Payment transaction sent:', tx.hash);
-    console.log('[ContractService] Check transaction status at: https://testnet.irysScan.io/tx/' + tx.hash);
     
     // Wait for confirmation
     console.log('[ContractService] Waiting for transaction confirmation...');
