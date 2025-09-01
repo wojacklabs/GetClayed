@@ -75,7 +75,7 @@ export async function payForUpload(rawProvider: any): Promise<string> {
     console.log('[ContractService] Network chainId type:', typeof network.chainId);
     console.log('[ContractService] Network chainId value:', network.chainId);
     
-    if (network.chainId !== BigInt(1270)) {
+    if (network.chainId !== 1270n) {
       throw new Error('Not connected to Irys testnet. Please switch networks.');
     }
     
@@ -84,21 +84,12 @@ export async function payForUpload(rawProvider: any): Promise<string> {
     const signerAddress = await signer.getAddress();
     console.log('[ContractService] Signer address:', signerAddress);
     
-    // Check balance before transaction
-    const balance = await provider.getBalance(signerAddress);
-    console.log(`[ContractService] Account balance: ${ethers.formatEther(balance)} IRYS`);
-    
     // Connect to payment contract
     const contract = new Contract(PAYMENT_CONTRACT_ADDRESS, PAYMENT_CONTRACT_ABI, signer);
     
     // Get service fee from contract
     const requiredFee = await contract.ARTICLE_PRICE();
     console.log(`[ContractService] Service fee: ${ethers.formatEther(requiredFee)} IRYS`);
-    
-    // Check if balance is sufficient
-    if (balance < requiredFee) {
-      throw new Error(`Insufficient funds. You need at least ${ethers.formatEther(requiredFee)} IRYS but have ${ethers.formatEther(balance)} IRYS`);
-    }
     
     // Execute payment
     const tx = await contract.payForArticle({

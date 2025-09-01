@@ -75,7 +75,7 @@ export async function payForUpload(rawProvider: any): Promise<string> {
     console.log('[ContractService] Network chainId type:', typeof network.chainId);
     console.log('[ContractService] Network chainId value:', network.chainId);
     
-    if (network.chainId !== BigInt(1270)) {
+    if (network.chainId !== 1270n) {
       throw new Error('Not connected to Irys testnet. Please switch networks.');
     }
     
