@@ -26,7 +26,7 @@ import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
-import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject } from '../../lib/clayStorageService'
+import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects } from '../../lib/clayStorageService'
 import { payForUpload, getUploadPrice } from '../../lib/contractService'
 import { downloadAsGLB } from '../../lib/glbService'
 import { queryCache } from '../../lib/queryCache'
@@ -1557,29 +1557,6 @@ export default function AdvancedClay() {
     console.log('Moving project:', projectId, 'to', folderPath)
   }
 
-  const handleProjectDelete = async (projectId: string) => {
-    try {
-      if (!irysUploader || !walletAddress) {
-        alert('Please connect your wallet first')
-        return
-      }
-      
-      console.log('Deleting project:', projectId)
-      
-      // Upload deletion marker
-      const deletionId = await deleteClayProject(irysUploader, projectId, walletAddress)
-      console.log('Deletion marker created:', deletionId)
-      
-      // Clear cache to refresh list
-      queryCache.delete(`projects-${walletAddress}`)
-      
-      alert('Project deleted successfully!')
-    } catch (error) {
-      console.error('Failed to delete project:', error)
-      alert('Failed to delete project. Please try again.')
-    }
-  }
-
   const handleFolderCreate = (folderPath: string) => {
     // Create folder (update projects with new folder)
     console.log('Creating folder:', folderPath)
@@ -1696,7 +1673,6 @@ export default function AdvancedClay() {
           walletAddress={walletAddress}
           onProjectSelect={handleProjectSelect}
           onProjectMove={handleProjectMove}
-          onProjectDelete={handleProjectDelete}
           onFolderCreate={handleFolderCreate}
           onFolderDelete={handleFolderDelete}
           currentFolder={currentFolder}

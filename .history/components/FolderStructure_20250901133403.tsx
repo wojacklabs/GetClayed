@@ -197,11 +197,6 @@ export default function FolderStructure({
     if (confirm(`Delete ${item.name}?`)) {
       if (item.type === 'folder') {
         onFolderDelete(item.id);
-      } else if (item.type === 'file' && item.projectId) {
-        onProjectDelete(item.projectId);
-        // Clear cache to refresh
-        queryCache.delete(`projects-${walletAddress}`);
-        fetchProjects();
       }
     }
     setContextMenu(null);
