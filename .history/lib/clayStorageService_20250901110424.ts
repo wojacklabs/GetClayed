@@ -168,8 +168,10 @@ export async function downloadClayProject(transactionId: string): Promise<ClayPr
     throw new Error(`Failed to download project: ${response.statusText}`);
   }
   
-  const jsonString = await response.text();
-  return JSON.parse(jsonString);
+  const arrayBuffer = await response.arrayBuffer();
+  const data = new Uint8Array(arrayBuffer);
+  
+  return decompressClayProject(data);
 }
 
 /**

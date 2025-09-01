@@ -1224,9 +1224,7 @@ export default function AdvancedClay() {
       position: new THREE.Vector3(0, 2, 0), // Start at y=2 so sphere sits on ground
       color: currentColor,
       shape: 'sphere',
-      scale: new THREE.Vector3(1, 1, 1),
-      size: 2,
-      detail: detail
+      scale: new THREE.Vector3(1, 1, 1)
     }
     setClayObjects([initialClay])
     addToHistory([initialClay])
@@ -1403,10 +1401,7 @@ export default function AdvancedClay() {
       shape: selectedShape,
       rotation: rotation,
       scale: new THREE.Vector3(1, 1, 1),
-      controlPoints: controlPoints,
-      size: size,
-      thickness: thickness,
-      detail: selectedShape === 'sphere' ? detail : undefined
+      controlPoints: controlPoints
     }
     setClayObjects(prev => {
       const newClays = [...prev, newClay]
