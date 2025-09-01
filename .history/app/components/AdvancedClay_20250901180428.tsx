@@ -1552,7 +1552,21 @@ export default function AdvancedClay() {
       }
 
       // Step 4: Save references
-      const result = uploadResult;
+      const result = await uploadClayProject(
+        uploader,
+        serialized,
+        currentFolder,
+        rootTxId,
+        (progress: ChunkProgressType) => {
+          setChunkUploadProgress({
+            ...progress,
+            isOpen: true,
+            projectName
+          })
+        }
+      )
+
+      console.log('Upload result:', result)
       
       // Save mutable reference
       saveMutableReference(
