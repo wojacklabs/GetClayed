@@ -1497,17 +1497,6 @@ export default function AdvancedClay() {
         backgroundColor
       )
       serialized.id = projectId; // Ensure project has the correct ID
-      
-      // Check project size
-      const jsonString = JSON.stringify(serialized);
-      const sizeInKB = Buffer.from(jsonString).byteLength / 1024;
-      console.log(`Project size: ${sizeInKB.toFixed(2)} KB`);
-      
-      if (sizeInKB >= 100) {
-        if (!confirm(`Your project is ${sizeInKB.toFixed(2)} KB, which exceeds the 100KB free tier.\nPayment will be required. Continue?`)) {
-          return;
-        }
-      }
 
       // Step 2: Upload to Irys with mutable reference support
       const result = await uploadClayProject(
@@ -1546,10 +1535,8 @@ export default function AdvancedClay() {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
         alert('Transaction cancelled by user')
-      } else if (error?.message?.includes('Insufficient balance')) {
-        alert('Insufficient balance. Your project is over 100KB and requires IRYS tokens. Please add funds to your wallet.')
-      } else if (error?.message?.includes('over 100KB')) {
-        alert('Project size exceeds 100KB free tier. Payment is required.')
+      } else if (error?.message?.includes('Insufficient')) {
+        alert('Insufficient balance. Please add IRYS tokens to your wallet.')
       } else {
         alert('Failed to save project. Please try again.')
       }

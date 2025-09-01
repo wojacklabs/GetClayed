@@ -101,36 +101,17 @@ export async function uploadToIrys(
       console.log('[uploadToIrys] Converted Uint8Array to Buffer');
     }
     
-    // Check data size
+    // Try to get price before upload to trigger any necessary signatures early
     const dataSize = uploadData instanceof File ? uploadData.size : uploadData.byteLength;
-    const sizeInKB = dataSize / 1024;
-    console.log(`[uploadToIrys] Data size: ${sizeInKB.toFixed(2)} KB`);
-    
-    // Only check price for data larger than 100KB
-    if (sizeInKB >= 100) {
-      console.log('[uploadToIrys] Data is over 100KB, checking price...');
-      if (typeof irysUploader.getPrice === 'function') {
-        try {
-          const priceStart = Date.now();
-          const price = await irysUploader.getPrice(dataSize);
-          const priceEnd = Date.now();
-          console.log(`[uploadToIrys] Price check took ${priceEnd - priceStart}ms, price:`, price);
-          
-          // Check if we have sufficient balance
-          if (typeof irysUploader.getLoadedBalance === 'function') {
-            const balance = await irysUploader.getLoadedBalance();
-            console.log('[uploadToIrys] Current balance:', balance);
-            if (balance.lt(price)) {
-              throw new Error(`Insufficient balance. Required: ${price}, Available: ${balance}`);
-            }
-          }
-        } catch (error) {
-          console.error('[uploadToIrys] Price check failed:', error);
-          throw error;
-        }
+    if (typeof irysUploader.getPrice === 'function') {
+      try {
+        const priceStart = Date.now();
+        const price = await irysUploader.getPrice(dataSize);
+        const priceEnd = Date.now();
+        console.log(`[uploadToIrys] Price check took ${priceEnd - priceStart}ms, price:`, price);
+      } catch (error) {
+        console.log('[uploadToIrys] Price check failed (continuing):', error);
       }
-    } else {
-      console.log('[uploadToIrys] Data is under 100KB - FREE upload!');
     }
     
     // Upload with tags

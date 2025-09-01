@@ -89,7 +89,6 @@ export async function uploadToIrys(
 ) {
   try {
     console.log('[uploadToIrys] Starting upload...');
-    const uploadStartTime = Date.now();
     console.log('[uploadToIrys] Data type:', data.constructor.name);
     console.log('[uploadToIrys] Data size:', data instanceof File ? data.size : data.byteLength);
     
@@ -101,46 +100,9 @@ export async function uploadToIrys(
       console.log('[uploadToIrys] Converted Uint8Array to Buffer');
     }
     
-    // Check data size
-    const dataSize = uploadData instanceof File ? uploadData.size : uploadData.byteLength;
-    const sizeInKB = dataSize / 1024;
-    console.log(`[uploadToIrys] Data size: ${sizeInKB.toFixed(2)} KB`);
-    
-    // Only check price for data larger than 100KB
-    if (sizeInKB >= 100) {
-      console.log('[uploadToIrys] Data is over 100KB, checking price...');
-      if (typeof irysUploader.getPrice === 'function') {
-        try {
-          const priceStart = Date.now();
-          const price = await irysUploader.getPrice(dataSize);
-          const priceEnd = Date.now();
-          console.log(`[uploadToIrys] Price check took ${priceEnd - priceStart}ms, price:`, price);
-          
-          // Check if we have sufficient balance
-          if (typeof irysUploader.getLoadedBalance === 'function') {
-            const balance = await irysUploader.getLoadedBalance();
-            console.log('[uploadToIrys] Current balance:', balance);
-            if (balance.lt(price)) {
-              throw new Error(`Insufficient balance. Required: ${price}, Available: ${balance}`);
-            }
-          }
-        } catch (error) {
-          console.error('[uploadToIrys] Price check failed:', error);
-          throw error;
-        }
-      }
-    } else {
-      console.log('[uploadToIrys] Data is under 100KB - FREE upload!');
-    }
-    
     // Upload with tags
-    console.log('[uploadToIrys] Calling upload method...');
-    const uploadMethodStart = Date.now();
     const receipt = await irysUploader.upload(uploadData, { tags });
-    const uploadMethodEnd = Date.now();
     
-    console.log(`[uploadToIrys] Upload method took ${uploadMethodEnd - uploadMethodStart}ms`);
-    console.log(`[uploadToIrys] Total upload took ${Date.now() - uploadStartTime}ms`);
     console.log('[uploadToIrys] Upload complete:', receipt.id);
     return receipt;
   } catch (error) {

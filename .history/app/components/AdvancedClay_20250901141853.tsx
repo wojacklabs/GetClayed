@@ -1497,17 +1497,6 @@ export default function AdvancedClay() {
         backgroundColor
       )
       serialized.id = projectId; // Ensure project has the correct ID
-      
-      // Check project size
-      const jsonString = JSON.stringify(serialized);
-      const sizeInKB = Buffer.from(jsonString).byteLength / 1024;
-      console.log(`Project size: ${sizeInKB.toFixed(2)} KB`);
-      
-      if (sizeInKB >= 100) {
-        if (!confirm(`Your project is ${sizeInKB.toFixed(2)} KB, which exceeds the 100KB free tier.\nPayment will be required. Continue?`)) {
-          return;
-        }
-      }
 
       // Step 2: Upload to Irys with mutable reference support
       const result = await uploadClayProject(
