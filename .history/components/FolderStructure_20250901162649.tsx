@@ -291,12 +291,7 @@ export default function FolderStructure({
               <Folder size={16} className="text-blue-500" />
             </>
           )}
-          {node.type === 'file' && (
-            <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 2C0 0.895431 0.895431 0 2 0H9L14 5V16C14 17.1046 13.1046 18 12 18H2C0.895431 18 0 17.1046 0 16V2Z" fill="#9CA3AF"/>
-              <path d="M9 0L14 5H11C9.89543 5 9 4.10457 9 3V0Z" fill="#6B7280"/>
-            </svg>
-          )}
+          {node.type === 'file' && <FileText size={16} className="text-blue-500" />}
           
           {renamingItem === node.id ? (
             <input

@@ -229,9 +229,9 @@ export async function uploadClayProject(
       wasChunked: false
     };
   } else {
-    // Chunked upload for large files (over 90KB)
+    // Chunked upload for large files
     wasChunked = true;
-    console.log(`[uploadClayProject] Data is ${sizeInKB.toFixed(2)} KB (over 90KB limit) - Using chunked upload`);
+    console.log(`[uploadClayProject] Data is ${sizeInKB.toFixed(2)} KB - Using chunked upload`);
     
     // Generate chunk set ID
     const chunkSetId = uuidv4();

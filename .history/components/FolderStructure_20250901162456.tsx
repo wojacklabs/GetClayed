@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, Folder, FolderPlus, FileText, MoreVertical, Trash2, Edit2, RefreshCw } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderPlus, File, MoreVertical, Trash2, Edit2, RefreshCw } from 'lucide-react';
 import { getUserFolderStructure } from '../lib/clayStorageService';
 import { queryCache } from '../lib/queryCache';
 import { getLocalFolders, addLocalFolder, removeLocalFolder, renameLocalFolder } from '../lib/localFolderService';
@@ -166,7 +166,7 @@ export default function FolderStructure({
     });
 
     setFolderTree(tree);
-  }, [projects, walletAddress, forceUpdate]);
+  }, [projects, walletAddress]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => {
@@ -241,7 +241,7 @@ export default function FolderStructure({
         }
         onFolderDelete(item.id);
         // Force re-render
-        setForceUpdate(prev => prev + 1);
+        fetchProjects();
       } else if (item.type === 'file' && item.projectId) {
         onProjectDelete(item.projectId);
         // Clear cache to refresh
@@ -288,15 +288,10 @@ export default function FolderStructure({
           {node.type === 'folder' && (
             <>
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              <Folder size={16} className="text-blue-500" />
+              <Folder size={16} className="text-blue-600" />
             </>
           )}
-          {node.type === 'file' && (
-            <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 2C0 0.895431 0.895431 0 2 0H9L14 5V16C14 17.1046 13.1046 18 12 18H2C0.895431 18 0 17.1046 0 16V2Z" fill="#9CA3AF"/>
-              <path d="M9 0L14 5H11C9.89543 5 9 4.10457 9 3V0Z" fill="#6B7280"/>
-            </svg>
-          )}
+          {node.type === 'file' && <File size={16} className="text-gray-600" />}
           
           {renamingItem === node.id ? (
             <input
@@ -401,13 +396,7 @@ export default function FolderStructure({
             draggable
           >
             <div className="mb-2">
-              <svg width="56" height="72" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 8C0 3.58172 3.58172 0 8 0H36L56 20V64C56 68.4183 52.4183 72 48 72H8C3.58172 72 0 68.4183 0 64V8Z" fill="#E5E7EB"/>
-                <path d="M36 0L56 20H44C39.5817 20 36 16.4183 36 12V0Z" fill="#D1D5DB"/>
-                <rect x="10" y="32" width="36" height="2" rx="1" fill="#6B7280"/>
-                <rect x="10" y="40" width="36" height="2" rx="1" fill="#6B7280"/>
-                <rect x="10" y="48" width="24" height="2" rx="1" fill="#6B7280"/>
-              </svg>
+              <File size={48} className="text-gray-400" />
             </div>
             {renamingItem === file.id ? (
               <input
