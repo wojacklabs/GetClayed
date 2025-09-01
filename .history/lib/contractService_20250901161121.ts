@@ -70,8 +70,8 @@ export async function payForUpload(provider: any): Promise<string> {
       throw new Error('Failed to switch to Irys testnet');
     }
     
-    // Create signer from new provider
-    const signer = await newProvider.getSigner();
+    // Create signer from provider
+    const signer = provider.getSigner ? await provider.getSigner() : provider;
     
     // Connect to payment contract
     const contract = new Contract(PAYMENT_CONTRACT_ADDRESS, PAYMENT_CONTRACT_ABI, signer);
