@@ -12,7 +12,7 @@ const PAYMENT_CONTRACT_ABI = [
 
 export async function payForUpload(provider: any): Promise<string> {
   try {
-    console.log('[ContractService] Paying service fee for upload');
+    console.log('[ContractService] Paying for Irys upload');
     
     // Check network
     const network = await provider.getNetwork();
@@ -28,9 +28,9 @@ export async function payForUpload(provider: any): Promise<string> {
     // Connect to payment contract
     const contract = new Contract(PAYMENT_CONTRACT_ADDRESS, PAYMENT_CONTRACT_ABI, signer);
     
-    // Get service fee from contract
+    // Get required fee
     const requiredFee = await contract.ARTICLE_PRICE();
-    console.log(`[ContractService] Service fee: ${ethers.formatEther(requiredFee)} IRYS`);
+    console.log(`[ContractService] Required fee: ${ethers.formatEther(requiredFee)} IRYS`);
     
     // Execute payment
     const tx = await contract.payForArticle({
@@ -68,27 +68,7 @@ export async function payForUpload(provider: any): Promise<string> {
 }
 
 export async function getUploadPrice(provider: any): Promise<string> {
-  try {
-    // Check network
-    const network = await provider.getNetwork();
-    console.log('[ContractService] Current network:', network);
-    
-    if (network.chainId !== BigInt(1270)) {
-      console.warn('[ContractService] Not on Irys testnet, returning default service fee');
-      return '0.1';
-    }
-    
-    // Get service fee from contract
-    const contract = new Contract(PAYMENT_CONTRACT_ADDRESS, PAYMENT_CONTRACT_ABI, provider);
-    const price = await contract.ARTICLE_PRICE();
-    const serviceFee = ethers.formatEther(price);
-    console.log(`[ContractService] Service fee from contract: ${serviceFee} IRYS`);
-    
-    // Note: Irys storage is free for data under 100KB
-    // This fee is only for the service
-    return serviceFee;
-  } catch (error) {
-    console.error('[ContractService] Error getting service fee:', error);
-    return '0.1'; // Default service fee
-  }
+  // Irys uploads under 100KB are free
+  // We only need to pay the contract fee
+  return '0.1';
 }
