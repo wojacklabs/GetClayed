@@ -13,13 +13,10 @@ const PAYMENT_CONTRACT_ABI = [
 
 async function switchToIrysTestnet(provider: any): Promise<void> {
   try {
-    console.log('[ContractService] Switching to Irys testnet...');
-    console.log('[ContractService] Provider for switching:', provider);
-    const result = await provider.request({
+    await provider.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: '0x4F6' }], // 1270 in hex
     });
-    console.log('[ContractService] Switch result:', result);
   } catch (switchError: any) {
     if (switchError.code === 4902) {
       // Chain not added, add it
