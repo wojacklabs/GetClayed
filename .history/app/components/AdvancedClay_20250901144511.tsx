@@ -2028,15 +2028,6 @@ export default function AdvancedClay() {
           
           <div className="w-px h-10 bg-gray-300" />
           
-          {/* New File Button */}
-          <button
-            onClick={handleNewFile}
-            className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
-            title="New File"
-          >
-            <FilePlus size={20} />
-          </button>
-          
           {/* Save Button */}
                       <SaveButton 
                         onSave={handleSaveProject} 

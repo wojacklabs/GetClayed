@@ -50,9 +50,9 @@ export function serializeClayProject(
         z: Math.round((clay.position?.z || 0) * 10000) / 10000
       },
       rotation: {
-        x: Math.round((clay.rotation?.x || 0) * 10000) / 10000,
-        y: Math.round((clay.rotation?.y || 0) * 10000) / 10000,
-        z: Math.round((clay.rotation?.z || 0) * 10000) / 10000
+        x: clay.rotation?.x || 0,
+        y: clay.rotation?.y || 0,
+        z: clay.rotation?.z || 0
       },
       scale: {
         x: clay.scale?.x || 1,
