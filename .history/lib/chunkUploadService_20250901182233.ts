@@ -103,8 +103,9 @@ export async function uploadInChunks(
       tags.push({ name: 'Root-TX', value: rootTxId });
     }
     
-    // Upload chunk (use already prepared buffer)
-    const receipt = await uploadToIrys(irysUploader, chunkBuffer, tags);
+    // Upload chunk
+    const uploadData = Buffer.from(JSON.stringify(chunkData), 'utf-8');
+    const receipt = await uploadToIrys(irysUploader, uploadData, tags);
     
     transactionIds.push(receipt.id);
     chunkMetadata.push({
