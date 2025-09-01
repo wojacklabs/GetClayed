@@ -79,11 +79,6 @@ export async function uploadInChunks(
       }
     };
     
-    // Convert chunk data to buffer and check size
-    const chunkBuffer = Buffer.from(JSON.stringify(chunkData), 'utf-8');
-    const chunkSizeKB = chunkBuffer.byteLength / 1024;
-    console.log(`[ChunkUpload] Chunk ${i + 1}/${totalChunks} size: ${chunkSizeKB.toFixed(2)} KB`);
-    
     const tags = [
       { name: 'Data-Type', value: 'clay-project-chunk' },
       { name: 'Project-ID', value: projectId },
@@ -103,8 +98,9 @@ export async function uploadInChunks(
       tags.push({ name: 'Root-TX', value: rootTxId });
     }
     
-    // Upload chunk (use already prepared buffer)
-    const receipt = await uploadToIrys(irysUploader, chunkBuffer, tags);
+    // Upload chunk
+    const uploadData = Buffer.from(JSON.stringify(chunkData), 'utf-8');
+    const receipt = await uploadToIrys(irysUploader, uploadData, tags);
     
     transactionIds.push(receipt.id);
     chunkMetadata.push({
