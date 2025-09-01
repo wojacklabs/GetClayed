@@ -1696,7 +1696,6 @@ export default function AdvancedClay() {
           walletAddress={walletAddress}
           onProjectSelect={handleProjectSelect}
           onProjectMove={handleProjectMove}
-          onProjectDelete={handleProjectDelete}
           onFolderCreate={handleFolderCreate}
           onFolderDelete={handleFolderDelete}
           currentFolder={currentFolder}

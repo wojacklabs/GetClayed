@@ -292,36 +292,6 @@ export function downloadProjectAsJSON(project: ClayProject) {
 }
 
 /**
- * Mark project as deleted (soft delete via tags)
- */
-export async function deleteClayProject(
-  irysUploader: any,
-  projectId: string,
-  walletAddress: string
-): Promise<string> {
-  // Create a deletion marker
-  const deletionMarker = {
-    projectId,
-    deletedAt: Date.now(),
-    deletedBy: walletAddress
-  };
-  
-  const data = Buffer.from(JSON.stringify(deletionMarker), 'utf-8');
-  
-  const tags = [
-    { name: 'Content-Type', value: 'application/json' },
-    { name: 'App-Name', value: 'GetClayed' },
-    { name: 'Data-Type', value: 'clay-project-deletion' },
-    { name: 'Project-ID', value: projectId },
-    { name: 'Deleted-By', value: walletAddress },
-    { name: 'Deleted-At', value: Date.now().toString() }
-  ];
-  
-  const receipt = await uploadToIrys(irysUploader, data, tags);
-  return receipt.id;
-}
-
-/**
  * Restore clay objects from project data
  */
 export function restoreClayObjects(project: ClayProject, detail: number = 48): any[] {
@@ -404,23 +374,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
         break;
     }
     
-    // Restore deformed vertices if they exist
-    if (clayData.vertices && clayData.vertices.length > 0) {
-      const positions = geometry.attributes.position.array;
-      const vertexCount = Math.min(clayData.vertices.length, positions.length / 3);
-      
-      for (let i = 0; i < vertexCount; i++) {
-        positions[i * 3] = clayData.vertices[i].x;
-        positions[i * 3 + 1] = clayData.vertices[i].y;
-        positions[i * 3 + 2] = clayData.vertices[i].z;
-      }
-      
-      geometry.attributes.position.needsUpdate = true;
-      geometry.computeVertexNormals();
-      geometry.computeBoundingBox();
-      geometry.computeBoundingSphere();
-    }
-    
     // Restore clay object
     return {
       id: clayData.id,
@@ -457,21 +410,22 @@ export async function queryUserProjects(
   try {
     console.log('[ClayStorage] Querying projects for wallet:', walletAddress);
     
-    // First, query all projects
-    const projectTags = [
+    // Build tags array for query - matching actual uploaded tags
+    const tags = [
       { name: 'App-Name', values: ['GetClayed'] },
-      { name: 'Data-Type', values: ['clay-project'] },
+      { name: 'Data-Type', values: ['clay-project'] }, // Changed from 'Type' to 'Data-Type'
       { name: 'Author', values: [walletAddress] }
     ];
     
+    // Add folder filter if specified
     if (folderPath && folderPath !== '/') {
-      projectTags.push({ name: 'Folder', values: [folderPath] });
+      tags.push({ name: 'Folder', values: [folderPath] }); // Changed from 'Folder-Path' to 'Folder'
     }
     
-    const projectQuery = `
+    const query = `
       query {
         transactions(
-          tags: [${projectTags.map(tag => 
+          tags: [${tags.map(tag => 
             `{ name: "${tag.name}", values: ${JSON.stringify(tag.values)} }`
           ).join(', ')}],
           first: 100,
@@ -491,93 +445,44 @@ export async function queryUserProjects(
       }
     `;
     
-    const projectResponse = await axios.post(IRYS_GRAPHQL_URL, { 
-      query: projectQuery 
+    console.log('[ClayStorage] GraphQL query:', query);
+    
+    const response = await axios.post(IRYS_GRAPHQL_URL, { 
+      query 
     }, {
       headers: {
         'Content-Type': 'application/json',
       }
     });
     
-    if (!projectResponse.data?.data?.transactions?.edges) {
-      console.error('[ClayStorage] Invalid response structure:', projectResponse.data);
+    if (!response.data?.data?.transactions?.edges) {
+      console.error('[ClayStorage] Invalid response structure:', response.data);
       return [];
     }
     
-    // Then, query all deletions
-    const deletionQuery = `
-      query {
-        transactions(
-          tags: [
-            { name: "App-Name", values: ["GetClayed"] },
-            { name: "Data-Type", values: ["clay-project-deletion"] },
-            { name: "Deleted-By", values: ["${walletAddress}"] }
-          ],
-          first: 100,
-          order: DESC
-        ) {
-          edges {
-            node {
-              id
-              tags {
-                name
-                value
-              }
-            }
-          }
-        }
+    const projects = response.data.data.transactions.edges.map((edge: any) => {
+      const tags: Record<string, string> = {};
+      edge.node.tags.forEach((tag: any) => {
+        tags[tag.name] = tag.value;
+      });
+      
+      // Parse timestamp from tags
+      let timestamp = parseInt(tags['Created-At'] || edge.node.timestamp || '0');
+      if (timestamp < 10000000000) {
+        timestamp = timestamp * 1000; // Convert seconds to milliseconds
       }
-    `;
-    
-    const deletionResponse = await axios.post(IRYS_GRAPHQL_URL, { 
-      query: deletionQuery 
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-      }
+      
+      return {
+        id: edge.node.id,
+        name: tags['Project-Name'] || 'Untitled',
+        author: tags['Author'] || '',
+        timestamp,
+        folderPath: tags['Folder'] || '/', // Changed from 'Folder-Path' to 'Folder'
+        tags
+      };
     });
     
-    // Extract deleted project IDs
-    const deletedProjectIds = new Set<string>();
-    if (deletionResponse.data?.data?.transactions?.edges) {
-      deletionResponse.data.data.transactions.edges.forEach((edge: any) => {
-        const tags: Record<string, string> = {};
-        edge.node.tags.forEach((tag: any) => {
-          tags[tag.name] = tag.value;
-        });
-        if (tags['Project-ID']) {
-          deletedProjectIds.add(tags['Project-ID']);
-        }
-      });
-    }
-    
-    console.log(`[ClayStorage] Found ${deletedProjectIds.size} deleted projects`);
-    
-    // Filter out deleted projects
-    const projects = projectResponse.data.data.transactions.edges
-      .filter((edge: any) => !deletedProjectIds.has(edge.node.id))
-      .map((edge: any) => {
-        const tags: Record<string, string> = {};
-        edge.node.tags.forEach((tag: any) => {
-          tags[tag.name] = tag.value;
-        });
-        
-        let timestamp = parseInt(tags['Created-At'] || edge.node.timestamp || '0');
-        if (timestamp < 10000000000) {
-          timestamp = timestamp * 1000;
-        }
-        
-        return {
-          id: edge.node.id,
-          name: tags['Project-Name'] || 'Untitled',
-          author: tags['Author'] || '',
-          timestamp,
-          folderPath: tags['Folder'] || '/',
-          tags
-        };
-      });
-    
-    console.log(`[ClayStorage] Returning ${projects.length} active projects`);
+    console.log(`[ClayStorage] Found ${projects.length} projects`);
     return projects;
     
   } catch (error) {
