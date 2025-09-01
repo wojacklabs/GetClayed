@@ -73,7 +73,7 @@ export async function getUploadPrice(provider: any): Promise<string> {
     const network = await provider.getNetwork();
     console.log('[ContractService] Current network:', network);
     
-    if (network.chainId !== BigInt(1270)) {
+    if (network.chainId !== 1270n) {
       console.warn('[ContractService] Not on Irys testnet, using default price');
       return '0.1';
     }

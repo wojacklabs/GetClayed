@@ -14,14 +14,6 @@ export async function payForUpload(provider: any): Promise<string> {
   try {
     console.log('[ContractService] Paying for Irys upload');
     
-    // Check network
-    const network = await provider.getNetwork();
-    console.log('[ContractService] Current network:', network);
-    
-    if (network.chainId !== BigInt(1270)) {
-      throw new Error('Please switch to Irys testnet (chainId: 1270)');
-    }
-    
     // Create signer from provider
     const signer = provider.getSigner ? await provider.getSigner() : provider;
     
@@ -73,7 +65,7 @@ export async function getUploadPrice(provider: any): Promise<string> {
     const network = await provider.getNetwork();
     console.log('[ContractService] Current network:', network);
     
-    if (network.chainId !== BigInt(1270)) {
+    if (network.chainId !== 1270n) {
       console.warn('[ContractService] Not on Irys testnet, using default price');
       return '0.1';
     }
