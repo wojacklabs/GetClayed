@@ -29,7 +29,6 @@ import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageService'
 import { payForUpload, getUploadPrice } from '../../lib/contractService'
 import { downloadAsGLB } from '../../lib/glbService'
-import { queryCache } from '../../lib/queryCache'
 import { ethers } from 'ethers'
 
 interface ClayObject {
@@ -1498,8 +1497,8 @@ export default function AdvancedClay() {
       console.log('Project saved with ID:', transactionId)
       alert(`Project saved successfully!\nPayment TX: ${paymentTx}\nIrys ID: ${transactionId}`)
       
-      // Clear cache to refresh projects list
-      queryCache.delete(`projects-${walletAddress}`)
+      // Refresh projects list
+      // TODO: Implement project listing
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {

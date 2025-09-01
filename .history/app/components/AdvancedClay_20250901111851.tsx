@@ -1498,8 +1498,8 @@ export default function AdvancedClay() {
       console.log('Project saved with ID:', transactionId)
       alert(`Project saved successfully!\nPayment TX: ${paymentTx}\nIrys ID: ${transactionId}`)
       
-      // Clear cache to refresh projects list
-      queryCache.delete(`projects-${walletAddress}`)
+      // Refresh projects list
+      // TODO: Implement project listing
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {

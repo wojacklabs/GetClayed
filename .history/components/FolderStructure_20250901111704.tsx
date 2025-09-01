@@ -13,7 +13,7 @@ interface FolderNode {
 }
 
 interface FolderStructureProps {
-  walletAddress: string | null;
+  projects: Array<{ id: string; tags: Record<string, string> }>;
   onProjectSelect: (projectId: string) => void;
   onProjectMove: (projectId: string, folderPath: string) => void;
   onFolderCreate: (folderPath: string) => void;
@@ -22,7 +22,7 @@ interface FolderStructureProps {
 }
 
 export default function FolderStructure({ 
-  walletAddress, 
+  projects, 
   onProjectSelect, 
   onProjectMove,
   onFolderCreate,
@@ -42,46 +42,6 @@ export default function FolderStructure({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: FolderNode } | null>(null);
   const [renamingItem, setRenamingItem] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [projects, setProjects] = useState<Array<{
-    id: string;
-    name: string;
-    folderPath: string;
-    timestamp: number;
-  }>>([]);
-
-  // Fetch projects when wallet address changes
-  const fetchProjects = async () => {
-    if (!walletAddress) {
-      setProjects([]);
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      // Check cache first
-      const cacheKey = `projects-${walletAddress}`;
-      const cached = queryCache.get<typeof projects>(cacheKey);
-      
-      if (cached) {
-        setProjects(cached);
-      } else {
-        const result = await getUserFolderStructure(walletAddress);
-        setProjects(result.projects);
-        
-        // Cache for 30 seconds
-        queryCache.set(cacheKey, result.projects, 30000);
-      }
-    } catch (error) {
-      console.error('Failed to fetch projects:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    fetchProjects();
-  }, [walletAddress]);
 
   // Build folder tree from projects
   useEffect(() => {
@@ -97,7 +57,7 @@ export default function FolderStructure({
 
     // Create all folders
     projects.forEach(project => {
-      const folderPath = project.folderPath === '/' ? '' : project.folderPath.replace(/^\//, '');
+      const folderPath = project.tags['Folder'] || '';
       if (folderPath) {
         const parts = folderPath.split('/').filter(Boolean);
         let currentPath = '';
@@ -122,14 +82,15 @@ export default function FolderStructure({
 
     // Add files to folders
     projects.forEach(project => {
-      const folderPath = project.folderPath === '/' ? '' : project.folderPath.replace(/^\//, '');
+      const folderPath = project.tags['Folder'] || '';
       const parent = folderPath ? folderMap.get(folderPath) || tree : tree;
       
       parent.children!.push({
         id: project.id,
-        name: project.name,
+        name: project.tags['Name'] || project.id,
         type: 'file',
-        projectId: project.id
+        projectId: project.id,
+        tags: project.tags
       });
     });
 
@@ -284,26 +245,13 @@ export default function FolderStructure({
     <div className="relative bg-white border-b border-gray-200">
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
         <h3 className="text-sm font-medium text-gray-700">Projects</h3>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => {
-              queryCache.delete(`projects-${walletAddress}`);
-              fetchProjects();
-            }}
-            className={`p-1 hover:bg-gray-100 rounded ${loading ? 'animate-spin' : ''}`}
-            title="Refresh"
-            disabled={loading}
-          >
-            <RefreshCw size={16} />
-          </button>
-          <button
-            onClick={() => handleCreateFolder('root')}
-            className="p-1 hover:bg-gray-100 rounded"
-            title="New Folder"
-          >
-            <FolderPlus size={16} />
-          </button>
-        </div>
+        <button
+          onClick={() => handleCreateFolder('root')}
+          className="p-1 hover:bg-gray-100 rounded"
+          title="New Folder"
+        >
+          <FolderPlus size={16} />
+        </button>
       </div>
       
       <div className="max-h-60 overflow-y-auto">

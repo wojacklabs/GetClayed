@@ -284,26 +284,13 @@ export default function FolderStructure({
     <div className="relative bg-white border-b border-gray-200">
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
         <h3 className="text-sm font-medium text-gray-700">Projects</h3>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => {
-              queryCache.delete(`projects-${walletAddress}`);
-              fetchProjects();
-            }}
-            className={`p-1 hover:bg-gray-100 rounded ${loading ? 'animate-spin' : ''}`}
-            title="Refresh"
-            disabled={loading}
-          >
-            <RefreshCw size={16} />
-          </button>
-          <button
-            onClick={() => handleCreateFolder('root')}
-            className="p-1 hover:bg-gray-100 rounded"
-            title="New Folder"
-          >
-            <FolderPlus size={16} />
-          </button>
-        </div>
+        <button
+          onClick={() => handleCreateFolder('root')}
+          className="p-1 hover:bg-gray-100 rounded"
+          title="New Folder"
+        >
+          <FolderPlus size={16} />
+        </button>
       </div>
       
       <div className="max-h-60 overflow-y-auto">
