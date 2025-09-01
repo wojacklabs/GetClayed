@@ -64,4 +64,31 @@ export function createDetailedGeometry(shape: string, size: number, thickness: n
   return geometry;
 }
 
-
+/**
+ * Apply subdivision to specific geometry types
+ */
+export function prepareGeometryForDeformation(geometry: THREE.BufferGeometry, shape: string): THREE.BufferGeometry {
+  switch (shape) {
+    case 'tetrahedron':
+      // Tetrahedron needs heavy subdivision due to very low initial vertex count
+      return subdivideGeometry(geometry, 3);
+      
+    case 'cube':
+      // Cube also benefits from subdivision
+      return subdivideGeometry(geometry, 2);
+      
+    case 'rectangle':
+    case 'triangle':
+    case 'circle':
+      // 2D shapes need some subdivision for deformation
+      return subdivideGeometry(geometry, 2);
+      
+    case 'sphere':
+      // Spheres already have enough vertices
+      return geometry;
+      
+    default:
+      // For other shapes, apply moderate subdivision
+      return subdivideGeometry(geometry, 1);
+  }
+}

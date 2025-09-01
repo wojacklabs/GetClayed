@@ -1345,26 +1345,40 @@ export default function AdvancedClay() {
         break
       
       case 'triangle':
-        // Create a detailed triangle with many vertices
-        geometry = createDetailedGeometry('triangle', size)
         if (controlPoints && controlPoints.length === 2) {
+          // Create a triangle shape
           const relativeP1 = controlPoints[0].clone().sub(position)
           const relativeP2 = controlPoints[1].clone().sub(position)
           const width = Math.abs(relativeP1.x - relativeP2.x) || size
           const height = Math.abs(relativeP1.y - relativeP2.y) || size
-          geometry.scale(width / size, height / size, 1)
+          
+          const shape = new THREE.Shape()
+          shape.moveTo(0, -height/2)
+          shape.lineTo(-width/2, height/2)
+          shape.lineTo(width/2, height/2)
+          shape.closePath()
+          
+          geometry = new THREE.ShapeGeometry(shape)
+        } else {
+          const shape = new THREE.Shape()
+          shape.moveTo(0, -size/2)
+          shape.lineTo(-size/2, size/2)
+          shape.lineTo(size/2, size/2)
+          shape.closePath()
+          
+          geometry = new THREE.ShapeGeometry(shape)
         }
         break
       
       case 'circle':
-        // Create a detailed circle
         if (controlPoints && controlPoints.length === 2) {
+          // Create a circle based on distance
           const relativeP1 = controlPoints[0].clone().sub(position)
           const relativeP2 = controlPoints[1].clone().sub(position)
           const radius = relativeP1.distanceTo(relativeP2) / 2
-          geometry = createDetailedGeometry('circle', radius * 2)
+          geometry = new THREE.CircleGeometry(radius, 32)
         } else {
-          geometry = createDetailedGeometry('circle', size)
+          geometry = new THREE.CircleGeometry(size/2, 32)
         }
         break
       

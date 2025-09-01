@@ -40,7 +40,7 @@ import {
   getMutableReference,
   generateProjectId
 } from '../../lib/mutableStorageService'
-import { createDetailedGeometry } from '../../lib/geometryUtils'
+import { prepareGeometryForDeformation } from '../../lib/geometryUtils'
 import { ChunkUploadProgress } from '../../components/ChunkUploadProgress'
 import { ChunkUploadProgress as ChunkProgressType } from '../../lib/chunkUploadService'
 
@@ -1209,13 +1209,6 @@ export default function AdvancedClay() {
   const [projects, setProjects] = useState<Array<{ id: string; tags: Record<string, string> }>>([])
   const [currentFolder, setCurrentFolder] = useState('')
   const [irysUploader, setIrysUploader] = useState<any>(null)
-  const [chunkUploadProgress, setChunkUploadProgress] = useState<ChunkProgressType & { isOpen: boolean; projectName: string }>({
-    currentChunk: 0,
-    totalChunks: 0,
-    percentage: 0,
-    isOpen: false,
-    projectName: ''
-  })
   
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
@@ -1322,49 +1315,87 @@ export default function AdvancedClay() {
         break
       
       case 'tetrahedron':
-        // Create a detailed tetrahedron-like shape with many vertices
-        geometry = createDetailedGeometry('tetrahedron', size, thickness)
+        // Create custom tetrahedron with base at drawn rectangle
+        const halfSize = size / 2
+        const height = size * thickness
+        
+        // Define vertices: 4 corners of base + 1 apex
+        const vertices = new Float32Array([
+          -halfSize, 0, -halfSize,  // 0: back-left
+           halfSize, 0, -halfSize,  // 1: back-right
+           halfSize, 0,  halfSize,  // 2: front-right
+          -halfSize, 0,  halfSize,  // 3: front-left
+                  0, height,     0   // 4: apex
+        ])
+        
+        // Define faces (triangles)
+        const indices = new Uint16Array([
+          0, 3, 1,  // base triangle 1
+          1, 3, 2,  // base triangle 2
+          0, 1, 4,  // side 1
+          1, 2, 4,  // side 2
+          2, 3, 4,  // side 3
+          3, 0, 4   // side 4
+        ])
+        
+        geometry = new THREE.BufferGeometry()
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
+        geometry.setIndex(new THREE.BufferAttribute(indices, 1))
+        geometry.computeVertexNormals()
         break
       case 'cube':
-        // Create a detailed cube with subdivided faces
-        geometry = createDetailedGeometry('cube', size, thickness)
+        // For cube, use dimensions directly from click points
+        geometry = new THREE.BoxGeometry(size, size * thickness, size)
         break
       
       case 'rectangle':
         if (controlPoints && controlPoints.length === 2) {
-          // Create a detailed rectangle with many vertices
+          // Create a flat plane for rectangle
           const relativeP1 = controlPoints[0].clone().sub(position)
           const relativeP2 = controlPoints[1].clone().sub(position)
-          const width = Math.abs(relativeP1.x - relativeP2.x) || size
-          const height = Math.abs(relativeP1.y - relativeP2.y) || size
-          geometry = createDetailedGeometry('rectangle', Math.max(width, height))
-          geometry.scale(width / Math.max(width, height), height / Math.max(width, height), 1)
+          const width = Math.abs(relativeP1.x - relativeP2.x)
+          const height = Math.abs(relativeP1.y - relativeP2.y)
+          geometry = new THREE.PlaneGeometry(width || size, height || size)
         } else {
-          geometry = createDetailedGeometry('rectangle', size)
+          geometry = new THREE.PlaneGeometry(size, size)
         }
         break
       
       case 'triangle':
-        // Create a detailed triangle with many vertices
-        geometry = createDetailedGeometry('triangle', size)
         if (controlPoints && controlPoints.length === 2) {
+          // Create a triangle shape
           const relativeP1 = controlPoints[0].clone().sub(position)
           const relativeP2 = controlPoints[1].clone().sub(position)
           const width = Math.abs(relativeP1.x - relativeP2.x) || size
           const height = Math.abs(relativeP1.y - relativeP2.y) || size
-          geometry.scale(width / size, height / size, 1)
+          
+          const shape = new THREE.Shape()
+          shape.moveTo(0, -height/2)
+          shape.lineTo(-width/2, height/2)
+          shape.lineTo(width/2, height/2)
+          shape.closePath()
+          
+          geometry = new THREE.ShapeGeometry(shape)
+        } else {
+          const shape = new THREE.Shape()
+          shape.moveTo(0, -size/2)
+          shape.lineTo(-size/2, size/2)
+          shape.lineTo(size/2, size/2)
+          shape.closePath()
+          
+          geometry = new THREE.ShapeGeometry(shape)
         }
         break
       
       case 'circle':
-        // Create a detailed circle
         if (controlPoints && controlPoints.length === 2) {
+          // Create a circle based on distance
           const relativeP1 = controlPoints[0].clone().sub(position)
           const relativeP2 = controlPoints[1].clone().sub(position)
           const radius = relativeP1.distanceTo(relativeP2) / 2
-          geometry = createDetailedGeometry('circle', radius * 2)
+          geometry = new THREE.CircleGeometry(radius, 32)
         } else {
-          geometry = createDetailedGeometry('circle', size)
+          geometry = new THREE.CircleGeometry(size/2, 32)
         }
         break
       
@@ -1509,19 +1540,12 @@ export default function AdvancedClay() {
         }
       }
 
-      // Step 3: Upload to Irys
+      // Step 3: Upload to Irys for free (under 100KB)
       const result = await uploadClayProject(
         uploader,
         serialized,
         currentFolder,
-        rootTxId,
-        (progress: ChunkProgressType) => {
-          setChunkUploadProgress({
-            ...progress,
-            isOpen: true,
-            projectName
-          })
-        }
+        rootTxId
       )
 
       console.log('Upload result:', result)
@@ -1544,15 +1568,8 @@ export default function AdvancedClay() {
       });
       markProjectDirty(false);
       
-      // Close progress dialog if it was open
-      setChunkUploadProgress(prev => ({ ...prev, isOpen: false }))
-      
       const viewUrl = `https://gateway.irys.xyz/mutable/${result.rootTxId}`;
-      if (result.wasChunked) {
-        alert(`Large project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nUploaded in ${chunkUploadProgress.totalChunks} chunks.\nView at: ${viewUrl}`)
-      } else {
-        alert(`Project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nView at: ${viewUrl}`)
-      }
+      alert(`Project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nView at: ${viewUrl}`)
       
       // Clear cache to refresh projects list
       queryCache.delete(`projects-${walletAddress}`)
@@ -1794,15 +1811,6 @@ export default function AdvancedClay() {
   
   return (
     <div className="h-screen bg-gray-100 relative flex flex-col">
-      {/* Chunk upload progress dialog */}
-      <ChunkUploadProgress 
-        isOpen={chunkUploadProgress.isOpen}
-        currentChunk={chunkUploadProgress.currentChunk}
-        totalChunks={chunkUploadProgress.totalChunks}
-        percentage={chunkUploadProgress.percentage}
-        projectName={chunkUploadProgress.projectName}
-      />
-      
       {/* Folder Structure - Only show when wallet connected */}
       {walletAddress && (
         <FolderStructure
