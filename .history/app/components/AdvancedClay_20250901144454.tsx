@@ -1675,36 +1675,6 @@ export default function AdvancedClay() {
     }
   }
   
-  const handleNewFile = () => {
-    if (currentProjectInfo?.isDirty) {
-      if (!confirm('You have unsaved changes. Create a new file anyway?')) {
-        return
-      }
-    }
-    
-    // Reset to initial state
-    const geometry = new THREE.SphereGeometry(2, detail, detail)
-    geometry.userData = { deformed: false };
-    
-    const initialClay: ClayObject = {
-      id: 'clay-1',
-      geometry: geometry,
-      position: new THREE.Vector3(0, 2, 0),
-      color: currentColor,
-      shape: 'sphere',
-      scale: new THREE.Vector3(1, 1, 1),
-      size: 2,
-      detail: detail
-    }
-    
-    setClayObjects([initialClay])
-    addToHistory([initialClay])
-    setCurrentProjectInfo(null)
-    setCurrentProject(null)
-    setBackgroundColor('#f0f0f0')
-    setCurrentFolder('')
-  }
-  
   // Move selected clay with keyboard
   const moveSelectedClay = useCallback((direction: 'x+' | 'x-' | 'y+' | 'y-' | 'z+' | 'z-') => {
     if (!selectedClayId || tool !== 'move') return
@@ -2027,15 +1997,6 @@ export default function AdvancedClay() {
           </button>
           
           <div className="w-px h-10 bg-gray-300" />
-          
-          {/* New File Button */}
-          <button
-            onClick={handleNewFile}
-            className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
-            title="New File"
-          >
-            <FilePlus size={20} />
-          </button>
           
           {/* Save Button */}
                       <SaveButton 
