@@ -165,7 +165,7 @@ export default function FolderStructure({
     });
 
     setFolderTree(tree);
-  }, [projects, walletAddress]);
+  }, [projects]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => {
@@ -234,13 +234,7 @@ export default function FolderStructure({
   const handleDelete = (item: FolderNode) => {
     if (confirm(`Delete ${item.name}?`)) {
       if (item.type === 'folder') {
-        // Remove from local storage
-        if (walletAddress) {
-          removeLocalFolder(walletAddress, item.id);
-        }
         onFolderDelete(item.id);
-        // Force re-render
-        fetchProjects();
       } else if (item.type === 'file' && item.projectId) {
         onProjectDelete(item.projectId);
         // Clear cache to refresh
