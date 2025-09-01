@@ -1531,7 +1531,8 @@ export default function AdvancedClay() {
       setClayObjects(restoredObjects)
       
       // Reset history with new state
-      addToHistory(restoredObjects)
+      setHistory([restoredObjects])
+      setCurrentStep(0)
       
       // Update current folder if project has folder info
       if (project.tags?.includes('Folder')) {
