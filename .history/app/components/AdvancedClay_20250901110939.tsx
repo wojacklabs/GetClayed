@@ -29,7 +29,6 @@ import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject } from '../../lib/clayStorageService'
 import { payForUpload, getUploadPrice } from '../../lib/contractService'
 import { downloadAsGLB } from '../../lib/glbService'
-import { queryCache } from '../../lib/queryCache'
 import { ethers } from 'ethers'
 
 interface ClayObject {
@@ -1498,8 +1497,8 @@ export default function AdvancedClay() {
       console.log('Project saved with ID:', transactionId)
       alert(`Project saved successfully!\nPayment TX: ${paymentTx}\nIrys ID: ${transactionId}`)
       
-      // Clear cache to refresh projects list
-      queryCache.delete(`projects-${walletAddress}`)
+      // Refresh projects list
+      // TODO: Implement project listing
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
@@ -1530,21 +1529,6 @@ export default function AdvancedClay() {
   const handleFolderDelete = (folderPath: string) => {
     // Delete folder
     console.log('Deleting folder:', folderPath)
-  }
-
-  const handleExportGLB = async () => {
-    const projectName = prompt('Enter project name for GLB export:')
-    if (!projectName) return
-
-    try {
-      await downloadAsGLB(clayObjects, projectName, {
-        author: walletAddress || 'Anonymous',
-        description: 'Created with GetClayed'
-      })
-    } catch (error) {
-      console.error('Failed to export GLB:', error)
-      alert('Failed to export GLB file')
-    }
   }
   
   // Move selected clay with keyboard
@@ -1635,7 +1619,7 @@ export default function AdvancedClay() {
       {/* Folder Structure - Only show when wallet connected */}
       {walletAddress && (
         <FolderStructure
-          walletAddress={walletAddress}
+          projects={projects}
           onProjectSelect={handleProjectSelect}
           onProjectMove={handleProjectMove}
           onFolderCreate={handleFolderCreate}
@@ -1856,15 +1840,6 @@ export default function AdvancedClay() {
           
           {/* Save Button */}
                       <SaveButton onSave={handleSaveProject} isConnected={!!walletAddress} />
-          
-          {/* Export GLB Button */}
-          <button
-            onClick={handleExportGLB}
-            className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
-            title="Export as GLB"
-          >
-            <Download size={20} />
-          </button>
         </div>
             {/* Right side - Background Color */}
             <div className="flex items-center gap-2 pr-4" style={{ minWidth: '200px' }}>
