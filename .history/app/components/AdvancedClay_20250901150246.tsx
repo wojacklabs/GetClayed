@@ -28,8 +28,6 @@ import FolderStructure from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject } from '../../lib/clayStorageService'
-import { getUploadPrice, payForUpload } from '../../lib/contractService'
-import { ethers } from 'ethers'
 import { downloadAsGLB } from '../../lib/glbService'
 import { queryCache } from '../../lib/queryCache'
 import { 
