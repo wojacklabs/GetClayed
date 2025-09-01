@@ -86,7 +86,7 @@ export default function FolderStructure({
     fetchProjects();
   }, [walletAddress]);
 
-  // Build folder tree from projects and local folders
+  // Build folder tree from projects
   useEffect(() => {
     const tree: FolderNode = {
       id: 'root',
@@ -98,35 +98,7 @@ export default function FolderStructure({
     const folderMap = new Map<string, FolderNode>();
     folderMap.set('root', tree);
 
-    // First, create all local folders
-    if (walletAddress) {
-      const localFolders = getLocalFolders(walletAddress);
-      localFolders.forEach(folderPath => {
-        const parts = folderPath.split('/').filter(Boolean);
-        let currentPath = '';
-        let parentNode = tree;
-
-        parts.forEach(part => {
-          currentPath = currentPath ? `${currentPath}/${part}` : part;
-          
-          if (!folderMap.has(currentPath)) {
-            const newFolder: FolderNode = {
-              id: currentPath,
-              name: part,
-              type: 'folder',
-              children: []
-            };
-            
-            parentNode.children!.push(newFolder);
-            folderMap.set(currentPath, newFolder);
-          }
-          
-          parentNode = folderMap.get(currentPath)!;
-        });
-      });
-    }
-
-    // Then, create folders from projects
+    // Create all folders
     projects.forEach(project => {
       const folderPath = project.folderPath === '/' ? '' : project.folderPath.replace(/^\//, '');
       if (folderPath) {
@@ -165,7 +137,7 @@ export default function FolderStructure({
     });
 
     setFolderTree(tree);
-  }, [projects, walletAddress]);
+  }, [projects]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => {
@@ -217,16 +189,7 @@ export default function FolderStructure({
     const folderName = prompt('New folder name:');
     if (folderName) {
       const path = parentId === 'root' ? folderName : `${parentId}/${folderName}`;
-      
-      // Save to local storage immediately
-      if (walletAddress) {
-        addLocalFolder(walletAddress, path);
-      }
-      
       onFolderCreate(path);
-      
-      // Force re-render to show new folder immediately
-      fetchProjects();
     }
     setContextMenu(null);
   };
@@ -234,13 +197,7 @@ export default function FolderStructure({
   const handleDelete = (item: FolderNode) => {
     if (confirm(`Delete ${item.name}?`)) {
       if (item.type === 'folder') {
-        // Remove from local storage
-        if (walletAddress) {
-          removeLocalFolder(walletAddress, item.id);
-        }
         onFolderDelete(item.id);
-        // Force re-render
-        fetchProjects();
       } else if (item.type === 'file' && item.projectId) {
         onProjectDelete(item.projectId);
         // Clear cache to refresh

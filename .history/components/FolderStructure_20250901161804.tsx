@@ -165,7 +165,7 @@ export default function FolderStructure({
     });
 
     setFolderTree(tree);
-  }, [projects, walletAddress]);
+  }, [projects]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => {
