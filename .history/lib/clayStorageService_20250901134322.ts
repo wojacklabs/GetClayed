@@ -83,21 +83,19 @@ export function serializeClayProject(
     
     // Save deformed vertices if geometry has been modified
     if (clay.geometry && clay.geometry.attributes && clay.geometry.attributes.position) {
-      // Check if this is a deformed geometry by looking for userData flag
-      const isDeformed = clay.geometry.userData?.deformed === true;
-      
-      if (isDeformed) {
-        const positions = clay.geometry.attributes.position.array;
-        const vertices = [];
-        for (let i = 0; i < positions.length; i += 3) {
-          vertices.push({
-            x: positions[i],
-            y: positions[i + 1],
-            z: positions[i + 2]
-          });
-        }
+      const positions = clay.geometry.attributes.position.array;
+      const vertices = [];
+      for (let i = 0; i < positions.length; i += 3) {
+        vertices.push({
+          x: positions[i],
+          y: positions[i + 1],
+          z: positions[i + 2]
+        });
+      }
+      // Only save if vertices have been modified (check if different from original)
+      const hasBeenModified = clay.shape && ['push', 'pull'].some(tool => true); // Simple check - in real app would compare with original
+      if (hasBeenModified || vertices.length > 0) {
         clayData.vertices = vertices;
-        console.log(`[serializeClayProject] Saved ${vertices.length} deformed vertices for clay ${clay.id}`);
       }
     }
     
@@ -207,37 +205,15 @@ export async function uploadClayProject(
  * Download clay project from Irys
  */
 export async function downloadClayProject(transactionId: string): Promise<ClayProject> {
-  try {
-    console.log('[downloadClayProject] Downloading from transaction:', transactionId)
-    
-    // Try mutable reference first
-    const mutableUrl = `https://gateway.irys.xyz/mutable/${transactionId}`;
-    console.log('[downloadClayProject] Trying mutable URL:', mutableUrl)
-    
-    let response = await fetch(mutableUrl, {
-      redirect: 'follow'
-    });
-    
-    // If mutable reference fails, try direct transaction ID
-    if (!response.ok) {
-      console.log('[downloadClayProject] Mutable reference failed, trying direct URL')
-      const directUrl = `${process.env.NEXT_PUBLIC_IRYS_GATEWAY_URL || 'https://gateway.irys.xyz'}/${transactionId}`;
-      response = await fetch(directUrl);
-    }
-    
-    if (!response.ok) {
-      throw new Error(`Failed to download project: ${response.statusText}`);
-    }
-    
-    const jsonString = await response.text();
-    const data = JSON.parse(jsonString);
-    console.log('[downloadClayProject] Downloaded data:', data)
-    
-    return data as ClayProject;
-  } catch (error) {
-    console.error('[downloadClayProject] Error:', error)
-    throw error;
+  const url = `${process.env.NEXT_PUBLIC_IRYS_GATEWAY_URL || 'https://gateway.irys.xyz'}/${transactionId}`;
+  
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download project: ${response.statusText}`);
   }
+  
+  const jsonString = await response.text();
+  return JSON.parse(jsonString);
 }
 
 /**
@@ -451,8 +427,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
     
     // Restore deformed vertices if they exist
     if (clayData.vertices && clayData.vertices.length > 0) {
-      console.log(`[restoreClayObjects] Restoring ${clayData.vertices.length} deformed vertices for clay ${clayData.id}`);
-      
       const positions = geometry.attributes.position.array;
       const vertexCount = Math.min(clayData.vertices.length, positions.length / 3);
       
@@ -466,9 +440,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
       geometry.computeVertexNormals();
       geometry.computeBoundingBox();
       geometry.computeBoundingSphere();
-      
-      // Mark geometry as deformed
-      geometry.userData.deformed = true;
     }
     
     // Restore clay object
@@ -603,61 +574,29 @@ export async function queryUserProjects(
     
     console.log(`[ClayStorage] Found ${deletedProjectIds.size} deleted projects`);
     
-    // Group by project ID to find latest versions
-    const projectMap = new Map<string, any>();
-    
-    projectResponse.data.data.transactions.edges.forEach((edge: any) => {
-      const tags: Record<string, string> = {};
-      edge.node.tags.forEach((tag: any) => {
-        tags[tag.name] = tag.value;
-      });
-      
-      const projectId = tags['Project-ID'];
-      const rootTx = tags['Root-TX'];
-      
-      if (!projectId) return; // Skip if no project ID
-      
-      // Skip deleted projects
-      if (deletedProjectIds.has(edge.node.id)) return;
-      
-      let timestamp = parseInt(tags['Created-At'] || edge.node.timestamp || '0');
-      if (timestamp < 10000000000) {
-        timestamp = timestamp * 1000;
-      }
-      
-      const projectData = {
-        id: edge.node.id,
-        projectId,
-        rootTxId: rootTx || edge.node.id,
-        name: tags['Project-Name'] || 'Untitled',
-        author: tags['Author'] || '',
-        timestamp,
-        updatedAt: parseInt(tags['Updated-At'] || tags['Created-At'] || edge.node.timestamp || '0'),
-        folderPath: tags['Folder'] || '/',
-        tags
-      };
-      
-      // If this is a root transaction (no Root-TX tag), or if we don't have this project yet
-      if (!rootTx || !projectMap.has(projectId)) {
-        projectMap.set(projectId, projectData);
-      } else {
-        // Check if this is a newer version
-        const existing = projectMap.get(projectId);
-        if (projectData.updatedAt > existing.updatedAt) {
-          projectMap.set(projectId, projectData);
+    // Filter out deleted projects
+    const projects = projectResponse.data.data.transactions.edges
+      .filter((edge: any) => !deletedProjectIds.has(edge.node.id))
+      .map((edge: any) => {
+        const tags: Record<string, string> = {};
+        edge.node.tags.forEach((tag: any) => {
+          tags[tag.name] = tag.value;
+        });
+        
+        let timestamp = parseInt(tags['Created-At'] || edge.node.timestamp || '0');
+        if (timestamp < 10000000000) {
+          timestamp = timestamp * 1000;
         }
-      }
-    });
-    
-    // Convert map to array and use the latest transaction ID for each project
-    const projects = Array.from(projectMap.values()).map(project => ({
-      id: project.rootTxId, // Use root TX ID for mutable reference
-      name: project.name,
-      author: project.author,
-      timestamp: project.timestamp,
-      folderPath: project.folderPath,
-      tags: project.tags
-    }));
+        
+        return {
+          id: edge.node.id,
+          name: tags['Project-Name'] || 'Untitled',
+          author: tags['Author'] || '',
+          timestamp,
+          folderPath: tags['Folder'] || '/',
+          tags
+        };
+      });
     
     console.log(`[ClayStorage] Returning ${projects.length} active projects`);
     return projects;

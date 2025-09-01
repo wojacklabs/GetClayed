@@ -73,43 +73,16 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
       {isOpen && (
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-96 border border-gray-200">
-            <h2 className="text-xl font-bold mb-4">
-              {currentProjectName && saveMode === 'saveAs' ? 'Save As New Project' : 'Save Project'}
-            </h2>
-            
-            {currentProjectName && saveMode === 'saveAs' && (
-              <div className="mb-4 text-sm text-gray-600">
-                Current project: <span className="font-medium">{currentProjectName}</span>
-              </div>
-            )}
-            
+            <h2 className="text-xl font-bold mb-4">Save Project</h2>
             <input
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder={saveMode === 'saveAs' ? "New project name" : "Project name"}
+              placeholder="Project name"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 mb-4"
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
               autoFocus
             />
-            
-            {currentProjectName && (
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => handleSave(false)}
-                  className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm"
-                >
-                  Update "{currentProjectName}"
-                </button>
-                <button
-                  onClick={() => setSaveMode('saveAs')}
-                  className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm"
-                >
-                  Save as New
-                </button>
-              </div>
-            )}
-            
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setIsOpen(false)}
@@ -118,12 +91,12 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
                 Cancel
               </button>
               <button
-                onClick={() => handleSave(saveMode === 'saveAs')}
-                disabled={loading || (saveMode === 'saveAs' && !projectName.trim())}
+                onClick={handleSave}
+                disabled={loading || !projectName.trim()}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {saveMode === 'saveAs' ? 'Save As' : 'Save'}
+                Save
               </button>
             </div>
           </div>

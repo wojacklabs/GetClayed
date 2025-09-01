@@ -370,13 +370,9 @@ function Clay({
           // Position update is already handled in useFrame
         } else if (meshRef.current && dragState.current.originalGeometry) {
           // Geometry update for push/pull
-          const clonedGeometry = meshRef.current.geometry.clone()
-          // Preserve userData flags
-          clonedGeometry.userData = { ...meshRef.current.geometry.userData }
-          
           const newClay = {
             ...clay,
-            geometry: clonedGeometry
+            geometry: meshRef.current.geometry.clone()
           }
           onUpdate(newClay)
         }
