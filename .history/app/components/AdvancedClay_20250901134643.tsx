@@ -370,13 +370,9 @@ function Clay({
           // Position update is already handled in useFrame
         } else if (meshRef.current && dragState.current.originalGeometry) {
           // Geometry update for push/pull
-          const clonedGeometry = meshRef.current.geometry.clone()
-          // Preserve userData flags
-          clonedGeometry.userData = { ...meshRef.current.geometry.userData }
-          
           const newClay = {
             ...clay,
-            geometry: clonedGeometry
+            geometry: meshRef.current.geometry.clone()
           }
           onUpdate(newClay)
         }
@@ -509,9 +505,6 @@ function Clay({
     geometry.computeVertexNormals()
     geometry.computeBoundingBox()
     geometry.computeBoundingSphere()
-    
-    // Mark geometry as deformed for serialization
-    geometry.userData.deformed = true
   })
   
   // Handle paint, delete and rotate object
@@ -2002,12 +1995,7 @@ export default function AdvancedClay() {
           <div className="w-px h-10 bg-gray-300" />
           
           {/* Save Button */}
-                      <SaveButton 
-                        onSave={handleSaveProject} 
-                        isConnected={!!walletAddress}
-                        currentProjectName={currentProjectInfo?.name}
-                        isDirty={currentProjectInfo?.isDirty}
-                      />
+                      <SaveButton onSave={handleSaveProject} isConnected={!!walletAddress} />
           
           {/* Export GLB Button */}
           <button

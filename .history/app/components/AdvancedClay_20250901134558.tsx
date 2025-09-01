@@ -370,13 +370,9 @@ function Clay({
           // Position update is already handled in useFrame
         } else if (meshRef.current && dragState.current.originalGeometry) {
           // Geometry update for push/pull
-          const clonedGeometry = meshRef.current.geometry.clone()
-          // Preserve userData flags
-          clonedGeometry.userData = { ...meshRef.current.geometry.userData }
-          
           const newClay = {
             ...clay,
-            geometry: clonedGeometry
+            geometry: meshRef.current.geometry.clone()
           }
           onUpdate(newClay)
         }
@@ -509,9 +505,6 @@ function Clay({
     geometry.computeVertexNormals()
     geometry.computeBoundingBox()
     geometry.computeBoundingSphere()
-    
-    // Mark geometry as deformed for serialization
-    geometry.userData.deformed = true
   })
   
   // Handle paint, delete and rotate object
@@ -1595,9 +1588,6 @@ export default function AdvancedClay() {
       const project = await downloadClayProject(projectId)
       console.log('Downloaded project:', project)
       
-      // Get mutable reference info
-      const mutableRef = getMutableReference(project.id);
-      
       // Restore clay objects
       const restoredObjects = restoreClayObjects(project, detail)
       console.log('Restored objects:', restoredObjects)
@@ -1618,20 +1608,6 @@ export default function AdvancedClay() {
       if (project.backgroundColor) {
         setBackgroundColor(project.backgroundColor)
       }
-      
-      // Set current project info
-      setCurrentProjectInfo({
-        projectId: project.id,
-        rootTxId: mutableRef?.rootTxId || projectId,
-        name: project.name,
-        isDirty: false
-      });
-      setCurrentProject({
-        projectId: project.id,
-        rootTxId: mutableRef?.rootTxId || projectId,
-        name: project.name,
-        isDirty: false
-      });
       
       alert(`Project "${project.name}" loaded successfully!`)
     } catch (error) {
@@ -2002,12 +1978,7 @@ export default function AdvancedClay() {
           <div className="w-px h-10 bg-gray-300" />
           
           {/* Save Button */}
-                      <SaveButton 
-                        onSave={handleSaveProject} 
-                        isConnected={!!walletAddress}
-                        currentProjectName={currentProjectInfo?.name}
-                        isDirty={currentProjectInfo?.isDirty}
-                      />
+                      <SaveButton onSave={handleSaveProject} isConnected={!!walletAddress} />
           
           {/* Export GLB Button */}
           <button

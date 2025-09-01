@@ -370,13 +370,9 @@ function Clay({
           // Position update is already handled in useFrame
         } else if (meshRef.current && dragState.current.originalGeometry) {
           // Geometry update for push/pull
-          const clonedGeometry = meshRef.current.geometry.clone()
-          // Preserve userData flags
-          clonedGeometry.userData = { ...meshRef.current.geometry.userData }
-          
           const newClay = {
             ...clay,
-            geometry: clonedGeometry
+            geometry: meshRef.current.geometry.clone()
           }
           onUpdate(newClay)
         }
@@ -509,9 +505,6 @@ function Clay({
     geometry.computeVertexNormals()
     geometry.computeBoundingBox()
     geometry.computeBoundingSphere()
-    
-    // Mark geometry as deformed for serialization
-    geometry.userData.deformed = true
   })
   
   // Handle paint, delete and rotate object
@@ -1240,16 +1233,6 @@ export default function AdvancedClay() {
   const [irysUploader, setIrysUploader] = useState<any>(null)
   
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
-  const cameraRef = useRef<THREE.Camera>(null)
-  const controlsRef = useRef<any>(null)
-  
-  // Mark project as dirty when clay objects change
-  useEffect(() => {
-    if (currentProjectInfo && clayObjects.length > 0) {
-      markProjectDirty(true);
-      setCurrentProjectInfo(prev => prev ? {...prev, isDirty: true} : null);
-    }
-  }, [clayObjects, backgroundColor])
   
   // Initialize with one clay
   useEffect(() => {
@@ -1479,32 +1462,16 @@ export default function AdvancedClay() {
     addToHistory([initialClay])
   }
 
-  const handleSaveProject = async (projectName: string, saveAs: boolean = false) => {
+  const handleSaveProject = async (projectName: string) => {
     if (!irysUploader || !walletAddress) {
       alert('Please connect your wallet first')
       return
     }
 
     try {
-      console.log('Saving project:', projectName, 'saveAs:', saveAs)
+      console.log('Saving project:', projectName)
       console.log('Clay objects:', clayObjects)
       console.log('First clay object structure:', clayObjects[0])
-      
-      let projectId: string;
-      let rootTxId: string | undefined;
-      
-      // Check if we're updating an existing project or creating a new one
-      if (currentProjectInfo && !saveAs) {
-        // Update existing project
-        projectId = currentProjectInfo.projectId;
-        rootTxId = currentProjectInfo.rootTxId;
-        console.log('Updating existing project:', projectId, 'with root:', rootTxId);
-      } else {
-        // Create new project or save as new
-        projectId = generateProjectId();
-        rootTxId = undefined;
-        console.log('Creating new project:', projectId);
-      }
       
       // Step 1: Pay for upload via smart contract
       const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
@@ -1537,38 +1504,16 @@ export default function AdvancedClay() {
         [], // tags
         backgroundColor
       )
-      serialized.id = projectId; // Ensure project has the correct ID
 
-      // Step 3: Upload to Irys with mutable reference support
-      const result = await uploadClayProject(
+      // Step 3: Upload to Irys
+      const transactionId = await uploadClayProject(
         irysUploader,
         serialized,
-        currentFolder,
-        rootTxId
+        currentFolder
       )
 
-      console.log('Upload result:', result)
-      
-      // Save mutable reference
-      saveMutableReference(
-        projectId,
-        result.rootTxId,
-        result.transactionId,
-        projectName,
-        walletAddress
-      );
-      
-      // Update current project info
-      setCurrentProjectInfo({
-        projectId,
-        rootTxId: result.rootTxId,
-        name: projectName,
-        isDirty: false
-      });
-      markProjectDirty(false);
-      
-      const viewUrl = `https://gateway.irys.xyz/mutable/${result.rootTxId}`;
-      alert(`Project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nPayment TX: ${paymentTx}\nView at: ${viewUrl}`)
+      console.log('Project saved with ID:', transactionId)
+      alert(`Project saved successfully!\nPayment TX: ${paymentTx}\nIrys ID: ${transactionId}`)
       
       // Clear cache to refresh projects list
       queryCache.delete(`projects-${walletAddress}`)
@@ -1595,9 +1540,6 @@ export default function AdvancedClay() {
       const project = await downloadClayProject(projectId)
       console.log('Downloaded project:', project)
       
-      // Get mutable reference info
-      const mutableRef = getMutableReference(project.id);
-      
       // Restore clay objects
       const restoredObjects = restoreClayObjects(project, detail)
       console.log('Restored objects:', restoredObjects)
@@ -1618,20 +1560,6 @@ export default function AdvancedClay() {
       if (project.backgroundColor) {
         setBackgroundColor(project.backgroundColor)
       }
-      
-      // Set current project info
-      setCurrentProjectInfo({
-        projectId: project.id,
-        rootTxId: mutableRef?.rootTxId || projectId,
-        name: project.name,
-        isDirty: false
-      });
-      setCurrentProject({
-        projectId: project.id,
-        rootTxId: mutableRef?.rootTxId || projectId,
-        name: project.name,
-        isDirty: false
-      });
       
       alert(`Project "${project.name}" loaded successfully!`)
     } catch (error) {
@@ -2002,12 +1930,7 @@ export default function AdvancedClay() {
           <div className="w-px h-10 bg-gray-300" />
           
           {/* Save Button */}
-                      <SaveButton 
-                        onSave={handleSaveProject} 
-                        isConnected={!!walletAddress}
-                        currentProjectName={currentProjectInfo?.name}
-                        isDirty={currentProjectInfo?.isDirty}
-                      />
+                      <SaveButton onSave={handleSaveProject} isConnected={!!walletAddress} />
           
           {/* Export GLB Button */}
           <button

@@ -451,8 +451,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
     
     // Restore deformed vertices if they exist
     if (clayData.vertices && clayData.vertices.length > 0) {
-      console.log(`[restoreClayObjects] Restoring ${clayData.vertices.length} deformed vertices for clay ${clayData.id}`);
-      
       const positions = geometry.attributes.position.array;
       const vertexCount = Math.min(clayData.vertices.length, positions.length / 3);
       
@@ -466,9 +464,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
       geometry.computeVertexNormals();
       geometry.computeBoundingBox();
       geometry.computeBoundingSphere();
-      
-      // Mark geometry as deformed
-      geometry.userData.deformed = true;
     }
     
     // Restore clay object
