@@ -1180,14 +1180,11 @@ function DynamicGridHelper() {
       <Text position={[0, 10.5, 0]} fontSize={0.5} color="green">Y</Text>
       <Text position={[0, 0, 10.5]} fontSize={0.5} color="blue">Z</Text>
       
-      {/* Depth adjustment indicator for move tool */}
-      <group position={[0, 11, 0]}>
-        <Text fontSize={0.4} color="yellow">
-          Scroll: Move along camera direction (depth)
+      {/* Camera direction indicator */}
+      <group position={[0, 12, 0]}>
+        <Text fontSize={0.3} color="white">
+          Camera: {cameraInfo.direction.x.toFixed(2)}, {cameraInfo.direction.y.toFixed(2)}, {cameraInfo.direction.z.toFixed(2)}
         </Text>
-        <arrowHelper 
-          args={[cameraInfo.direction, new THREE.Vector3(0, 10, 0), 3, 0xffff00]} 
-        />
       </group>
       
       {/* XY plane (vertical) */}
