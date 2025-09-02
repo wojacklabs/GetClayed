@@ -112,11 +112,10 @@ function useHistory() {
 
 // Brush Guide Component
 function BrushGuide({ position, size }: { position: THREE.Vector3; size: number }) {
-  // Use absolute size in world units
   return (
     <mesh position={position}>
       <sphereGeometry args={[size, 16, 16]} />
-      <meshBasicMaterial color="#4dabf7" opacity={0.3} transparent wireframe />
+      <meshBasicMaterial color="#4dabf7" opacity={0.3} transparent />
     </mesh>
   )
 }
@@ -1116,53 +1115,56 @@ function AddClayHelper({
 
 // Screen-locked Isometric Grid Helper
 function DynamicGridHelper() {
+  const { camera } = useThree()
+  const meshRef = useRef<THREE.Mesh>(null)
+  
+  useFrame(() => {
+    if (meshRef.current) {
+      // Get camera position and direction
+      const cameraPosition = new THREE.Vector3()
+      camera.getWorldPosition(cameraPosition)
+      
+      const cameraDirection = new THREE.Vector3()
+      camera.getWorldDirection(cameraDirection)
+      
+      // Position grid in front of camera
+      const planeDistance = 5
+      const planeCenter = cameraPosition.clone().add(cameraDirection.clone().multiplyScalar(planeDistance))
+      
+      // Calculate camera's right and up vectors in world space
+      const worldUp = new THREE.Vector3(0, 1, 0)
+      const cameraRight = new THREE.Vector3().crossVectors(cameraDirection, worldUp).normalize()
+      const cameraUp = new THREE.Vector3().crossVectors(cameraRight, cameraDirection).normalize()
+      
+      // Create a 45-degree tilt relative to camera's view
+      const tiltAngle = Math.PI / 4 // 45 degrees
+      const tiltAxis = cameraRight // Tilt around camera's right axis
+      
+      // Create quaternion that combines camera rotation with tilt
+      const quaternion = new THREE.Quaternion()
+      quaternion.setFromAxisAngle(cameraRight, -tiltAngle)
+      
+      // Apply camera's quaternion first, then tilt
+      const cameraQuaternion = camera.quaternion.clone()
+      quaternion.premultiply(cameraQuaternion)
+      
+      // Apply position and rotation
+      meshRef.current.position.copy(planeCenter)
+      meshRef.current.quaternion.copy(quaternion)
+    }
+  })
+  
   return (
-    <group>
-      {/* XZ plane (ground) */}
-      <gridHelper args={[20, 20, '#444444', '#666666']} />
-      
-      {/* Y axis indicator */}
-      <mesh position={[0, 5, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
-        <meshBasicMaterial color="#00ff00" opacity={0.5} transparent />
-      </mesh>
-      
-      {/* X axis indicator */}
-      <mesh position={[5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
-        <meshBasicMaterial color="#ff0000" opacity={0.5} transparent />
-      </mesh>
-      
-      {/* Z axis indicator */}
-      <mesh position={[0, 0, 5]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
-        <meshBasicMaterial color="#0000ff" opacity={0.5} transparent />
-      </mesh>
-      
-      {/* XY plane */}
-      <mesh position={[0, 0, -5]} rotation={[0, 0, 0]}>
-        <planeGeometry args={[20, 20, 20, 20]} />
-        <meshBasicMaterial 
-          color="#666666" 
-          wireframe 
-          transparent 
-          opacity={0.1} 
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      
-      {/* YZ plane */}
-      <mesh position={[-5, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[20, 20, 20, 20]} />
-        <meshBasicMaterial 
-          color="#666666" 
-          wireframe 
-          transparent 
-          opacity={0.1} 
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    </group>
+    <mesh ref={meshRef}>
+      <planeGeometry args={[40, 40, 40, 40]} />
+      <meshBasicMaterial 
+        color="#888888" 
+        wireframe 
+        transparent 
+        opacity={0.2} 
+        side={THREE.DoubleSide}
+      />
+    </mesh>
   )
 }
 
@@ -1182,7 +1184,7 @@ function RaycasterManager({
   setSelectedClayId: (id: string | null) => void
   removeClay: (id: string) => void
 }) {
-  const { camera, raycaster, gl, scene } = useThree()
+  const { camera, raycaster, gl } = useThree()
   
   useEffect(() => {
     const handlePointerClick = (event: PointerEvent) => {
@@ -1208,7 +1210,7 @@ function RaycasterManager({
       
       // Get all intersections
       const allIntersects: THREE.Intersection[] = []
-      scene.traverse((child) => {
+      gl.scene.traverse((child) => {
         if (child instanceof THREE.Mesh && child.userData.clayId) {
           const intersects = raycaster.intersectObject(child, false)
           if (intersects.length > 0) {
@@ -1244,7 +1246,7 @@ function RaycasterManager({
     return () => {
       gl.domElement.removeEventListener('click', handlePointerClick)
     }
-  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, camera, raycaster, gl, scene])
+  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, camera, raycaster, gl])
   
   return null
 }
@@ -1934,6 +1936,7 @@ export default function AdvancedClay() {
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
+        raycaster={{ params: { Points: { threshold: 0.1 }, Line: { threshold: 0.1 } } }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.6} />
@@ -1995,10 +1998,10 @@ export default function AdvancedClay() {
             <AddClayHelper onAdd={addNewClay} shape={selectedShape} />
           )}
           
-          {/* Grid for reference */}
-          {(tool === 'add' || tool === 'move') && (
+          {/* Grid for reference - hidden for now */}
+          {/* {tool === 'add' && (
             <DynamicGridHelper />
-          )}
+          )} */}
           
           <Environment preset="studio" />
         </Suspense>
