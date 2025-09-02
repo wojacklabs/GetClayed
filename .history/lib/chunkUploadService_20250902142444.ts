@@ -104,8 +104,8 @@ export async function uploadInChunks(
       tags.push({ name: 'Root-TX', value: rootTxId });
     }
     
-    // Upload chunk using fixed key uploader
-    const receipt = await fixedKeyUploader.upload(chunkBuffer, tags);
+    // Upload chunk (use already prepared buffer)
+    const receipt = await uploadToIrys(irysUploader, chunkBuffer, tags);
     
     transactionIds.push(receipt.id);
     chunkMetadata.push({
@@ -238,8 +238,7 @@ export async function uploadChunkManifest(
   }
   
   const uploadData = Buffer.from(JSON.stringify(manifest), 'utf-8');
-  // Use fixed key uploader for manifest
-  const receipt = await fixedKeyUploader.upload(uploadData, tags);
+  const receipt = await uploadToIrys(irysUploader, uploadData, tags);
   
   return receipt.id;
 }

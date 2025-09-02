@@ -218,8 +218,7 @@ export async function uploadClayProject(
     });
   }
   
-  // Use fixed key uploader instead of user's wallet
-  const receipt = await fixedKeyUploader.upload(data, tags);
+  const receipt = await uploadToIrys(irysUploader, data, tags);
   
   // Return the rootTxId (either existing or new transaction ID)
   const finalRootTxId = rootTxId || receipt.id;
