@@ -601,7 +601,7 @@ export async function queryUserProjects(
     const projectTags = [
       { name: 'App-Name', values: ['GetClayed'] },
       { name: 'Data-Type', values: ['clay-project', 'clay-project-manifest'] },
-      { name: 'Author', values: [walletAddress.toLowerCase()] }
+      { name: 'Author', values: [walletAddress] }
     ];
     
     if (folderPath && folderPath !== '/') {

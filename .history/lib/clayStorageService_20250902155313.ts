@@ -191,7 +191,7 @@ export async function uploadClayProject(
     { name: 'Data-Type', value: 'clay-project' },
     { name: 'Project-Name', value: project.name },
     { name: 'Project-ID', value: project.id },
-    { name: 'Author', value: project.author.toLowerCase() },
+    { name: 'Author', value: project.author },
     { name: 'Created-At', value: project.createdAt.toString() },
     { name: 'Updated-At', value: Date.now().toString() },
     { name: 'Version', value: '2.0' },
@@ -601,7 +601,7 @@ export async function queryUserProjects(
     const projectTags = [
       { name: 'App-Name', values: ['GetClayed'] },
       { name: 'Data-Type', values: ['clay-project', 'clay-project-manifest'] },
-      { name: 'Author', values: [walletAddress.toLowerCase()] }
+      { name: 'Author', values: [walletAddress] }
     ];
     
     if (folderPath && folderPath !== '/') {
