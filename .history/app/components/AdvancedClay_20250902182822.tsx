@@ -1140,93 +1140,64 @@ function AddClayHelper({
 // Screen-locked Isometric Grid Helper
 function DynamicGridHelper() {
   const { camera } = useThree()
-  const meshRef = useRef<THREE.Group>(null)
+  const [cameraInfo, setCameraInfo] = useState({ direction: new THREE.Vector3(), position: new THREE.Vector3() })
   
   useFrame(() => {
-    if (meshRef.current) {
-      // Get camera position and calculate depth planes
-      const cameraPos = camera.position.clone()
-      const lookAt = new THREE.Vector3(0, 0, 0)
-      const cameraDir = lookAt.clone().sub(cameraPos).normalize()
-      
-      // Position depth planes perpendicular to camera view
-      const distance = 8
-      const planePos = cameraPos.clone().add(cameraDir.clone().multiplyScalar(distance))
-      
-      // Calculate perpendicular vectors for depth plane
-      const up = new THREE.Vector3(0, 1, 0)
-      const right = new THREE.Vector3().crossVectors(cameraDir, up).normalize()
-      const planeUp = new THREE.Vector3().crossVectors(right, cameraDir).normalize()
-      
-      // Update depth plane orientation
-      const depthPlane = meshRef.current.getObjectByName('depthPlane')
-      if (depthPlane) {
-        depthPlane.position.copy(planePos)
-        depthPlane.lookAt(planePos.clone().add(cameraDir))
-      }
-    }
+    const dir = new THREE.Vector3()
+    camera.getWorldDirection(dir)
+    const pos = new THREE.Vector3()
+    camera.getWorldPosition(pos)
+    setCameraInfo({ direction: dir, position: pos })
   })
   
   return (
-    <group ref={meshRef}>
-      {/* Ground grid for reference */}
-      <gridHelper args={[20, 20, '#333333', '#555555']} />
+    <group>
+      {/* XZ plane (ground) */}
+      <gridHelper args={[20, 20, '#444444', '#666666']} />
       
-      {/* Minimal axis indicators at origin */}
-      <group>
-        {/* X axis (red) */}
-        <mesh position={[2.5, 0, 0]}>
-          <boxGeometry args={[5, 0.1, 0.1]} />
-          <meshBasicMaterial color="#ff0000" opacity={0.6} transparent />
-        </mesh>
-        
-        {/* Y axis (green) */}
-        <mesh position={[0, 2.5, 0]}>
-          <boxGeometry args={[0.1, 5, 0.1]} />
-          <meshBasicMaterial color="#00ff00" opacity={0.6} transparent />
-        </mesh>
-        
-        {/* Z axis (blue) */}
-        <mesh position={[0, 0, 2.5]}>
-          <boxGeometry args={[0.1, 0.1, 5]} />
-          <meshBasicMaterial color="#0000ff" opacity={0.6} transparent />
-        </mesh>
+      {/* Axis arrows */}
+      <arrowHelper args={[new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 10, 0xff0000]} />
+      <arrowHelper args={[new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 10, 0x00ff00]} />
+      <arrowHelper args={[new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 10, 0x0000ff]} />
+      
+      {/* Axis labels */}
+      <Text position={[10.5, 0, 0]} fontSize={0.5} color="red">X</Text>
+      <Text position={[0, 10.5, 0]} fontSize={0.5} color="green">Y</Text>
+      <Text position={[0, 0, 10.5]} fontSize={0.5} color="blue">Z</Text>
+      
+      {/* Depth adjustment indicator for move tool */}
+      <group position={[0, 11, 0]}>
+        <Text fontSize={0.4} color="yellow">
+          Scroll: Move along camera direction (depth)
+        </Text>
+        <arrowHelper 
+          args={[cameraInfo.direction, new THREE.Vector3(0, 10, 0), 3, 0xffff00]} 
+        />
       </group>
       
-      {/* Depth reference plane */}
-      <mesh name="depthPlane">
-        <planeGeometry args={[15, 15, 15, 15]} />
+      {/* XY plane (vertical) */}
+      <mesh position={[0, 5, -10]} rotation={[0, 0, 0]}>
+        <planeGeometry args={[20, 10, 20, 10]} />
         <meshBasicMaterial 
-          color="#4dabf7" 
+          color="#666666" 
           wireframe 
           transparent 
-          opacity={0.15} 
+          opacity={0.1} 
           side={THREE.DoubleSide}
         />
       </mesh>
       
-      {/* Depth markers */}
-      <group>
-        {[0, 5, 10, -5, -10].map((z, i) => (
-          <group key={i} position={[0, 0, z]}>
-            <mesh>
-              <ringGeometry args={[0.8, 1, 32]} />
-              <meshBasicMaterial 
-                color={z === 0 ? "#ffffff" : "#666666"} 
-                opacity={z === 0 ? 0.8 : 0.4} 
-                transparent 
-              />
-            </mesh>
-            <Text 
-              position={[1.5, 0, 0]} 
-              fontSize={0.3} 
-              color={z === 0 ? "white" : "#666666"}
-            >
-              {z > 0 ? `+${z}` : z}
-            </Text>
-          </group>
-        ))}
-      </group>
+      {/* YZ plane (vertical) */}
+      <mesh position={[-10, 5, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[20, 10, 20, 10]} />
+        <meshBasicMaterial 
+          color="#666666" 
+          wireframe 
+          transparent 
+          opacity={0.1} 
+          side={THREE.DoubleSide}
+        />
+      </mesh>
     </group>
   )
 }
@@ -1457,20 +1428,8 @@ export default function AdvancedClay() {
         geometry = createDetailedGeometry('tetrahedron', size, thickness)
         break
       case 'cube':
-        // Create a detailed cube with actual dimensions
-        if (controlPoints && controlPoints.length > 0) {
-          // Use custom dimensions passed in controlPoints[0]
-          const dimensions = controlPoints[0]
-          const segments = 10
-          geometry = new THREE.BoxGeometry(
-            dimensions.x, 
-            dimensions.y, 
-            dimensions.z, 
-            segments, segments, segments
-          )
-        } else {
-          geometry = createDetailedGeometry('cube', size, thickness)
-        }
+        // Create a detailed cube with subdivided faces
+        geometry = createDetailedGeometry('cube', size, thickness)
         break
       
       case 'rectangle':
