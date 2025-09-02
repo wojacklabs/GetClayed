@@ -716,10 +716,6 @@ export async function queryUserProjects(
       // For manifest files, we need to show them as projects but with manifest indicator
       const isManifest = dataType === 'clay-project-manifest';
       
-      if (isManifest) {
-        console.log(`[ClayStorage] Found manifest: ${projectId}, TX: ${edge.node.id}`);
-      }
-      
       let timestamp = parseInt(tags['Created-At'] || edge.node.timestamp || '0');
       if (timestamp < 10000000000) {
         timestamp = timestamp * 1000;

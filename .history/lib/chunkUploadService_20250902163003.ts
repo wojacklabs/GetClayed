@@ -220,11 +220,10 @@ export async function uploadChunkManifest(
   };
   
   const tags = [
-    { name: 'App-Name', value: 'GetClayed' },
     { name: 'Data-Type', value: 'clay-project-manifest' },
     { name: 'Project-ID', value: projectId },
     { name: 'Project-Name', value: projectName },
-    { name: 'Author', value: walletAddress.toLowerCase() },
+    { name: 'Author', value: walletAddress },
     { name: 'Chunk-Set-ID', value: chunkSetId },
     { name: 'Total-Chunks', value: totalChunks.toString() },
     { name: 'Created-At', value: new Date().toISOString() }

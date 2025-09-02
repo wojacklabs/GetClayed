@@ -696,8 +696,6 @@ export async function queryUserProjects(
     // Group by project ID to find latest versions
     const projectMap = new Map<string, any>();
     
-    console.log(`[ClayStorage] Processing ${projectResponse.data.data.transactions.edges.length} transactions`);
-    
     projectResponse.data.data.transactions.edges.forEach((edge: any) => {
       const tags: Record<string, string> = {};
       edge.node.tags.forEach((tag: any) => {
@@ -716,10 +714,6 @@ export async function queryUserProjects(
       // For manifest files, we need to show them as projects but with manifest indicator
       const isManifest = dataType === 'clay-project-manifest';
       
-      if (isManifest) {
-        console.log(`[ClayStorage] Found manifest: ${projectId}, TX: ${edge.node.id}`);
-      }
-      
       let timestamp = parseInt(tags['Created-At'] || edge.node.timestamp || '0');
       if (timestamp < 10000000000) {
         timestamp = timestamp * 1000;
@@ -734,8 +728,7 @@ export async function queryUserProjects(
         timestamp,
         updatedAt: parseInt(tags['Updated-At'] || tags['Created-At'] || edge.node.timestamp || '0'),
         folderPath: tags['Folder'] || '/',
-        tags,
-        isManifest // Add manifest indicator
+        tags
       };
       
       // If this is a root transaction (no Root-TX tag), or if we don't have this project yet
