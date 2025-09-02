@@ -1235,12 +1235,7 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: 
       {tool === 'move' && selectedClayPos && (
         <group position={selectedClayPos}>
           {/* Camera-aligned movement plane */}
-          <mesh 
-            onUpdate={(self) => {
-              // Orient plane to face camera
-              self.lookAt(camera.position)
-            }}
-          >
+          <mesh>
             <planeGeometry args={[8, 8, 8, 8]} />
             <meshBasicMaterial 
               color="#00ffff" 
