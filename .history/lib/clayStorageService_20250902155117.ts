@@ -191,7 +191,7 @@ export async function uploadClayProject(
     { name: 'Data-Type', value: 'clay-project' },
     { name: 'Project-Name', value: project.name },
     { name: 'Project-ID', value: project.id },
-    { name: 'Author', value: project.author.toLowerCase() },
+    { name: 'Author', value: project.author },
     { name: 'Created-At', value: project.createdAt.toString() },
     { name: 'Updated-At', value: Date.now().toString() },
     { name: 'Version', value: '2.0' },
@@ -342,7 +342,7 @@ export async function queryClayProjects(
   
   let tagFilters = [
     { name: 'App-Name', values: ['GetClayed'] },
-    { name: 'Data-Type', values: ['clay-project'] }
+    { name: 'Data-Type', values: ['clay-project', 'clay-project-manifest'] }
   ];
   
   if (author) {
@@ -381,6 +381,9 @@ export async function queryClayProjects(
     `
   };
   
+  console.log('[queryClayProjects] Query filters:', tagFilters);
+  console.log('[queryClayProjects] GraphQL query:', query.query);
+  
   const response = await fetch(queryUrl.toString(), {
     method: 'POST',
     headers: {
@@ -394,6 +397,7 @@ export async function queryClayProjects(
   }
   
   const result = await response.json();
+  console.log('[queryClayProjects] Raw response:', result);
   
   return result.data.transactions.edges.map((edge: any) => {
     const tags: Record<string, string> = {};
@@ -601,7 +605,7 @@ export async function queryUserProjects(
     const projectTags = [
       { name: 'App-Name', values: ['GetClayed'] },
       { name: 'Data-Type', values: ['clay-project', 'clay-project-manifest'] },
-      { name: 'Author', values: [walletAddress.toLowerCase()] }
+      { name: 'Author', values: [walletAddress] }
     ];
     
     if (folderPath && folderPath !== '/') {

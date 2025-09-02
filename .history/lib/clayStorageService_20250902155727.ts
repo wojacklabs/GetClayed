@@ -191,7 +191,7 @@ export async function uploadClayProject(
     { name: 'Data-Type', value: 'clay-project' },
     { name: 'Project-Name', value: project.name },
     { name: 'Project-ID', value: project.id },
-    { name: 'Author', value: project.author.toLowerCase() },
+    { name: 'Author', value: project.author },
     { name: 'Created-At', value: project.createdAt.toString() },
     { name: 'Updated-At', value: Date.now().toString() },
     { name: 'Version', value: '2.0' },
@@ -601,11 +601,56 @@ export async function queryUserProjects(
     const projectTags = [
       { name: 'App-Name', values: ['GetClayed'] },
       { name: 'Data-Type', values: ['clay-project', 'clay-project-manifest'] },
-      { name: 'Author', values: [walletAddress.toLowerCase()] }
+      { name: 'Author', values: [walletAddress] }
+    ];
+    
+    // Debug: Also query without Author filter to see all uploads
+    const debugTags = [
+      { name: 'App-Name', values: ['GetClayed'] },
+      { name: 'Data-Type', values: ['clay-project', 'clay-project-manifest'] }
     ];
     
     if (folderPath && folderPath !== '/') {
       projectTags.push({ name: 'Folder', values: [folderPath] });
+    }
+    
+    // Debug query without author filter
+    const debugQuery = `
+      query {
+        transactions(
+          tags: [${debugTags.map(tag => 
+            `{ name: "${tag.name}", values: ${JSON.stringify(tag.values)} }`
+          ).join(', ')}],
+          first: 10,
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+              timestamp
+              tags {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
+    
+    console.log('[ClayStorage] Debug - Querying all GetClayed projects...');
+    const debugResponse = await axios.post(IRYS_GRAPHQL_URL, { 
+      query: debugQuery 
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    console.log('[ClayStorage] Debug - All projects:', debugResponse.data?.data?.transactions?.edges?.length || 0);
+    if (debugResponse.data?.data?.transactions?.edges?.length > 0) {
+      console.log('[ClayStorage] Debug - First project tags:', 
+        debugResponse.data.data.transactions.edges[0].node.tags);
     }
     
     const projectQuery = `
@@ -631,6 +676,8 @@ export async function queryUserProjects(
       }
     `;
     
+    console.log('[ClayStorage] GraphQL query:', projectQuery);
+    
     const projectResponse = await axios.post(IRYS_GRAPHQL_URL, { 
       query: projectQuery 
     }, {
@@ -638,6 +685,8 @@ export async function queryUserProjects(
         'Content-Type': 'application/json',
       }
     });
+    
+    console.log('[ClayStorage] GraphQL response:', projectResponse.data);
     
     if (!projectResponse.data?.data?.transactions?.edges) {
       console.error('[ClayStorage] Invalid response structure:', projectResponse.data);
