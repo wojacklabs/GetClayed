@@ -23,7 +23,7 @@ export async function payForUpload(provider: any): Promise<string> {
     
     // Check network (like IrysDune)
     const network = await ethersProvider.getNetwork();
-    if (network.chainId !== BigInt(1270)) {
+    if (network.chainId !== 1270n) {
       throw new Error('Not connected to Irys testnet. Please switch networks.');
     }
     console.log('[ContractService] Connected to Irys testnet');
