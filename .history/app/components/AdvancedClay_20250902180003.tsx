@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { TrackballControls, Environment, Box, Line, Text } from '@react-three/drei'
+import { TrackballControls, Environment, Box, Line } from '@react-three/drei'
 import { useRef, useState, useEffect, Suspense, useCallback } from 'react'
 import * as THREE from 'three'
 import { 
@@ -1154,45 +1154,32 @@ function AddClayHelper({
 
 // Screen-locked Isometric Grid Helper
 function DynamicGridHelper() {
-  const { camera } = useThree()
-  const [cameraInfo, setCameraInfo] = useState({ direction: new THREE.Vector3(), position: new THREE.Vector3() })
-  
-  useFrame(() => {
-    const dir = new THREE.Vector3()
-    camera.getWorldDirection(dir)
-    const pos = new THREE.Vector3()
-    camera.getWorldPosition(pos)
-    setCameraInfo({ direction: dir, position: pos })
-  })
-  
   return (
     <group>
       {/* XZ plane (ground) */}
       <gridHelper args={[20, 20, '#444444', '#666666']} />
       
-      {/* Axis arrows */}
-      <arrowHelper args={[new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 10, 0xff0000]} />
-      <arrowHelper args={[new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 10, 0x00ff00]} />
-      <arrowHelper args={[new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 10, 0x0000ff]} />
+      {/* Y axis indicator */}
+      <mesh position={[0, 5, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
+        <meshBasicMaterial color="#00ff00" opacity={0.5} transparent />
+      </mesh>
       
-      {/* Axis labels */}
-      <Text position={[10.5, 0, 0]} fontSize={0.5} color="red">X</Text>
-      <Text position={[0, 10.5, 0]} fontSize={0.5} color="green">Y</Text>
-      <Text position={[0, 0, 10.5]} fontSize={0.5} color="blue">Z</Text>
+      {/* X axis indicator */}
+      <mesh position={[5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
+        <meshBasicMaterial color="#ff0000" opacity={0.5} transparent />
+      </mesh>
       
-      {/* Depth adjustment indicator for move tool */}
-      <group position={[0, 11, 0]}>
-        <Text fontSize={0.4} color="yellow">
-          Scroll: Move along camera direction (depth)
-        </Text>
-        <arrowHelper 
-          args={[cameraInfo.direction, new THREE.Vector3(0, 10, 0), 3, 0xffff00]} 
-        />
-      </group>
+      {/* Z axis indicator */}
+      <mesh position={[0, 0, 5]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
+        <meshBasicMaterial color="#0000ff" opacity={0.5} transparent />
+      </mesh>
       
-      {/* XY plane (vertical) */}
-      <mesh position={[0, 5, -10]} rotation={[0, 0, 0]}>
-        <planeGeometry args={[20, 10, 20, 10]} />
+      {/* XY plane */}
+      <mesh position={[0, 0, -5]} rotation={[0, 0, 0]}>
+        <planeGeometry args={[20, 20, 20, 20]} />
         <meshBasicMaterial 
           color="#666666" 
           wireframe 
@@ -1202,9 +1189,9 @@ function DynamicGridHelper() {
         />
       </mesh>
       
-      {/* YZ plane (vertical) */}
-      <mesh position={[-10, 5, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[20, 10, 20, 10]} />
+      {/* YZ plane */}
+      <mesh position={[-5, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[20, 20, 20, 20]} />
         <meshBasicMaterial 
           color="#666666" 
           wireframe 
