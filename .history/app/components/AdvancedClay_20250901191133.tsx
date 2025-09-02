@@ -27,7 +27,8 @@ import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
-import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject } from '../../lib/clayStorageService'
+import { serializeClayProject, downloadClayProject, restoreClayObjects, deleteClayProject } from '../../lib/clayStorageService'
+import { bundledUploadClayProject } from '../../lib/bundledStorageService'
 import { getUploadPrice, payForUpload } from '../../lib/contractService'
 import { ethers } from 'ethers'
 import { downloadAsGLB } from '../../lib/glbService'
@@ -1491,42 +1492,7 @@ export default function AdvancedClay() {
         alert(`Your project is ${sizeInKB.toFixed(2)} KB, which exceeds the 90KB free tier.\nIt will be split into multiple chunks for upload.`);
       }
 
-      // Step 2: Pay service fee via smart contract first
-      try {
-        // Get raw provider
-        let rawProvider = (window as any).ethereum;
-        if (!rawProvider && (window as any).okxwallet) {
-          rawProvider = (window as any).okxwallet;
-        } else if (!rawProvider && typeof (window as any).web3 !== 'undefined' && (window as any).web3.currentProvider) {
-          rawProvider = (window as any).web3.currentProvider;
-        }
-        
-        if (!rawProvider) {
-          alert('No wallet provider found. Please install MetaMask or another Ethereum wallet.');
-          return;
-        }
-        
-        console.log('Raw provider obtained:', rawProvider)
-        console.log('Paying service fee via smart contract...')
-        const paymentTx = await payForUpload(rawProvider)
-        console.log('Service fee payment transaction:', paymentTx)
-        
-        alert(`Service fee paid successfully! TX: ${paymentTx}`)
-      } catch (error: any) {
-        console.error('Service fee payment failed:', error)
-        if (error?.message?.includes('User rejected')) {
-          alert('Transaction cancelled by user')
-          return
-        } else if (error?.message?.includes('Irys testnet')) {
-          alert('Please switch to Irys testnet network in your wallet.')
-          return
-        } else {
-          alert('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.')
-          return
-        }
-      }
-
-      // Step 3: Upload to Irys (no payment needed for free tier)
+      // Step 2: Upload to Irys first (first signature)
       console.log('Starting Irys upload...')
       let uploadResult;
       try {
@@ -1548,6 +1514,42 @@ export default function AdvancedClay() {
         console.error('Irys upload failed:', uploadError)
         alert('Failed to upload project to Irys. Please try again.')
         return
+      }
+
+      // Step 3: Pay service fee via smart contract (0.1 IRYS) - second signature
+      try {
+        // Get raw provider
+        let rawProvider = (window as any).ethereum;
+        if (!rawProvider && (window as any).okxwallet) {
+          rawProvider = (window as any).okxwallet;
+        } else if (!rawProvider && typeof (window as any).web3 !== 'undefined' && (window as any).web3.currentProvider) {
+          rawProvider = (window as any).web3.currentProvider;
+        }
+        
+        if (!rawProvider) {
+          alert('No wallet provider found. Please install MetaMask or another Ethereum wallet.');
+          return;
+        }
+        
+        console.log('Raw provider obtained:', rawProvider)
+        console.log('Raw provider request method:', typeof rawProvider.request)
+        console.log('Paying service fee via smart contract...')
+        const paymentTx = await payForUpload(rawProvider)
+        console.log('Service fee payment transaction:', paymentTx)
+        
+        alert(`Service fee paid successfully! TX: ${paymentTx}`)
+      } catch (error: any) {
+        console.error('Service fee payment failed:', error)
+        if (error?.message?.includes('User rejected')) {
+          alert('Transaction cancelled by user')
+          return
+        } else if (error?.message?.includes('Irys testnet')) {
+          alert('Please switch to Irys testnet network in your wallet.')
+          return
+        } else {
+          alert('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.')
+          return
+        }
       }
 
       // Step 4: Save references

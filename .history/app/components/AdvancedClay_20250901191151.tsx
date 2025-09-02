@@ -27,7 +27,8 @@ import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
 import { createIrysUploader, uploadToIrys } from '../../lib/irys'
-import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject } from '../../lib/clayStorageService'
+import { serializeClayProject, downloadClayProject, restoreClayObjects, deleteClayProject } from '../../lib/clayStorageService'
+import { bundledUploadClayProject } from '../../lib/bundledStorageService'
 import { getUploadPrice, payForUpload } from '../../lib/contractService'
 import { ethers } from 'ethers'
 import { downloadAsGLB } from '../../lib/glbService'
@@ -1491,7 +1492,30 @@ export default function AdvancedClay() {
         alert(`Your project is ${sizeInKB.toFixed(2)} KB, which exceeds the 90KB free tier.\nIt will be split into multiple chunks for upload.`);
       }
 
-      // Step 2: Pay service fee via smart contract first
+      // Step 2: Upload to Irys using bundled client (no signature needed)
+      console.log('Starting bundled Irys upload...')
+      let uploadResult;
+      try {
+        uploadResult = await bundledUploadClayProject(
+          serialized,
+          currentFolder,
+          rootTxId,
+          (progress: ChunkProgressType) => {
+            setChunkUploadProgress({
+              ...progress,
+              isOpen: true,
+              projectName
+            })
+          }
+        )
+        console.log('Upload result:', uploadResult)
+      } catch (uploadError: any) {
+        console.error('Bundled Irys upload failed:', uploadError)
+        alert('Failed to upload project to Irys. Please try again.')
+        return
+      }
+
+      // Step 3: Pay service fee via smart contract (0.1 IRYS) - second signature
       try {
         // Get raw provider
         let rawProvider = (window as any).ethereum;
@@ -1507,6 +1531,7 @@ export default function AdvancedClay() {
         }
         
         console.log('Raw provider obtained:', rawProvider)
+        console.log('Raw provider request method:', typeof rawProvider.request)
         console.log('Paying service fee via smart contract...')
         const paymentTx = await payForUpload(rawProvider)
         console.log('Service fee payment transaction:', paymentTx)
@@ -1524,30 +1549,6 @@ export default function AdvancedClay() {
           alert('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.')
           return
         }
-      }
-
-      // Step 3: Upload to Irys (no payment needed for free tier)
-      console.log('Starting Irys upload...')
-      let uploadResult;
-      try {
-        uploadResult = await uploadClayProject(
-          uploader,
-          serialized,
-          currentFolder,
-          rootTxId,
-          (progress: ChunkProgressType) => {
-            setChunkUploadProgress({
-              ...progress,
-              isOpen: true,
-              projectName
-            })
-          }
-        )
-        console.log('Upload result:', uploadResult)
-      } catch (uploadError: any) {
-        console.error('Irys upload failed:', uploadError)
-        alert('Failed to upload project to Irys. Please try again.')
-        return
       }
 
       // Step 4: Save references
