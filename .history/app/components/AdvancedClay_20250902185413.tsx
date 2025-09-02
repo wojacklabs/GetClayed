@@ -600,12 +600,10 @@ function Clay({
 // Add Clay Helper with drag to size
 function AddClayHelper({ 
   onAdd, 
-  shape,
-  onHoverPoint
+  shape 
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
   shape: 'sphere' | 'tetrahedron' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
-  onHoverPoint?: (point: THREE.Vector3 | null) => void
 }) {
   const { camera, raycaster, gl } = useThree()
   const [dragStart, setDragStart] = useState<THREE.Vector3 | null>(null)
@@ -776,12 +774,6 @@ function AddClayHelper({
     
     const handleMouseMove = (e: MouseEvent) => {
       const point = getIntersectionPoint(e)
-      
-      // Update hover point for coordinate display
-      if (onHoverPoint) {
-        onHoverPoint(point)
-      }
-      
       if (!point) return
       
       if (shape === 'sphere') {
@@ -2101,21 +2093,12 @@ export default function AdvancedClay() {
           
           {/* Add Clay Helper */}
           {tool === 'add' && (
-            <AddClayHelper 
-              onAdd={addNewClay} 
-              shape={selectedShape}
-              onHoverPoint={setHoveredPoint}
-            />
+            <AddClayHelper onAdd={addNewClay} shape={selectedShape} />
           )}
           
           {/* Grid for reference */}
           {(tool === 'add' || tool === 'move') && (
-            <DynamicGridHelper 
-              tool={tool}
-              selectedClayId={selectedClayId}
-              clayObjects={clayObjects}
-              hoveredPoint={hoveredPoint}
-            />
+            <DynamicGridHelper />
           )}
           
           <Environment preset="studio" />

@@ -776,12 +776,6 @@ function AddClayHelper({
     
     const handleMouseMove = (e: MouseEvent) => {
       const point = getIntersectionPoint(e)
-      
-      // Update hover point for coordinate display
-      if (onHoverPoint) {
-        onHoverPoint(point)
-      }
-      
       if (!point) return
       
       if (shape === 'sphere') {
@@ -2101,11 +2095,7 @@ export default function AdvancedClay() {
           
           {/* Add Clay Helper */}
           {tool === 'add' && (
-            <AddClayHelper 
-              onAdd={addNewClay} 
-              shape={selectedShape}
-              onHoverPoint={setHoveredPoint}
-            />
+            <AddClayHelper onAdd={addNewClay} shape={selectedShape} />
           )}
           
           {/* Grid for reference */}
