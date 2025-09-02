@@ -1934,6 +1934,7 @@ export default function AdvancedClay() {
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
+        raycaster={{ params: { Points: { threshold: 0.1 }, Line: { threshold: 0.1 } } }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.6} />

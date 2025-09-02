@@ -112,11 +112,10 @@ function useHistory() {
 
 // Brush Guide Component
 function BrushGuide({ position, size }: { position: THREE.Vector3; size: number }) {
-  // Use absolute size in world units
   return (
     <mesh position={position}>
       <sphereGeometry args={[size, 16, 16]} />
-      <meshBasicMaterial color="#4dabf7" opacity={0.3} transparent wireframe />
+      <meshBasicMaterial color="#4dabf7" opacity={0.3} transparent />
     </mesh>
   )
 }
@@ -305,10 +304,8 @@ function Clay({
         )
         
         const dist = pos.distanceTo(centerPos)
-        // Use absolute brush size in world units
-        const absoluteBrushSize = brushSize
-        if (dist <= absoluteBrushSize) {
-          const weight = 1 - (dist / absoluteBrushSize)
+        if (dist <= brushSize) {
+          const weight = 1 - (dist / brushSize)
           dragState.current.vertices.push({
             index: i,
             weight: Math.pow(weight, 0.6),
@@ -488,7 +485,20 @@ function Clay({
     geometry.userData.deformed = true
   })
   
-
+  // Handle paint, delete and rotate object
+  const handleClick = () => {
+    if (tool === 'paint') {
+      const newClay = { ...clay, color: currentColor }
+      onUpdate(newClay)
+    } else if (tool === 'delete') {
+      onSelect()
+      if (onDelete) {
+        onDelete()
+      }
+    } else if (tool === 'rotateObject') {
+      onSelect()
+    }
+  }
   
   // Rotation state for manual rotation
   const rotationRef = useRef({
@@ -502,7 +512,7 @@ function Clay({
     <group ref={groupRef} position={clay.position} rotation={clay.rotation || new THREE.Euler()}>
       <mesh
         ref={meshRef}
-        userData={{ clayId: clay.id }}
+        onClick={handleClick}
         onPointerEnter={onHover}
         onPointerLeave={onHoverEnd}
         onPointerMove={(e) => {
@@ -715,47 +725,51 @@ function AddClayHelper({
           // Second click - just store the point, don't create yet
           setClickPoints([...clickPoints, point])
         } else if (clickPoints.length === 2) {
-          // Third click - create shape with position and size based on all three points
+          // Third click - create shape with adjusted height
           const [p1, p2] = clickPoints
-          const p3 = point // Third click point
           
-          // Calculate the base rectangle from first two points
-          const baseCenter = new THREE.Vector3(
+          // Calculate the size based on the drawn rectangle
+          const diagonal = p1.distanceTo(p2)
+          const size = diagonal / Math.sqrt(2) // Size for the shape
+          
+          // Calculate center of the base
+          const center = new THREE.Vector3(
             (p1.x + p2.x) / 2,
             (p1.y + p2.y) / 2,
             (p1.z + p2.z) / 2
           )
           
-          // Calculate size based on the base rectangle
-          const width = Math.abs(p2.x - p1.x)
-          const depth = Math.abs(p2.z - p1.z)
-          const baseSize = Math.max(width, depth) || 1
+          // Get camera-relative plane basis vectors
+          const cameraDirection = new THREE.Vector3()
+          camera.getWorldDirection(cameraDirection)
           
-          // Calculate height from the third point to the base plane
-          const baseNormal = new THREE.Vector3(0, 1, 0) // Assuming Y-up
-          const basePlane = new THREE.Plane(baseNormal, -baseCenter.y)
-          const heightVector = p3.clone().sub(baseCenter)
-          const height = Math.abs(heightVector.y) || 1
+          const worldUp = new THREE.Vector3(0, 1, 0)
+          const cameraRight = new THREE.Vector3().crossVectors(cameraDirection, worldUp).normalize()
           
-          // Calculate final center (midpoint between base center and apex)
-          const finalCenter = new THREE.Vector3()
-          if (shape === 'tetrahedron') {
-            // For tetrahedron, center is 1/4 up from base
-            finalCenter.copy(baseCenter).add(new THREE.Vector3(0, height / 4, 0))
-          } else {
-            // For cube, center is at half height
-            finalCenter.copy(baseCenter).add(new THREE.Vector3(0, height / 2, 0))
+          // Calculate tilted plane normal (same as AddClayHelper)
+          const tiltAngle = Math.PI / 4
+          const planeNormal = cameraDirection.clone()
+          planeNormal.applyAxisAngle(cameraRight, tiltAngle)
+          
+          // Calculate plane basis vectors
+          const planeRight = cameraRight
+          const planeUp = new THREE.Vector3().crossVectors(planeRight, planeNormal).normalize()
+          
+          // Adjust position based on height perpendicular to tilted plane
+          if (shape === 'tetrahedron' || shape === 'cube') {
+            // Move center along plane normal by half the height
+            center.add(planeNormal.clone().multiplyScalar(shapeHeight / 2))
           }
           
-          // Calculate rotation based on the three points
+          const thickness = shapeHeight / size // Relative thickness
+          
+          // Calculate rotation to align with tilted plane
           const rotation = new THREE.Euler()
+          const matrix = new THREE.Matrix4()
+          matrix.makeBasis(planeRight, planeUp, planeNormal.clone().negate())
+          rotation.setFromRotationMatrix(matrix)
           
-          // For more complex rotation, we could calculate based on the plane formed by the three points
-          // For now, keep it simple with no rotation
-          
-          const thickness = height / baseSize // Relative thickness
-          
-          onAdd(finalCenter, baseSize, thickness, rotation)
+          onAdd(center, size, thickness, rotation)
           setClickPoints([])
           setShapeHeight(2) // Reset height
         }
@@ -1054,12 +1068,12 @@ function AddClayHelper({
               <Box
                 args={[
                   Math.abs(clickPoints[1].x - clickPoints[0].x) || 0.1,
-                  Math.abs(currentPoint.y - ((clickPoints[0].y + clickPoints[1].y) / 2)) || 0.1,
+                  shapeHeight,
                   Math.abs(clickPoints[1].z - clickPoints[0].z) || 0.1
                 ]}
                 position={[
                   (clickPoints[0].x + clickPoints[1].x) / 2,
-                  ((clickPoints[0].y + clickPoints[1].y) / 2 + currentPoint.y) / 2,
+                  (clickPoints[0].y + clickPoints[1].y) / 2 + shapeHeight / 2,
                   (clickPoints[0].z + clickPoints[1].z) / 2
                 ]}
               >
@@ -1069,7 +1083,7 @@ function AddClayHelper({
               <mesh 
                 position={[
                   (clickPoints[0].x + clickPoints[1].x) / 2,
-                  ((clickPoints[0].y + clickPoints[1].y) / 2 + currentPoint.y * 3) / 4,
+                  (clickPoints[0].y + clickPoints[1].y) / 2 + shapeHeight / 2,
                   (clickPoints[0].z + clickPoints[1].z) / 2
                 ]}
                 rotation={[0, Math.PI / 4, 0]}
@@ -1079,7 +1093,7 @@ function AddClayHelper({
                     Math.abs(clickPoints[1].x - clickPoints[0].x),
                     Math.abs(clickPoints[1].z - clickPoints[0].z)
                   ) / Math.sqrt(2) || 1,
-                  Math.abs(currentPoint.y - ((clickPoints[0].y + clickPoints[1].y) / 2)) || 1,
+                  shapeHeight,
                   4,
                   1
                 ]} />
@@ -1116,53 +1130,56 @@ function AddClayHelper({
 
 // Screen-locked Isometric Grid Helper
 function DynamicGridHelper() {
+  const { camera } = useThree()
+  const meshRef = useRef<THREE.Mesh>(null)
+  
+  useFrame(() => {
+    if (meshRef.current) {
+      // Get camera position and direction
+      const cameraPosition = new THREE.Vector3()
+      camera.getWorldPosition(cameraPosition)
+      
+      const cameraDirection = new THREE.Vector3()
+      camera.getWorldDirection(cameraDirection)
+      
+      // Position grid in front of camera
+      const planeDistance = 5
+      const planeCenter = cameraPosition.clone().add(cameraDirection.clone().multiplyScalar(planeDistance))
+      
+      // Calculate camera's right and up vectors in world space
+      const worldUp = new THREE.Vector3(0, 1, 0)
+      const cameraRight = new THREE.Vector3().crossVectors(cameraDirection, worldUp).normalize()
+      const cameraUp = new THREE.Vector3().crossVectors(cameraRight, cameraDirection).normalize()
+      
+      // Create a 45-degree tilt relative to camera's view
+      const tiltAngle = Math.PI / 4 // 45 degrees
+      const tiltAxis = cameraRight // Tilt around camera's right axis
+      
+      // Create quaternion that combines camera rotation with tilt
+      const quaternion = new THREE.Quaternion()
+      quaternion.setFromAxisAngle(cameraRight, -tiltAngle)
+      
+      // Apply camera's quaternion first, then tilt
+      const cameraQuaternion = camera.quaternion.clone()
+      quaternion.premultiply(cameraQuaternion)
+      
+      // Apply position and rotation
+      meshRef.current.position.copy(planeCenter)
+      meshRef.current.quaternion.copy(quaternion)
+    }
+  })
+  
   return (
-    <group>
-      {/* XZ plane (ground) */}
-      <gridHelper args={[20, 20, '#444444', '#666666']} />
-      
-      {/* Y axis indicator */}
-      <mesh position={[0, 5, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
-        <meshBasicMaterial color="#00ff00" opacity={0.5} transparent />
-      </mesh>
-      
-      {/* X axis indicator */}
-      <mesh position={[5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
-        <meshBasicMaterial color="#ff0000" opacity={0.5} transparent />
-      </mesh>
-      
-      {/* Z axis indicator */}
-      <mesh position={[0, 0, 5]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 10, 8]} />
-        <meshBasicMaterial color="#0000ff" opacity={0.5} transparent />
-      </mesh>
-      
-      {/* XY plane */}
-      <mesh position={[0, 0, -5]} rotation={[0, 0, 0]}>
-        <planeGeometry args={[20, 20, 20, 20]} />
-        <meshBasicMaterial 
-          color="#666666" 
-          wireframe 
-          transparent 
-          opacity={0.1} 
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      
-      {/* YZ plane */}
-      <mesh position={[-5, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[20, 20, 20, 20]} />
-        <meshBasicMaterial 
-          color="#666666" 
-          wireframe 
-          transparent 
-          opacity={0.1} 
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    </group>
+    <mesh ref={meshRef}>
+      <planeGeometry args={[40, 40, 40, 40]} />
+      <meshBasicMaterial 
+        color="#888888" 
+        wireframe 
+        transparent 
+        opacity={0.2} 
+        side={THREE.DoubleSide}
+      />
+    </mesh>
   )
 }
 
@@ -1182,7 +1199,7 @@ function RaycasterManager({
   setSelectedClayId: (id: string | null) => void
   removeClay: (id: string) => void
 }) {
-  const { camera, raycaster, gl, scene } = useThree()
+  const { camera, raycaster, gl } = useThree()
   
   useEffect(() => {
     const handlePointerClick = (event: PointerEvent) => {
@@ -1208,7 +1225,7 @@ function RaycasterManager({
       
       // Get all intersections
       const allIntersects: THREE.Intersection[] = []
-      scene.traverse((child) => {
+      gl.scene.traverse((child) => {
         if (child instanceof THREE.Mesh && child.userData.clayId) {
           const intersects = raycaster.intersectObject(child, false)
           if (intersects.length > 0) {
@@ -1244,7 +1261,7 @@ function RaycasterManager({
     return () => {
       gl.domElement.removeEventListener('click', handlePointerClick)
     }
-  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, camera, raycaster, gl, scene])
+  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, camera, raycaster, gl])
   
   return null
 }
@@ -1934,6 +1951,7 @@ export default function AdvancedClay() {
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
+        raycaster={{ params: { Points: { threshold: 0.1 }, Line: { threshold: 0.1 } } }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.6} />
@@ -1949,16 +1967,6 @@ export default function AdvancedClay() {
             maxDistance={20}
             staticMoving={false}
             dynamicDampingFactor={0.1}
-          />
-          
-          {/* Raycaster Manager for global click handling */}
-          <RaycasterManager 
-            tool={tool}
-            currentColor={currentColor}
-            clayObjects={clayObjects}
-            updateClay={updateClay}
-            setSelectedClayId={setSelectedClayId}
-            removeClay={removeClay}
           />
           
           {/* Clay Objects */}
@@ -1995,10 +2003,10 @@ export default function AdvancedClay() {
             <AddClayHelper onAdd={addNewClay} shape={selectedShape} />
           )}
           
-          {/* Grid for reference */}
-          {(tool === 'add' || tool === 'move') && (
+          {/* Grid for reference - hidden for now */}
+          {/* {tool === 'add' && (
             <DynamicGridHelper />
-          )}
+          )} */}
           
           <Environment preset="studio" />
         </Suspense>

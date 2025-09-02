@@ -1208,7 +1208,7 @@ function RaycasterManager({
       
       // Get all intersections
       const allIntersects: THREE.Intersection[] = []
-      scene.traverse((child) => {
+      gl.scene.traverse((child) => {
         if (child instanceof THREE.Mesh && child.userData.clayId) {
           const intersects = raycaster.intersectObject(child, false)
           if (intersects.length > 0) {
@@ -1244,7 +1244,7 @@ function RaycasterManager({
     return () => {
       gl.domElement.removeEventListener('click', handlePointerClick)
     }
-  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, camera, raycaster, gl, scene])
+  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, camera, raycaster, gl])
   
   return null
 }
@@ -1934,6 +1934,7 @@ export default function AdvancedClay() {
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
+        raycaster={{ params: { Points: { threshold: 0.1 }, Line: { threshold: 0.1 } } }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.6} />
