@@ -1508,21 +1508,6 @@ export default function AdvancedClay() {
           return;
         }
         
-        console.log('[AdvancedClay] Found wallet provider:', provider);
-        
-        // Request wallet connection if needed
-        try {
-          const accounts = await provider.request({ method: 'eth_accounts' });
-          if (!accounts || accounts.length === 0) {
-            console.log('[AdvancedClay] No connected accounts, requesting connection...');
-            await provider.request({ method: 'eth_requestAccounts' });
-          }
-        } catch (connectError) {
-          console.error('[AdvancedClay] Wallet connection error:', connectError);
-          alert('Failed to connect wallet. Please try again.');
-          return;
-        }
-        
         console.log('Paying service fee via smart contract...')
         const paymentTx = await payForUpload(provider)
         console.log('Service fee payment transaction:', paymentTx)
