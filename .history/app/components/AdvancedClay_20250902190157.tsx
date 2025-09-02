@@ -1231,91 +1231,39 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: 
         </group>
       )}
       
-      {/* Camera-aligned movement plane for move tool */}
-      {tool === 'move' && selectedClayPos && (
-        <group position={selectedClayPos}>
-          {/* Camera-aligned movement plane */}
-          <mesh 
-            onUpdate={(self) => {
-              // Orient plane to face camera
-              self.lookAt(camera.position)
-            }}
-          >
-            <planeGeometry args={[8, 8, 8, 8]} />
-            <meshBasicMaterial 
-              color="#00ffff" 
-              wireframe 
-              transparent 
-              opacity={0.2} 
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-          
-          {/* Camera right axis (horizontal in view) */}
-          <arrowHelper 
-            args={[
-              cameraRight,
-              new THREE.Vector3(0, 0, 0),
-              3,
-              0x00ff00,
-              1,
-              0.5
-            ]} 
-          />
-          <arrowHelper 
-            args={[
-              cameraRight.clone().negate(),
-              new THREE.Vector3(0, 0, 0),
-              3,
-              0x00ff00,
-              1,
-              0.5
-            ]} 
-          />
-          
-          {/* Camera up axis (vertical in view) */}
-          <arrowHelper 
-            args={[
-              cameraUp,
-              new THREE.Vector3(0, 0, 0),
-              3,
-              0xff0000,
-              1,
-              0.5
-            ]} 
-          />
-          <arrowHelper 
-            args={[
-              cameraUp.clone().negate(),
-              new THREE.Vector3(0, 0, 0),
-              3,
-              0xff0000,
-              1,
-              0.5
-            ]} 
-          />
-          
-          {/* Depth direction (scroll) */}
+      {/* Camera direction depth guide for move tool */}
+      {tool === 'move' && (
+        <group position={[0, 0, 0]}>
           <arrowHelper 
             args={[
               cameraDir.clone().negate(),
-              new THREE.Vector3(0, 0, 0),
-              2,
+              new THREE.Vector3(0, 2, 0),
+              5,
               0xffff00,
-              1,
-              0.5
+              2,
+              1
             ]} 
           />
           <arrowHelper 
             args={[
               cameraDir,
-              new THREE.Vector3(0, 0, 0),
-              2,
+              new THREE.Vector3(0, 2, 0),
+              5,
               0xffff00,
-              1,
-              0.5
+              2,
+              1
             ]} 
           />
+          
+          <Text 
+            position={[0, 3, 0]} 
+            fontSize={0.3} 
+            color="yellow"
+            anchorX="center"
+            anchorY="middle"
+          >
+            Scroll: Depth
+          </Text>
         </group>
       )}
       
