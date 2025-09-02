@@ -393,32 +393,54 @@ function Clay({
     
     // Handle move tool with free 3D dragging
     if (tool === 'move' && isSelected) {
-      // Create ray from mouse position
-      raycaster.setFromCamera(dragState.current.mousePos, camera)
+      // Get current and initial mouse positions in NDC
+      const currentMouse = dragState.current.mousePos
+      const initialMouse = dragState.current.initialMousePos
       
-      // Create a horizontal plane at the object's current Y position
-      const planeY = dragState.current.initialObjectPos.y + dragState.current.currentDepth
-      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -planeY)
-      
-      // Find where the ray intersects the horizontal plane
-      const intersection = new THREE.Vector3()
-      const hasIntersection = raycaster.ray.intersectPlane(plane, intersection)
-      
-      if (hasIntersection) {
-        // Update only X and Y positions (Y from scroll, X/Z from drag)
-        const newPosition = new THREE.Vector3(
-          intersection.x,
-          planeY,  // Y is controlled by scroll (currentDepth)
-          intersection.z
-        )
-        
-        // Update position
-        const newClay = {
-          ...clay,
-          position: newPosition
-        }
-        onUpdate(newClay)
+      // Calculate mouse delta in screen space (-1 to 1 range)
+      const mouseDelta = {
+        x: currentMouse.x - initialMouse.x,
+        y: currentMouse.y - initialMouse.y
       }
+      
+      // Convert to world space movement
+      // Get camera's viewport dimensions at object's distance
+      const objectDistance = camera.position.distanceTo(dragState.current.initialObjectPos)
+      const vFov = (camera.fov * Math.PI) / 180
+      const viewportHeight = 2 * Math.tan(vFov / 2) * objectDistance
+      const viewportWidth = viewportHeight * camera.aspect
+      
+      // Calculate world space movement based on screen delta
+      // mouseDelta is in range [-2, 2], so divide by 2
+      const worldDeltaX = (mouseDelta.x / 2) * viewportWidth
+      const worldDeltaY = (mouseDelta.y / 2) * viewportHeight
+      
+      // Get camera's right and up vectors in world space
+      const cameraDirection = new THREE.Vector3()
+      camera.getWorldDirection(cameraDirection)
+      
+      const worldUp = new THREE.Vector3(0, 1, 0)
+      const cameraRight = new THREE.Vector3().crossVectors(cameraDirection, worldUp).normalize()
+      const cameraUp = new THREE.Vector3().crossVectors(cameraRight, cameraDirection).normalize()
+      
+      // Apply movement only along camera's right and up vectors
+      const movement = cameraRight.clone().multiplyScalar(worldDeltaX)
+        .add(cameraUp.clone().multiplyScalar(worldDeltaY))
+      
+      // Add depth adjustment from scroll
+      const depthAdjustment = cameraDirection.clone().multiplyScalar(dragState.current.currentDepth)
+      
+      // Apply to original position
+      const newPosition = dragState.current.initialObjectPos.clone()
+        .add(movement)
+        .add(depthAdjustment)
+      
+      // Update position
+      const newClay = {
+        ...clay,
+        position: newPosition
+      }
+      onUpdate(newClay)
       return
     }
     
