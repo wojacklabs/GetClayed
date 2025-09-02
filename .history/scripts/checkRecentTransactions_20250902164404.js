@@ -10,7 +10,7 @@ async function checkRecentTransactions() {
     query {
       transactions(
         tags: [
-          일 ㄱ            
+          일 ㄱ
         ],
         first: 20,
         order: DESC

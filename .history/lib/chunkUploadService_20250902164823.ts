@@ -6,7 +6,6 @@ export interface ChunkMetadata {
   chunkId: string;
   chunkIndex: number;
   totalChunks: number;
-  chunkSetId: string;
   projectId: string;
   rootTxId?: string;
 }
@@ -114,7 +113,6 @@ export async function uploadInChunks(
       chunkId: receipt.id,
       chunkIndex,
       totalChunks,
-      chunkSetId,
       projectId,
       rootTxId
     });
@@ -132,52 +130,32 @@ export async function downloadChunks(chunkSetId: string, totalChunks: number, ch
   const chunks: string[] = new Array(totalChunks);
   let foundChunks = 0;
   
-  try {
-    // If chunk IDs are provided directly (from manifest), use them
-    if (chunkIds && chunkIds.length === totalChunks) {
-      console.log(`[ChunkDownload] Using ${chunkIds.length} chunk IDs from manifest`);
-      
-      for (let i = 0; i < chunkIds.length; i++) {
-        const txId = chunkIds[i];
-        try {
-          const chunkResponse = await fetch(`https://gateway.irys.xyz/${txId}`);
-          const chunkData = await chunkResponse.json();
-          
-          chunks[i] = chunkData.chunk;
-          foundChunks++;
-          console.log(`[ChunkDownload] Downloaded chunk ${i + 1}/${totalChunks}`);
-        } catch (error) {
-          console.error(`[ChunkDownload] Error downloading chunk ${i}:`, error);
-        }
-      }
-    } else {
-      // Fallback to GraphQL query
-      console.log(`[ChunkDownload] Querying chunks for set ${chunkSetId}`);
-      
-      const query = `
-        query {
-          transactions(
-            tags: [
-              { name: "App-Name", values: ["GetClayed"] }
-              { name: "Data-Type", values: ["clay-project-chunk"] }
-              { name: "Chunk-Set-ID", values: ["${chunkSetId}"] }
-            ]
-            first: 100
-            order: ASC
-          ) {
-            edges {
-              node {
-                id
-                tags {
-                  name
-                  value
-                }
-              }
+  // Query all chunks for this set
+  const query = `
+    query {
+      transactions(
+        tags: [
+          { name: "App-Name", values: ["GetClayed"] }
+          { name: "Data-Type", values: ["clay-project-chunk"] }
+          { name: "Chunk-Set-ID", values: ["${chunkSetId}"] }
+        ]
+        first: 100
+        order: ASC
+      ) {
+        edges {
+          node {
+            id
+            tags {
+              name
+              value
             }
           }
         }
-      `;
-      
+      }
+    }
+  `;
+  
+  try {
     const response = await fetch('https://uploader.irys.xyz/graphql', {
       method: 'POST',
       headers: {
@@ -206,7 +184,6 @@ export async function downloadChunks(chunkSetId: string, totalChunks: number, ch
         chunks[chunkIndex] = chunkData.chunk;
         foundChunks++;
       }
-    }
     }
     
     if (foundChunks !== totalChunks) {

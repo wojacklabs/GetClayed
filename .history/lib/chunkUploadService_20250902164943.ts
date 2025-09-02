@@ -6,7 +6,6 @@ export interface ChunkMetadata {
   chunkId: string;
   chunkIndex: number;
   totalChunks: number;
-  chunkSetId: string;
   projectId: string;
   rootTxId?: string;
 }
@@ -114,7 +113,6 @@ export async function uploadInChunks(
       chunkId: receipt.id,
       chunkIndex,
       totalChunks,
-      chunkSetId,
       projectId,
       rootTxId
     });

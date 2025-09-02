@@ -114,7 +114,6 @@ export async function uploadInChunks(
       chunkId: receipt.id,
       chunkIndex,
       totalChunks,
-      chunkSetId,
       projectId,
       rootTxId
     });
