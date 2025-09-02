@@ -235,6 +235,9 @@ export async function uploadClayProject(
     wasChunked = true;
     console.log(`[uploadClayProject] Data is ${sizeInKB.toFixed(2)} KB (over 90KB limit) - Using chunked upload`);
     
+    // Generate chunk set ID
+    const chunkSetId = uuidv4();
+    
     // Upload chunks
     const { transactionIds, chunkMetadata } = await uploadInChunks(
       irysUploader,

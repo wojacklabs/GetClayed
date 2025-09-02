@@ -235,6 +235,9 @@ export async function uploadClayProject(
     wasChunked = true;
     console.log(`[uploadClayProject] Data is ${sizeInKB.toFixed(2)} KB (over 90KB limit) - Using chunked upload`);
     
+    // Generate chunk set ID
+    const chunkSetId = uuidv4();
+    
     // Upload chunks
     const { transactionIds, chunkMetadata } = await uploadInChunks(
       irysUploader,
@@ -246,12 +249,6 @@ export async function uploadClayProject(
       rootTxId,
       onProgress
     );
-    
-    // Get chunkSetId from the first chunk metadata
-    const chunkSetId = chunkMetadata[0]?.chunkSetId;
-    if (!chunkSetId) {
-      throw new Error('No chunk set ID found in chunk metadata');
-    }
     
     // Upload manifest
     const manifestTxId = await uploadChunkManifest(
