@@ -1137,108 +1137,92 @@ function AddClayHelper({
 // Screen-locked Isometric Grid Helper
 function DynamicGridHelper() {
   const { camera } = useThree()
-  const [cameraDir, setCameraDir] = useState(new THREE.Vector3())
+  const meshRef = useRef<THREE.Group>(null)
   
   useFrame(() => {
-    // Get camera direction
-    const dir = new THREE.Vector3()
-    camera.getWorldDirection(dir)
-    setCameraDir(dir)
+    if (meshRef.current) {
+      // Get camera position and calculate depth planes
+      const cameraPos = camera.position.clone()
+      const lookAt = new THREE.Vector3(0, 0, 0)
+      const cameraDir = lookAt.clone().sub(cameraPos).normalize()
+      
+      // Position depth planes perpendicular to camera view
+      const distance = 8
+      const planePos = cameraPos.clone().add(cameraDir.clone().multiplyScalar(distance))
+      
+      // Calculate perpendicular vectors for depth plane
+      const up = new THREE.Vector3(0, 1, 0)
+      const right = new THREE.Vector3().crossVectors(cameraDir, up).normalize()
+      const planeUp = new THREE.Vector3().crossVectors(right, cameraDir).normalize()
+      
+      // Update depth plane orientation
+      const depthPlane = meshRef.current.getObjectByName('depthPlane')
+      if (depthPlane) {
+        depthPlane.position.copy(planePos)
+        depthPlane.lookAt(planePos.clone().add(cameraDir))
+      }
+    }
   })
   
   return (
-    <group>
+    <group ref={meshRef}>
       {/* Ground grid for reference */}
       <gridHelper args={[20, 20, '#333333', '#555555']} />
       
-      {/* Camera direction depth guide */}
-      <group position={[0, 0, 0]}>
-        {/* Forward/backward depth line */}
-        <arrowHelper 
-          args={[
-            cameraDir.clone().negate(), // Arrow points in camera direction
-            new THREE.Vector3(0, 2, 0), // Start position slightly elevated
-            5, // Length
-            0xffff00, // Yellow color
-            2, // Head length
-            1  // Head width
-          ]} 
-        />
-        <arrowHelper 
-          args={[
-            cameraDir, // Opposite direction
-            new THREE.Vector3(0, 2, 0),
-            5,
-            0xffff00,
-            2,
-            1
-          ]} 
-        />
+      {/* Minimal axis indicators at origin */}
+      <group>
+        {/* X axis (red) */}
+        <mesh position={[2.5, 0, 0]}>
+          <boxGeometry args={[5, 0.1, 0.1]} />
+          <meshBasicMaterial color="#ff0000" opacity={0.6} transparent />
+        </mesh>
         
-        {/* Depth movement indicator text */}
-        <Text 
-          position={[0, 3, 0]} 
-          fontSize={0.4} 
-          color="yellow"
-          anchorX="center"
-          anchorY="middle"
-        >
-          ← Scroll →
-        </Text>
-        <Text 
-          position={[0, 2.5, 0]} 
-          fontSize={0.3} 
-          color="yellow"
-          anchorX="center"
-          anchorY="middle"
-        >
-          Camera Depth
-        </Text>
+        {/* Y axis (green) */}
+        <mesh position={[0, 2.5, 0]}>
+          <boxGeometry args={[0.1, 5, 0.1]} />
+          <meshBasicMaterial color="#00ff00" opacity={0.6} transparent />
+        </mesh>
+        
+        {/* Z axis (blue) */}
+        <mesh position={[0, 0, 2.5]}>
+          <boxGeometry args={[0.1, 0.1, 5]} />
+          <meshBasicMaterial color="#0000ff" opacity={0.6} transparent />
+        </mesh>
       </group>
       
-      {/* Depth reference rings along camera direction */}
-      {[-10, -5, 0, 5, 10].map((distance, i) => {
-        const pos = cameraDir.clone().multiplyScalar(distance)
-        pos.y = 0 // Keep rings on ground level
-        
-        return (
-          <group key={i} position={pos}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[1.8, 2, 32]} />
+      {/* Depth reference plane */}
+      <mesh name="depthPlane">
+        <planeGeometry args={[15, 15, 15, 15]} />
+        <meshBasicMaterial 
+          color="#4dabf7" 
+          wireframe 
+          transparent 
+          opacity={0.15} 
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      
+      {/* Depth markers */}
+      <group>
+        {[0, 5, 10, -5, -10].map((z, i) => (
+          <group key={i} position={[0, 0, z]}>
+            <mesh>
+              <ringGeometry args={[0.8, 1, 32]} />
               <meshBasicMaterial 
-                color={distance === 0 ? "#ffffff" : "#666666"} 
-                opacity={distance === 0 ? 0.6 : 0.3} 
+                color={z === 0 ? "#ffffff" : "#666666"} 
+                opacity={z === 0 ? 0.8 : 0.4} 
                 transparent 
               />
             </mesh>
-            {distance !== 0 && (
-              <Text 
-                position={[0, 0.5, 0]} 
-                fontSize={0.4} 
-                color="#999999"
-                anchorX="center"
-              >
-                {distance > 0 ? `+${distance}` : distance}
-              </Text>
-            )}
+            <Text 
+              position={[1.5, 0, 0]} 
+              fontSize={0.3} 
+              color={z === 0 ? "white" : "#666666"}
+            >
+              {z > 0 ? `+${z}` : z}
+            </Text>
           </group>
-        )
-      })}
-      
-      {/* Simple axis indicators */}
-      <group>
-        <mesh position={[2, 0, 0]}>
-          <boxGeometry args={[4, 0.05, 0.05]} />
-          <meshBasicMaterial color="#ff0000" opacity={0.3} transparent />
-        </mesh>
-        <mesh position={[0, 2, 0]}>
-          <boxGeometry args={[0.05, 4, 0.05]} />
-          <meshBasicMaterial color="#00ff00" opacity={0.3} transparent />
-        </mesh>
-        <mesh position={[0, 0, 2]}>
-          <boxGeometry args={[0.05, 0.05, 4]} />
-          <meshBasicMaterial color="#0000ff" opacity={0.3} transparent />
-        </mesh>
+        ))}
       </group>
     </group>
   )
