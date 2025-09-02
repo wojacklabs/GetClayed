@@ -148,38 +148,31 @@ async function checkIrysData() {
       console.log('Error fetching transaction:', error.message);
     }
 
-    // Check manifest tags using transactions query
-    const manifestTagQuery = `
+    // 4. Check transaction metadata
+    const txMetadataQuery = `
       query {
-        transactions(
-          ids: ["${txId}"],
-          first: 1
-        ) {
-          edges {
-            node {
-              id
-              timestamp
-              tags {
-                name
-                value
-              }
-            }
+        transaction(id: "${txId}") {
+          id
+          timestamp
+          tags {
+            name
+            value
           }
         }
       }
     `;
 
-    const manifestTagResponse = await axios.post(IRYS_GRAPHQL_URL, {
-      query: manifestTagQuery
+    const metadataResponse = await axios.post(IRYS_GRAPHQL_URL, {
+      query: txMetadataQuery
     });
 
-    const manifestData = manifestTagResponse.data?.data?.transactions?.edges?.[0]?.node;
-    if (manifestData) {
-      console.log('\nManifest metadata:');
-      console.log(`ID: ${manifestData.id}`);
-      console.log(`Timestamp: ${new Date(manifestData.timestamp * 1000).toISOString()}`);
+    const txData = metadataResponse.data?.data?.transaction;
+    if (txData) {
+      console.log('\nTransaction metadata:');
+      console.log(`ID: ${txData.id}`);
+      console.log(`Timestamp: ${new Date(txData.timestamp * 1000).toISOString()}`);
       console.log('Tags:');
-      manifestData.tags.forEach(tag => {
+      txData.tags.forEach(tag => {
         console.log(`  ${tag.name}: ${tag.value}`);
       });
     }

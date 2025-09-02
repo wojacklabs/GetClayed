@@ -90,55 +90,9 @@ async function checkIrysData() {
     const walletEdges = walletResponse.data?.data?.transactions?.edges || [];
     console.log(`Found ${walletEdges.length} projects for this wallet`);
 
-    // 3. Check recent uploads with manifest
-    console.log(`\n\n=== Checking recent manifests ===`);
-    const manifestQuery = `
-      query {
-        transactions(
-          tags: [
-            { name: "App-Name", values: ["GetClayed"] },
-            { name: "Data-Type", values: ["clay-project-manifest"] }
-          ],
-          first: 5,
-          order: DESC
-        ) {
-          edges {
-            node {
-              id
-              timestamp
-              tags {
-                name
-                value
-              }
-            }
-          }
-        }
-      }
-    `;
-
-    const manifestResponse = await axios.post(IRYS_GRAPHQL_URL, {
-      query: manifestQuery
-    });
-
-    const manifests = manifestResponse.data?.data?.transactions?.edges || [];
-    console.log(`Found ${manifests.length} manifest files\n`);
-    
-    manifests.forEach((edge, index) => {
-      console.log(`\nManifest ${index + 1}:`);
-      console.log(`ID: ${edge.node.id}`);
-      console.log(`Timestamp: ${new Date(edge.node.timestamp * 1000).toISOString()}`);
-      
-      const tags = edge.node.tags || [];
-      const authorTag = tags.find(t => t.name === 'Author');
-      const projectNameTag = tags.find(t => t.name === 'Project-Name');
-      
-      console.log(`Author: ${authorTag?.value || 'N/A'}`);
-      console.log(`Project Name: ${projectNameTag?.value || 'N/A'}`);
-    });
-
-    // 4. Check a specific transaction
+    // 3. Check a specific transaction
     const txId = 'cHEFHW4QVbiSJiEATSqrVzpmiiY8NAUbz7sesspf5qx'; // From the logs
-    console.log(`\n\n=== Checking specific manifest: ${txId} ===`);
+    console.log(`\n\n=== Checking specific transaction: ${txId} ===`);
     
     try {
       const txResponse = await axios.get(`https://gateway.irys.xyz/${txId}`);
@@ -148,38 +102,31 @@ async function checkIrysData() {
       console.log('Error fetching transaction:', error.message);
     }
 
-    // Check manifest tags using transactions query
-    const manifestTagQuery = `
+    // 4. Check transaction metadata
+    const txMetadataQuery = `
       query {
-        transactions(
-          ids: ["${txId}"],
-          first: 1
-        ) {
-          edges {
-            node {
-              id
-              timestamp
-              tags {
-                name
-                value
-              }
-            }
+        transaction(id: "${txId}") {
+          id
+          timestamp
+          tags {
+            name
+            value
           }
         }
       }
     `;
 
-    const manifestTagResponse = await axios.post(IRYS_GRAPHQL_URL, {
-      query: manifestTagQuery
+    const metadataResponse = await axios.post(IRYS_GRAPHQL_URL, {
+      query: txMetadataQuery
     });
 
-    const manifestData = manifestTagResponse.data?.data?.transactions?.edges?.[0]?.node;
-    if (manifestData) {
-      console.log('\nManifest metadata:');
-      console.log(`ID: ${manifestData.id}`);
-      console.log(`Timestamp: ${new Date(manifestData.timestamp * 1000).toISOString()}`);
+    const txData = metadataResponse.data?.data?.transaction;
+    if (txData) {
+      console.log('\nTransaction metadata:');
+      console.log(`ID: ${txData.id}`);
+      console.log(`Timestamp: ${new Date(txData.timestamp * 1000).toISOString()}`);
       console.log('Tags:');
-      manifestData.tags.forEach(tag => {
+      txData.tags.forEach(tag => {
         console.log(`  ${tag.name}: ${tag.value}`);
       });
     }
