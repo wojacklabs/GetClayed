@@ -396,15 +396,14 @@ function Clay({
       // Create ray from mouse position
       raycaster.setFromCamera(dragState.current.mousePos, camera)
       
-      // Get camera basis vectors
+      // Calculate the distance from camera to the initial click point
+      const cameraDistance = camera.position.distanceTo(dragState.current.initialClickPoint)
+      
+      // Create a plane perpendicular to camera at that distance
       const cameraDirection = new THREE.Vector3()
       camera.getWorldDirection(cameraDirection)
       
-      const worldUp = new THREE.Vector3(0, 1, 0)
-      const cameraRight = new THREE.Vector3().crossVectors(cameraDirection, worldUp).normalize()
-      const cameraUp = new THREE.Vector3().crossVectors(cameraRight, cameraDirection).normalize()
-      
-      // Create plane at object's depth perpendicular to camera
+      // Create plane at the object's depth
       const plane = new THREE.Plane()
       plane.setFromNormalAndCoplanarPoint(cameraDirection, dragState.current.initialClickPoint)
       
@@ -413,22 +412,15 @@ function Clay({
       const hasIntersection = raycaster.ray.intersectPlane(plane, intersection)
       
       if (hasIntersection) {
-        // Calculate movement in camera space
-        const deltaWorld = intersection.clone().sub(dragState.current.initialClickPoint)
+        // Calculate the drag delta
+        const dragDelta = intersection.clone().sub(dragState.current.initialClickPoint)
         
-        // Project the delta onto camera's right and up vectors (2D movement in view)
-        const rightMovement = cameraRight.clone().multiplyScalar(deltaWorld.dot(cameraRight))
-        const upMovement = cameraUp.clone().multiplyScalar(deltaWorld.dot(cameraUp))
-        
-        // Combine movements (only 2 axes in camera view)
-        const movement2D = rightMovement.add(upMovement)
-        
-        // Add depth adjustment from scroll (3rd axis)
+        // Add depth adjustment from scroll
         const depthAdjustment = cameraDirection.clone().multiplyScalar(dragState.current.currentDepth)
         
         // Apply to original position
         const newPosition = dragState.current.initialObjectPos.clone()
-          .add(movement2D)
+          .add(dragDelta)
           .add(depthAdjustment)
         
         // Update position
