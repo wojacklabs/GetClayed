@@ -600,12 +600,10 @@ function Clay({
 // Add Clay Helper with drag to size
 function AddClayHelper({ 
   onAdd, 
-  shape,
-  onHoverPoint
+  shape 
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
   shape: 'sphere' | 'tetrahedron' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
-  onHoverPoint?: (point: THREE.Vector3 | null) => void
 }) {
   const { camera, raycaster, gl } = useThree()
   const [dragStart, setDragStart] = useState<THREE.Vector3 | null>(null)
@@ -776,12 +774,6 @@ function AddClayHelper({
     
     const handleMouseMove = (e: MouseEvent) => {
       const point = getIntersectionPoint(e)
-      
-      // Update hover point for coordinate display
-      if (onHoverPoint) {
-        onHoverPoint(point)
-      }
-      
       if (!point) return
       
       if (shape === 'sphere') {
@@ -1152,39 +1144,15 @@ function AddClayHelper({
 }
 
 // Screen-locked Isometric Grid Helper
-function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: {
-  tool: string
-  selectedClayId: string | null
-  clayObjects: ClayObject[]
-  hoveredPoint: THREE.Vector3 | null
-}) {
+function DynamicGridHelper() {
   const { camera } = useThree()
   const [cameraDir, setCameraDir] = useState(new THREE.Vector3())
-  const [currentCoords, setCurrentCoords] = useState({ x: 0, y: 0, z: 0 })
   
   useFrame(() => {
     // Get camera direction
     const dir = new THREE.Vector3()
     camera.getWorldDirection(dir)
     setCameraDir(dir)
-    
-    // Update coordinates based on tool
-    if (tool === 'move' && selectedClayId) {
-      const selectedClay = clayObjects.find(c => c.id === selectedClayId)
-      if (selectedClay) {
-        setCurrentCoords({
-          x: selectedClay.position.x,
-          y: selectedClay.position.y,
-          z: selectedClay.position.z
-        })
-      }
-    } else if (tool === 'add' && hoveredPoint) {
-      setCurrentCoords({
-        x: hoveredPoint.x,
-        y: hoveredPoint.y,
-        z: hoveredPoint.z
-      })
-    }
   })
   
   return (
@@ -1192,57 +1160,79 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: 
       {/* Ground grid for reference */}
       <gridHelper args={[20, 20, '#333333', '#555555']} />
       
-      {/* Coordinate display */}
-      {(tool === 'move' || tool === 'add') && (
-        <group position={[0, 5, 0]}>
-          <Text 
-            fontSize={0.5} 
-            color="white"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.05}
-            outlineColor="black"
-          >
-            X: {currentCoords.x.toFixed(2)}  Y: {currentCoords.y.toFixed(2)}  Z: {currentCoords.z.toFixed(2)}
-          </Text>
-        </group>
-      )}
+      {/* Camera direction depth guide */}
+      <group position={[0, 0, 0]}>
+        {/* Forward/backward depth line */}
+        <arrowHelper 
+          args={[
+            cameraDir.clone().negate(), // Arrow points in camera direction
+            new THREE.Vector3(0, 2, 0), // Start position slightly elevated
+            5, // Length
+            0xffff00, // Yellow color
+            2, // Head length
+            1  // Head width
+          ]} 
+        />
+        <arrowHelper 
+          args={[
+            cameraDir, // Opposite direction
+            new THREE.Vector3(0, 2, 0),
+            5,
+            0xffff00,
+            2,
+            1
+          ]} 
+        />
+        
+        {/* Depth movement indicator text */}
+        <Text 
+          position={[0, 3, 0]} 
+          fontSize={0.4} 
+          color="yellow"
+          anchorX="center"
+          anchorY="middle"
+        >
+          ← Scroll →
+        </Text>
+        <Text 
+          position={[0, 2.5, 0]} 
+          fontSize={0.3} 
+          color="yellow"
+          anchorX="center"
+          anchorY="middle"
+        >
+          Camera Depth
+        </Text>
+      </group>
       
-      {/* Camera direction depth guide for move tool */}
-      {tool === 'move' && (
-        <group position={[0, 0, 0]}>
-          <arrowHelper 
-            args={[
-              cameraDir.clone().negate(),
-              new THREE.Vector3(0, 2, 0),
-              5,
-              0xffff00,
-              2,
-              1
-            ]} 
-          />
-          <arrowHelper 
-            args={[
-              cameraDir,
-              new THREE.Vector3(0, 2, 0),
-              5,
-              0xffff00,
-              2,
-              1
-            ]} 
-          />
-          
-          <Text 
-            position={[0, 3, 0]} 
-            fontSize={0.3} 
-            color="yellow"
-            anchorX="center"
-            anchorY="middle"
-          >
-            Scroll: Depth
-          </Text>
-        </group>
-      )}
+      {/* Depth reference rings along camera direction */}
+      {[-10, -5, 0, 5, 10].map((distance, i) => {
+        const pos = cameraDir.clone().multiplyScalar(distance)
+        pos.y = 0 // Keep rings on ground level
+        
+        return (
+          <group key={i} position={pos}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[1.8, 2, 32]} />
+              <meshBasicMaterial 
+                color={distance === 0 ? "#ffffff" : "#666666"} 
+                opacity={distance === 0 ? 0.6 : 0.3} 
+                transparent 
+              />
+            </mesh>
+            {distance !== 0 && (
+              <Text 
+                position={[0, 0.5, 0]} 
+                fontSize={0.4} 
+                color="#999999"
+                anchorX="center"
+              >
+                {distance > 0 ? `+${distance}` : distance}
+              </Text>
+            )}
+          </group>
+        )
+      })}
       
       {/* Simple axis indicators */}
       <group>
@@ -2101,21 +2091,12 @@ export default function AdvancedClay() {
           
           {/* Add Clay Helper */}
           {tool === 'add' && (
-            <AddClayHelper 
-              onAdd={addNewClay} 
-              shape={selectedShape}
-              onHoverPoint={setHoveredPoint}
-            />
+            <AddClayHelper onAdd={addNewClay} shape={selectedShape} />
           )}
           
           {/* Grid for reference */}
           {(tool === 'add' || tool === 'move') && (
-            <DynamicGridHelper 
-              tool={tool}
-              selectedClayId={selectedClayId}
-              clayObjects={clayObjects}
-              hoveredPoint={hoveredPoint}
-            />
+            <DynamicGridHelper />
           )}
           
           <Environment preset="studio" />
