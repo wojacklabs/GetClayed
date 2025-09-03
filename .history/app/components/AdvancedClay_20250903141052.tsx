@@ -1204,12 +1204,9 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: 
     setCameraUp(up)
     
     // Update coordinates based on tool
-    let worldPos: THREE.Vector3 | null = null
-    
     if (tool === 'move' && selectedClayId) {
       const selectedClay = clayObjects.find(c => c.id === selectedClayId)
       if (selectedClay) {
-        worldPos = selectedClay.position.clone()
         setCurrentCoords({
           x: selectedClay.position.x,
           y: selectedClay.position.y,
@@ -1218,30 +1215,12 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: 
         setSelectedClayPos(selectedClay.position.clone())
       }
     } else if (tool === 'add' && hoveredPoint) {
-      worldPos = hoveredPoint.clone()
       setCurrentCoords({
         x: hoveredPoint.x,
         y: hoveredPoint.y,
         z: hoveredPoint.z
       })
       setSelectedClayPos(null)
-    }
-    
-    // Calculate camera-relative coordinates
-    if (worldPos) {
-      // Get position relative to camera
-      const relativePos = worldPos.clone().sub(camera.position)
-      
-      // Project onto camera axes
-      const cameraX = relativePos.dot(right)
-      const cameraY = relativePos.dot(up)
-      const cameraZ = -relativePos.dot(dir) // Negative because camera looks along -Z
-      
-      setCameraRelativeCoords({
-        x: cameraX,
-        y: cameraY,
-        z: cameraZ
-      })
     }
   })
   
@@ -1261,118 +1240,39 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: 
             outlineWidth={0.05}
             outlineColor="black"
           >
-            World: X: {currentCoords.x.toFixed(2)}  Y: {currentCoords.y.toFixed(2)}  Z: {currentCoords.z.toFixed(2)}
-          </Text>
-          <Text 
-            position={[0, -0.7, 0]}
-            fontSize={0.4} 
-            color="yellow"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.03}
-            outlineColor="black"
-          >
-            Camera: X: {cameraRelativeCoords.x.toFixed(2)}  Y: {cameraRelativeCoords.y.toFixed(2)}  Z: {cameraRelativeCoords.z.toFixed(2)}
+            X: {currentCoords.x.toFixed(2)}  Y: {currentCoords.y.toFixed(2)}  Z: {currentCoords.z.toFixed(2)}
           </Text>
           {tool === 'move' && (
             <Text 
-              position={[0, -1.3, 0]}
+              position={[0, -0.7, 0]}
               fontSize={0.3} 
               color="cyan"
               anchorX="center"
               anchorY="middle"
             >
-              Drag: Camera XY plane | Scroll: Camera depth (Z)
+              Drag: Camera XY plane | Scroll: Camera depth
             </Text>
           )}
         </group>
       )}
       
 
-      {/* Camera-aligned coordinate plane for move tool */}
-      {tool === 'move' && selectedClayPos && (
-        <group position={selectedClayPos}>
-          {/* Camera XY plane (for drag) */}
-          <mesh
-            onUpdate={(self) => {
-              // Orient plane to face camera
-              self.lookAt(camera.position)
-            }}
-          >
-            <planeGeometry args={[10, 10, 10, 10]} />
-            <meshBasicMaterial 
-              color="#00ffff" 
-              wireframe 
-              transparent 
-              opacity={0.2} 
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-          
-          {/* Camera X axis (right) */}
-          <arrowHelper 
-            args={[
-              cameraRight,
-              new THREE.Vector3(0, 0, 0),
-              3,
-              0xff0000,  // Red for X
-              1,
-              0.5
-            ]} 
-          />
-          <Text
-            position={cameraRight.clone().multiplyScalar(3.5)}
-            fontSize={0.3}
-            color="red"
-            anchorX="center"
-            anchorY="middle"
-          >
-            Camera X
-          </Text>
-          
-          {/* Camera Y axis (up) */}
-          <arrowHelper 
-            args={[
-              cameraUp,
-              new THREE.Vector3(0, 0, 0),
-              3,
-              0x00ff00,  // Green for Y
-              1,
-              0.5
-            ]} 
-          />
-          <Text
-            position={cameraUp.clone().multiplyScalar(3.5)}
-            fontSize={0.3}
-            color="green"
-            anchorX="center"
-            anchorY="middle"
-          >
-            Camera Y
-          </Text>
-          
-          {/* Camera Z axis (forward/backward) - for scroll */}
-          <arrowHelper 
-            args={[
-              cameraDir.clone().negate(),
-              new THREE.Vector3(0, 0, 0),
-              3,
-              0x0000ff,  // Blue for Z
-              1,
-              0.5
-            ]} 
-          />
-          <Text
-            position={cameraDir.clone().negate().multiplyScalar(3.5)}
-            fontSize={0.3}
-            color="blue"
-            anchorX="center"
-            anchorY="middle"
-          >
-            Camera Z (Scroll)
-          </Text>
-        </group>
-      )}
+      
+      {/* Simple axis indicators */}
+      <group>
+        <mesh position={[2, 0, 0]}>
+          <boxGeometry args={[4, 0.05, 0.05]} />
+          <meshBasicMaterial color="#ff0000" opacity={0.3} transparent />
+        </mesh>
+        <mesh position={[0, 2, 0]}>
+          <boxGeometry args={[0.05, 4, 0.05]} />
+          <meshBasicMaterial color="#00ff00" opacity={0.3} transparent />
+        </mesh>
+        <mesh position={[0, 0, 2]}>
+          <boxGeometry args={[0.05, 0.05, 4]} />
+          <meshBasicMaterial color="#0000ff" opacity={0.3} transparent />
+        </mesh>
+      </group>
     </group>
   )
 }
