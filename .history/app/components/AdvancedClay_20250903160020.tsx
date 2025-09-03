@@ -1218,7 +1218,7 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         })
         setSelectedClayPos(selectedClay.position.clone())
       }
-    } else if ((tool === 'add' || tool === 'push' || tool === 'pull') && hoveredPoint) {
+    } else if (tool === 'add' && hoveredPoint) {
       worldPos = hoveredPoint.clone()
       setCurrentCoords({
         x: hoveredPoint.x,
