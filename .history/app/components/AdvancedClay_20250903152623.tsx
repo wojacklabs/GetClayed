@@ -1243,13 +1243,6 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         y: cameraY,
         z: cameraZ
       })
-      
-      // Update parent component
-      onCoordsUpdate({
-        x: cameraX,
-        y: cameraY,
-        z: cameraZ
-      })
     }
   })
   
@@ -2188,13 +2181,12 @@ export default function AdvancedClay() {
           )}
           
           {/* Grid for reference */}
-          {(tool === 'add' || tool === 'move' || tool === 'push' || tool === 'pull') && (
+          {(tool === 'add' || tool === 'move') && (
             <DynamicGridHelper 
               tool={tool}
               selectedClayId={selectedClayId}
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
-              onCoordsUpdate={setCameraRelativeCoords}
             />
           )}
           
@@ -2569,15 +2561,6 @@ export default function AdvancedClay() {
           )}
         </div>
       </div>
-      
-      {/* Coordinate Display Overlay */}
-      {(tool === 'move' || tool === 'add' || tool === 'push' || tool === 'pull') && (
-        <div className="fixed bottom-4 right-4 bg-black/70 text-white p-2 rounded-md font-mono text-xs">
-          <div>X: {cameraRelativeCoords.x.toFixed(2)}</div>
-          <div>Y: {cameraRelativeCoords.y.toFixed(2)}</div>
-          <div>Z: {cameraRelativeCoords.z.toFixed(2)}</div>
-        </div>
-      )}
     </div>
   )
 }
