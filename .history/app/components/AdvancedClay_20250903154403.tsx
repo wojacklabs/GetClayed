@@ -2204,7 +2204,7 @@ export default function AdvancedClay() {
       </div>
       
       {/* Bottom Toolbar */}
-      <div className="bg-white shadow-lg border-t border-gray-200">
+      <div className="fixed bottom-0 left-0 right-0 bg-white backdrop-blur-sm shadow-lg z-50 border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
           {/* Left side - Connect Wallet */}
