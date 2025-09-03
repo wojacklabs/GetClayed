@@ -2569,15 +2569,6 @@ export default function AdvancedClay() {
           )}
         </div>
       </div>
-      
-      {/* Coordinate Display Overlay */}
-      {(tool === 'move' || tool === 'add' || tool === 'push' || tool === 'pull') && (
-        <div className="fixed bottom-4 right-4 bg-black/70 text-white p-2 rounded-md font-mono text-xs">
-          <div>X: {cameraRelativeCoords.x.toFixed(2)}</div>
-          <div>Y: {cameraRelativeCoords.y.toFixed(2)}</div>
-          <div>Z: {cameraRelativeCoords.z.toFixed(2)}</div>
-        </div>
-      )}
     </div>
   )
 }

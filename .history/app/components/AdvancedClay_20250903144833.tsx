@@ -1176,12 +1176,11 @@ function AddClayHelper({
 }
 
 // Screen-locked Isometric Grid Helper
-function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate }: {
+function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: {
   tool: string
   selectedClayId: string | null
   clayObjects: ClayObject[]
   hoveredPoint: THREE.Vector3 | null
-  onCoordsUpdate: (coords: { x: number; y: number; z: number }) => void
 }) {
   const { camera } = useThree()
   const [cameraDir, setCameraDir] = useState(new THREE.Vector3())
@@ -1243,19 +1242,26 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         y: cameraY,
         z: cameraZ
       })
-      
-      // Update parent component
-      onCoordsUpdate({
-        x: cameraX,
-        y: cameraY,
-        z: cameraZ
-      })
     }
   })
   
   return (
     <group>
-
+      {/* Coordinate display */}
+      {(tool === 'move' || tool === 'add') && (
+        <group position={[0, 5, 0]}>
+          <Text 
+            fontSize={0.5} 
+            color="yellow"
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.05}
+            outlineColor="black"
+          >
+            X: {cameraRelativeCoords.x.toFixed(2)}  Y: {cameraRelativeCoords.y.toFixed(2)}  Z: {cameraRelativeCoords.z.toFixed(2)}
+          </Text>
+        </group>
+      )}
       
 
       {/* Camera-aligned coordinate plane for move tool */}
@@ -1439,7 +1445,6 @@ export default function AdvancedClay() {
   const [backgroundColor, setBackgroundColor] = useState('#f0f0f0')
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
-  const [cameraRelativeCoords, setCameraRelativeCoords] = useState({ x: 0, y: 0, z: 0 })
   
   // Track current project
   const [currentProjectInfo, setCurrentProjectInfo] = useState<{
@@ -2188,13 +2193,12 @@ export default function AdvancedClay() {
           )}
           
           {/* Grid for reference */}
-          {(tool === 'add' || tool === 'move' || tool === 'push' || tool === 'pull') && (
+          {(tool === 'add' || tool === 'move') && (
             <DynamicGridHelper 
               tool={tool}
               selectedClayId={selectedClayId}
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
-              onCoordsUpdate={setCameraRelativeCoords}
             />
           )}
           
@@ -2569,15 +2573,6 @@ export default function AdvancedClay() {
           )}
         </div>
       </div>
-      
-      {/* Coordinate Display Overlay */}
-      {(tool === 'move' || tool === 'add' || tool === 'push' || tool === 'pull') && (
-        <div className="fixed bottom-4 right-4 bg-black/70 text-white p-2 rounded-md font-mono text-xs">
-          <div>X: {cameraRelativeCoords.x.toFixed(2)}</div>
-          <div>Y: {cameraRelativeCoords.y.toFixed(2)}</div>
-          <div>Z: {cameraRelativeCoords.z.toFixed(2)}</div>
-        </div>
-      )}
     </div>
   )
 }
