@@ -641,7 +641,6 @@ function AddClayHelper({
   const [isDraggingCurve, setIsDraggingCurve] = useState(false)
   const [curveControlPoint, setCurveControlPoint] = useState<THREE.Vector3 | null>(null)
   const [lineThickness, setLineThickness] = useState(0.05) // Much thinner default
-  const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth
   
   useEffect(() => {
     const canvas = gl.domElement
@@ -653,8 +652,28 @@ function AddClayHelper({
       
       raycaster.setFromCamera(new THREE.Vector2(x, y), camera)
       
-      // Create XY plane at current depth
-      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -currentDepth)
+      // Get camera position and direction
+      const cameraPosition = new THREE.Vector3()
+      camera.getWorldPosition(cameraPosition)
+      
+      const cameraDirection = new THREE.Vector3()
+      camera.getWorldDirection(cameraDirection)
+      
+      // Position plane in front of camera
+      const planeDistance = 5
+      const planeCenter = cameraPosition.clone().add(cameraDirection.clone().multiplyScalar(planeDistance))
+      
+      // Calculate camera-relative tilted plane normal
+      const worldUp = new THREE.Vector3(0, 1, 0)
+      const cameraRight = new THREE.Vector3().crossVectors(cameraDirection, worldUp).normalize()
+      
+      // Create 45-degree tilt relative to camera view
+      const tiltAngle = Math.PI / 4
+      const planeNormal = cameraDirection.clone()
+      planeNormal.applyAxisAngle(cameraRight, tiltAngle)
+      
+      const plane = new THREE.Plane()
+      plane.setFromNormalAndCoplanarPoint(planeNormal, planeCenter)
       
       const intersection = new THREE.Vector3()
       
@@ -868,16 +887,11 @@ function AddClayHelper({
     }
     
     const handleWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      
       // Adjust thickness for line and curve
       if ((shape === 'line' || shape === 'curve') && (clickPoints.length > 0 || isDraggingCurve)) {
+        e.preventDefault()
         const delta = e.deltaY * -0.0001
         setLineThickness(prev => Math.max(0.01, Math.min(0.5, prev + delta)))
-      } else {
-        // Adjust Z-axis depth for all shapes
-        const delta = e.deltaY * 0.01
-        setCurrentDepth(prev => prev + delta)
       }
     }
     
@@ -891,7 +905,7 @@ function AddClayHelper({
       canvas.removeEventListener('mouseleave', handleMouseLeave)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth])
+  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint])
   
   // Render for sphere (drag method)
   if (shape === 'sphere') {

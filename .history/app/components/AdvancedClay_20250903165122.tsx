@@ -868,16 +868,11 @@ function AddClayHelper({
     }
     
     const handleWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      
       // Adjust thickness for line and curve
       if ((shape === 'line' || shape === 'curve') && (clickPoints.length > 0 || isDraggingCurve)) {
+        e.preventDefault()
         const delta = e.deltaY * -0.0001
         setLineThickness(prev => Math.max(0.01, Math.min(0.5, prev + delta)))
-      } else {
-        // Adjust Z-axis depth for all shapes
-        const delta = e.deltaY * 0.01
-        setCurrentDepth(prev => prev + delta)
       }
     }
     
@@ -891,7 +886,7 @@ function AddClayHelper({
       canvas.removeEventListener('mouseleave', handleMouseLeave)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth])
+  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint])
   
   // Render for sphere (drag method)
   if (shape === 'sphere') {
