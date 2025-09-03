@@ -416,20 +416,9 @@ function Clay({
       // Convert screen movement to world movement
       // Mouse delta is in [-2, 2] range, so scale appropriately
       const distance = camera.position.distanceTo(dragState.current.initialObjectPos)
-      let viewHeight: number
-      let viewWidth: number
-      
-      if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-        const perspectiveCamera = camera as THREE.PerspectiveCamera
-        const fov = (perspectiveCamera.fov * Math.PI) / 180
-        viewHeight = 2 * Math.tan(fov / 2) * distance
-        viewWidth = viewHeight * perspectiveCamera.aspect
-      } else {
-        // OrthographicCamera
-        const orthographicCamera = camera as THREE.OrthographicCamera
-        viewHeight = orthographicCamera.top - orthographicCamera.bottom
-        viewWidth = orthographicCamera.right - orthographicCamera.left
-      }
+      const fov = (camera.fov * Math.PI) / 180
+      const viewHeight = 2 * Math.tan(fov / 2) * distance
+      const viewWidth = viewHeight * camera.aspect
       
       // Scale mouse movement to world units
       const screenX = (mouseDelta.x / 2) * viewWidth
