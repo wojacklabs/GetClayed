@@ -160,7 +160,6 @@ function Clay({
   const dragState = useRef({
     active: false,
     mousePos: new THREE.Vector2(),
-    initialMousePos: new THREE.Vector2(),  // Store initial mouse position
     targetVertex: -1,
     originalGeometry: null as THREE.BufferGeometry | null,
     vertices: [] as Array<{
@@ -256,7 +255,6 @@ function Clay({
             dragState.current.active = true
             dragState.current.initialClickPoint = intersects[0].point.clone()
             dragState.current.initialObjectPos = clay.position.clone()
-            dragState.current.initialMousePos.copy(dragState.current.mousePos)  // Store initial mouse position
             dragState.current.currentDepth = 0  // Reset depth adjustment
             
             // Calculate offset from object center to click point
@@ -272,7 +270,6 @@ function Clay({
       if (!meshRef.current) return
       
       updateMousePosition(e)
-      dragState.current.initialMousePos.copy(dragState.current.mousePos)  // Store initial mouse position
       
       // Store original geometry for undo
       dragState.current.originalGeometry = meshRef.current.geometry.clone()
@@ -416,20 +413,9 @@ function Clay({
       // Convert screen movement to world movement
       // Mouse delta is in [-2, 2] range, so scale appropriately
       const distance = camera.position.distanceTo(dragState.current.initialObjectPos)
-      let viewHeight: number
-      let viewWidth: number
-      
-      if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-        const perspectiveCamera = camera as THREE.PerspectiveCamera
-        const fov = (perspectiveCamera.fov * Math.PI) / 180
-        viewHeight = 2 * Math.tan(fov / 2) * distance
-        viewWidth = viewHeight * perspectiveCamera.aspect
-      } else {
-        // OrthographicCamera
-        const orthographicCamera = camera as THREE.OrthographicCamera
-        viewHeight = orthographicCamera.top - orthographicCamera.bottom
-        viewWidth = orthographicCamera.right - orthographicCamera.left
-      }
+      const fov = (camera.fov * Math.PI) / 180
+      const viewHeight = 2 * Math.tan(fov / 2) * distance
+      const viewWidth = viewHeight * camera.aspect
       
       // Scale mouse movement to world units
       const screenX = (mouseDelta.x / 2) * viewWidth
