@@ -1274,12 +1274,12 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: 
               self.lookAt(camera.position)
             }}
           >
-            <planeGeometry args={[6, 6, 6, 6]} />
+            <planeGeometry args={[10, 10, 10, 10]} />
             <meshBasicMaterial 
               color="#00ffff" 
               wireframe 
               transparent 
-              opacity={0.15} 
+              opacity={0.2} 
               side={THREE.DoubleSide}
             />
           </mesh>
@@ -1289,36 +1289,63 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint }: 
             args={[
               cameraRight,
               new THREE.Vector3(0, 0, 0),
-              2,
+              3,
               0xff0000,  // Red for X
-              0.8,
-              0.4
+              1,
+              0.5
             ]} 
           />
+          <Text
+            position={cameraRight.clone().multiplyScalar(3.5)}
+            fontSize={0.3}
+            color="red"
+            anchorX="center"
+            anchorY="middle"
+          >
+            Camera X
+          </Text>
           
           {/* Camera Y axis (up) */}
           <arrowHelper 
             args={[
               cameraUp,
               new THREE.Vector3(0, 0, 0),
-              2,
+              3,
               0x00ff00,  // Green for Y
-              0.8,
-              0.4
+              1,
+              0.5
             ]} 
           />
+          <Text
+            position={cameraUp.clone().multiplyScalar(3.5)}
+            fontSize={0.3}
+            color="green"
+            anchorX="center"
+            anchorY="middle"
+          >
+            Camera Y
+          </Text>
           
           {/* Camera Z axis (forward/backward) - for scroll */}
           <arrowHelper 
             args={[
               cameraDir.clone().negate(),
               new THREE.Vector3(0, 0, 0),
-              2,
+              3,
               0x0000ff,  // Blue for Z
-              0.8,
-              0.4
+              1,
+              0.5
             ]} 
           />
+          <Text
+            position={cameraDir.clone().negate().multiplyScalar(3.5)}
+            fontSize={0.3}
+            color="blue"
+            anchorX="center"
+            anchorY="middle"
+          >
+            Camera Z (Scroll)
+          </Text>
         </group>
       )}
     </group>
