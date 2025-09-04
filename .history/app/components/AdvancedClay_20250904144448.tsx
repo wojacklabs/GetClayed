@@ -1223,10 +1223,10 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
     camera.getWorldDirection(dir)
     setCameraDir(dir)
     
-    // Get camera's actual local axes in world space
-    const cameraMatrix = camera.matrixWorld
-    const right = new THREE.Vector3().setFromMatrixColumn(cameraMatrix, 0).normalize()
-    const up = new THREE.Vector3().setFromMatrixColumn(cameraMatrix, 1).normalize()
+    // Calculate camera right and up vectors
+    const worldUp = new THREE.Vector3(0, 1, 0)
+    const right = new THREE.Vector3().crossVectors(dir, worldUp).normalize()
+    const up = new THREE.Vector3().crossVectors(right, dir).normalize()
     setCameraRight(right)
     setCameraUp(up)
     
