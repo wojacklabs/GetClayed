@@ -1223,10 +1223,10 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
     camera.getWorldDirection(dir)
     setCameraDir(dir)
     
-    // Get camera's actual local axes in world space
-    const cameraMatrix = camera.matrixWorld
-    const right = new THREE.Vector3().setFromMatrixColumn(cameraMatrix, 0).normalize()
-    const up = new THREE.Vector3().setFromMatrixColumn(cameraMatrix, 1).normalize()
+    // Calculate camera right and up vectors
+    const worldUp = new THREE.Vector3(0, 1, 0)
+    const right = new THREE.Vector3().crossVectors(dir, worldUp).normalize()
+    const up = new THREE.Vector3().crossVectors(right, dir).normalize()
     setCameraRight(right)
     setCameraUp(up)
     
@@ -1284,28 +1284,22 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
 
       
 
-      {/* XZ Horizontal Planes for all objects in move tool */}
-      {tool === 'move' && clayObjects.map((clay, index) => {
-        // Generate different colors for each object
-        const hue = (index * 137.5) % 360 // Golden angle for better color distribution
-        const color = `hsl(${hue}, 50%, 50%)`
-        
-        return (
-          <group key={clay.id} position={clay.position}>
-            {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[200, 200, 100, 100]} />
-              <meshBasicMaterial 
-                color={color} 
-                wireframe 
-                transparent 
-                opacity={selectedClayId === clay.id ? 0.3 : 0.1} 
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-          </group>
-        )
-      })}
+      {/* XZ Horizontal Plane for move tool */}
+      {tool === 'move' && selectedClayPos && (
+        <group position={selectedClayPos}>
+          {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial 
+              color="#888888" 
+              wireframe 
+              transparent 
+              opacity={0.2} 
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+      )}
       
       {/* XZ Horizontal Plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
