@@ -1280,8 +1280,8 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
       
       {/* XZ Horizontal Plane for add tool */}
       {tool === 'add' && (
-        <group position={new THREE.Vector3(0, 0, hoveredPoint?.z || 0)}>
-          {/* XZ horizontal plane for add tool at current Z depth */}
+        <group position={new THREE.Vector3(0, hoveredPoint?.y || 0, 0)}>
+          {/* XZ horizontal plane for add tool */}
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[200, 200, 100, 100]} />
             <meshBasicMaterial 
