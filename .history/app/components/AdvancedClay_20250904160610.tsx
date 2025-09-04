@@ -1293,23 +1293,24 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         // Use a consistent function to map Z values to hues
         const hue = ((zKey * 137.5 + 180) % 360 + 360) % 360 // Golden angle with offset
         const color = `hsl(${hue}, 50%, 50%)`
-        
-        return (
-          <group key={clay.id} position={clay.position}>
-            {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[200, 200, 100, 100]} />
-              <meshBasicMaterial
-                color={color}
-                wireframe
-                transparent
-                opacity={selectedClayId === clay.id ? 0.3 : 0.1}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-          </group>
-        )
-      })}
+          
+          return (
+            <group key={clay.id} position={clay.position}>
+              {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[200, 200, 100, 100]} />
+                <meshBasicMaterial 
+                  color={color} 
+                  wireframe 
+                  transparent 
+                  opacity={selectedClayId === clay.id ? 0.3 : 0.1} 
+                  side={THREE.DoubleSide}
+                />
+              </mesh>
+            </group>
+          )
+        })
+      })()}
       
       {/* XZ Horizontal Plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
