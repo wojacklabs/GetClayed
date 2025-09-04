@@ -714,11 +714,13 @@ function Clay({
 function AddClayHelper({ 
   onAdd, 
   shape,
-  onHoverPoint
+  onHoverPoint,
+  clayObjects
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
   shape: 'sphere' | 'tetrahedron' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
   onHoverPoint?: (point: THREE.Vector3 | null) => void
+  clayObjects: ClayObject[]
 }) {
   const { camera, raycaster, gl } = useThree()
   const [dragStart, setDragStart] = useState<THREE.Vector3 | null>(null)
@@ -742,19 +744,57 @@ function AddClayHelper({
       
       raycaster.setFromCamera(new THREE.Vector2(x, y), camera)
       
-      // Create plane at current depth
-      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -currentDepth)
-      const intersection = new THREE.Vector3()
-      
-      if (raycaster.ray.intersectPlane(plane, intersection)) {
-        return intersection
+      // If checking for collision, find the frontmost object at this position
+      if (checkCollision && clayObjects.length > 0) {
+        // Check intersection with existing clay objects
+        let closestZ = currentDepth
+        
+        // Create a ray straight through at the mouse position
+        const testPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -currentDepth)
+        const testPoint = new THREE.Vector3()
+        
+        if (raycaster.ray.intersectPlane(testPlane, testPoint)) {
+          // Check if any clay object is near this X,Y position
+          for (const clay of clayObjects) {
+            const distance = Math.sqrt(
+              Math.pow(clay.position.x - testPoint.x, 2) + 
+              Math.pow(clay.position.y - testPoint.y, 2)
+            )
+            
+            // If object is nearby (within its approximate size)
+            const objectSize = clay.size || 2
+            if (distance < objectSize * 1.5) {
+              // Place new object slightly in front (camera looks at -Z, so subtract to move forward)
+              const frontZ = clay.position.z - 0.1 // Fixed small offset
+              if (frontZ < closestZ) {
+                closestZ = frontZ
+              }
+            }
+          }
+        }
+        
+        // Create plane at the adjusted depth
+        const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -closestZ)
+        const intersection = new THREE.Vector3()
+        
+        if (raycaster.ray.intersectPlane(plane, intersection)) {
+          return intersection
+        }
+      } else {
+        // Normal intersection at current depth
+        const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -currentDepth)
+        const intersection = new THREE.Vector3()
+        
+        if (raycaster.ray.intersectPlane(plane, intersection)) {
+          return intersection
+        }
       }
       
       return null
     }
     
     const handleMouseDown = (e: MouseEvent) => {
-      const point = getIntersectionPoint(e)
+      const point = getIntersectionPoint(e, true) // Enable collision check
       if (!point) return
       
       if (shape === 'sphere') {
@@ -980,7 +1020,7 @@ function AddClayHelper({
       canvas.removeEventListener('mouseleave', handleMouseLeave)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth])
+  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth, clayObjects])
   
   // Render for sphere (drag method)
   if (shape === 'sphere') {
@@ -2249,6 +2289,7 @@ export default function AdvancedClay() {
               onAdd={addNewClay} 
               shape={selectedShape}
               onHoverPoint={setHoveredPoint}
+              clayObjects={clayObjects}
             />
           )}
           
