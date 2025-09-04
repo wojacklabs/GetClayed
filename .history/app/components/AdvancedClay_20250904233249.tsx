@@ -629,6 +629,7 @@ function Clay({
           anchorY="middle"
           outlineWidth={0.1}
           outlineColor="black"
+          depthTest={false}
         >
           {(clay.size || 1).toFixed(2)}
         </Text>
@@ -987,7 +988,7 @@ function AddClayHelper({
     if (!dragEnd) return null
     
     if (isDragging && dragStart && dragEnd) {
-      const size = Math.max(0.1, Math.min(5, dragStart.distanceTo(dragEnd) * 0.5))
+      const size = Math.max(0.1, Math.min(5, dragStart.distanceTo(dragEnd)))
       const center = dragStart.clone().add(dragEnd).multiplyScalar(0.5)
       
       return (

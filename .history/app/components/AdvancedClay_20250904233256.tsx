@@ -629,6 +629,7 @@ function Clay({
           anchorY="middle"
           outlineWidth={0.1}
           outlineColor="black"
+          depthTest={false}
         >
           {(clay.size || 1).toFixed(2)}
         </Text>
