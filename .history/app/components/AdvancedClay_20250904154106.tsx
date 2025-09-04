@@ -2139,7 +2139,7 @@ export default function AdvancedClay() {
         />
       )}
       
-      {/* Canvas Container */}
+      {/* Canvas */}
       <div className="flex-1 relative overflow-hidden">
       <Canvas 
         camera={{ position: [5, 5, 5], fov: 50 }}
@@ -2225,9 +2225,10 @@ export default function AdvancedClay() {
           <Environment preset="studio" />
         </Suspense>
       </Canvas>
+      </div>
       
       {/* Bottom Toolbar */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200">
+      <div className="bg-white shadow-lg border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
           {/* Left side - Connect Wallet */}
@@ -2591,7 +2592,6 @@ export default function AdvancedClay() {
             </div>
           )}
         </div>
-      </div>
       </div>
       
       {/* Coordinate Display Overlay */}

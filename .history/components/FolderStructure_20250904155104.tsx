@@ -336,7 +336,7 @@ export default function FolderStructure({
     const files = folderTree.children?.filter(item => item.type === 'file') || [];
     
     return (
-      <div className="flex gap-4">
+      <div className="flex gap-6">
         {/* Folders */}
         {folders.map(folder => (
           <div
@@ -389,7 +389,7 @@ export default function FolderStructure({
         {files.map(file => (
           <div
             key={file.id}
-            className={`flex flex-col items-center cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+            className={`flex flex-col items-center cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors ${
               selectedItem === file.id ? 'bg-blue-100' : ''
             }`}
             onClick={() => {
@@ -400,8 +400,8 @@ export default function FolderStructure({
             onContextMenu={(e) => handleContextMenu(e, file)}
             draggable
           >
-            <div className="mb-1">
-              <svg width="34" height="43" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div className="mb-2">
+              <svg width="56" height="72" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0 8C0 3.58172 3.58172 0 8 0H36L56 20V64C56 68.4183 52.4183 72 48 72H8C3.58172 72 0 68.4183 0 64V8Z" fill="#E5E7EB"/>
                 <path d="M36 0L56 20H44C39.5817 20 36 16.4183 36 12V0Z" fill="#D1D5DB"/>
                 <rect x="10" y="32" width="36" height="2" rx="1" fill="#6B7280"/>
@@ -423,12 +423,12 @@ export default function FolderStructure({
                     setRenamingItem(null);
                   }
                 }}
-                className="px-1 py-0.5 text-xs border border-blue-400 rounded text-center"
+                className="px-2 py-1 text-sm border border-blue-400 rounded text-center"
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="text-xs text-gray-700 text-center max-w-[80px] truncate">
+              <span className="text-sm text-gray-700 text-center max-w-[100px] truncate">
                 {file.name}
               </span>
             )}
