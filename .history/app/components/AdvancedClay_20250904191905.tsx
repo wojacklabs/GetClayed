@@ -599,26 +599,13 @@ function Clay({
           emissive={
             isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize')
               ? '#0099ff' 
+              : (isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize'))
+              ? '#666666'
               : '#000000'
           }
-          emissiveIntensity={isSelected ? 0.5 : 0}
+          emissiveIntensity={isSelected ? 0.5 : (isHovered ? 0.3 : 0)}
         />
       </mesh>
-      {/* Hover outline */}
-      {isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize') && (
-        <mesh
-          scale={(clay.size || 1) * 1.02}
-          userData={{ isOutline: true }}
-        >
-          <meshBasicMaterial
-            color="#ffffff"
-            wireframe
-            transparent
-            opacity={0.8}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      )}
       {isSelected && tool === 'move' && (
         <mesh
           scale={clay.size || 1}
@@ -2364,7 +2351,7 @@ export default function AdvancedClay() {
                 onClick={() => setTool('resize')}
                 className={`p-3 rounded-lg transition-all ${
                   tool === 'resize' 
-                    ? 'bg-gray-800 text-white shadow-md' 
+                    ? 'bg-purple-500 text-white shadow-md' 
                     : 'bg-white hover:bg-gray-50 text-gray-700'
                 }`}
                 title="Resize Object"
