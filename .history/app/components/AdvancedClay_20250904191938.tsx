@@ -604,21 +604,6 @@ function Clay({
           emissiveIntensity={isSelected ? 0.5 : 0}
         />
       </mesh>
-      {/* Hover outline */}
-      {isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize') && (
-        <mesh
-          scale={(clay.size || 1) * 1.02}
-          userData={{ isOutline: true }}
-        >
-          <meshBasicMaterial
-            color="#ffffff"
-            wireframe
-            transparent
-            opacity={0.8}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      )}
       {isSelected && tool === 'move' && (
         <mesh
           scale={clay.size || 1}
