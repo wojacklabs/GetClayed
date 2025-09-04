@@ -2249,6 +2249,7 @@ export default function AdvancedClay() {
               onAdd={addNewClay} 
               shape={selectedShape}
               onHoverPoint={setHoveredPoint}
+              clayObjects={clayObjects}
             />
           )}
           

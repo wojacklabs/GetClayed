@@ -714,11 +714,13 @@ function Clay({
 function AddClayHelper({ 
   onAdd, 
   shape,
-  onHoverPoint
+  onHoverPoint,
+  clayObjects
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
   shape: 'sphere' | 'tetrahedron' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
   onHoverPoint?: (point: THREE.Vector3 | null) => void
+  clayObjects: ClayObject[]
 }) {
   const { camera, raycaster, gl } = useThree()
   const [dragStart, setDragStart] = useState<THREE.Vector3 | null>(null)
@@ -980,7 +982,7 @@ function AddClayHelper({
       canvas.removeEventListener('mouseleave', handleMouseLeave)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth])
+  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth, clayObjects])
   
   // Render for sphere (drag method)
   if (shape === 'sphere') {
@@ -2249,6 +2251,7 @@ export default function AdvancedClay() {
               onAdd={addNewClay} 
               shape={selectedShape}
               onHoverPoint={setHoveredPoint}
+              clayObjects={clayObjects}
             />
           )}
           
