@@ -242,6 +242,22 @@ function Clay({
     }
     
     const handleMouseDown = (e: MouseEvent) => {
+      if (tool === 'rotateObject' && isSelected && meshRef.current) {
+        // Start rotation
+        rotationRef.current.active = true
+        rotationRef.current.startX = e.clientX
+        rotationRef.current.startY = e.clientY
+        rotationRef.current.initialRotation.copy(meshRef.current.rotation)
+        return
+      }
+      
+      if (tool === 'resize' && isSelected) {
+        // Start resize
+        resizeRef.current.active = true
+        resizeRef.current.startY = e.clientY
+        resizeRef.current.initialSize = clay.size || 1
+        return
+      }
       
       if (tool === 'move') {
         // Select clay for moving
@@ -326,12 +342,43 @@ function Clay({
     }
     
     const handleMouseMove = (e: MouseEvent) => {
+      if (tool === 'rotateObject' && rotationRef.current.active && meshRef.current) {
+        // Handle rotation
+        const deltaX = (e.clientX - rotationRef.current.startX) * 0.01
+        const deltaY = (e.clientY - rotationRef.current.startY) * 0.01
+        
+        meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
+        meshRef.current.rotation.x = rotationRef.current.initialRotation.x + deltaY
+        return
+      }
+      
+      if (tool === 'resize' && resizeRef.current.active) {
+        // Handle resize
+        const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
+        const newSize = Math.max(0.1, resizeRef.current.initialSize + deltaY)
+        
+        const newClay = {
+          ...clay,
+          size: newSize
+        }
+        onUpdate(newClay)
+        return
+      }
+      
       if (dragState.current.active) {
         updateMousePosition(e)
       }
     }
     
     const handleMouseUp = () => {
+      if (rotationRef.current.active) {
+        rotationRef.current.active = false
+      }
+      
+      if (resizeRef.current.active) {
+        resizeRef.current.active = false
+      }
+      
       if (dragState.current.active) {
         dragState.current.active = false
         dragState.current.targetVertex = -1
@@ -375,70 +422,6 @@ function Clay({
       window.removeEventListener('mouseup', handleMouseUp)
     }
   }, [tool, brushSize, camera, raycaster, gl, onDeformingChange, clay, onUpdate, onSelect, isSelected])
-  
-  // Handle tool-specific mouse events when selected
-  useEffect(() => {
-    if (!isSelected) return
-    
-    const handleToolMouseDown = (e: MouseEvent) => {
-      if (tool === 'rotateObject' && meshRef.current) {
-        rotationRef.current.active = true
-        rotationRef.current.startX = e.clientX
-        rotationRef.current.startY = e.clientY
-        rotationRef.current.initialRotation.copy(meshRef.current.rotation)
-      } else if (tool === 'resize') {
-        resizeRef.current.active = true
-        resizeRef.current.startY = e.clientY
-        resizeRef.current.initialSize = clay.size || 1
-      }
-    }
-    
-    const handleToolMouseMove = (e: MouseEvent) => {
-      if (tool === 'rotateObject' && rotationRef.current.active && meshRef.current) {
-        const deltaX = (e.clientX - rotationRef.current.startX) * 0.01
-        const deltaY = (e.clientY - rotationRef.current.startY) * 0.01
-        
-        meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
-        meshRef.current.rotation.x = rotationRef.current.initialRotation.x + deltaY
-        
-        const newClay = {
-          ...clay,
-          rotation: meshRef.current.rotation.clone()
-        }
-        onUpdate(newClay)
-      } else if (tool === 'resize' && resizeRef.current.active) {
-        const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
-        const newSize = Math.max(0.1, resizeRef.current.initialSize + deltaY)
-        
-        const newClay = {
-          ...clay,
-          size: newSize
-        }
-        onUpdate(newClay)
-      }
-    }
-    
-    const handleToolMouseUp = () => {
-      if (rotationRef.current.active) {
-        rotationRef.current.active = false
-      }
-      if (resizeRef.current.active) {
-        resizeRef.current.active = false
-      }
-    }
-    
-    if (tool === 'rotateObject' || tool === 'resize') {
-      window.addEventListener('mousedown', handleToolMouseDown)
-      window.addEventListener('mousemove', handleToolMouseMove)
-      window.addEventListener('mouseup', handleToolMouseUp)
-      
-      return () => {
-        window.removeEventListener('mousedown', handleToolMouseDown)
-        window.removeEventListener('mousemove', handleToolMouseMove)
-        window.removeEventListener('mouseup', handleToolMouseUp)
-      }
-    }
-  }, [tool, isSelected, clay, onUpdate])
   
   // Frame update for dragging
   useFrame(() => {
@@ -577,7 +560,6 @@ function Clay({
       <mesh
         ref={meshRef}
         userData={{ clayId: clay.id }}
-        scale={clay.size || 1}
         onPointerEnter={onHover}
         onPointerLeave={onHoverEnd}
         onPointerMove={(e) => {
@@ -608,7 +590,6 @@ function Clay({
       </mesh>
       {isSelected && tool === 'move' && (
         <mesh
-          scale={clay.size || 1}
           onPointerDown={(e) => {
             if (tool === 'move' && meshRef.current && groupRef.current) {
               e.stopPropagation()
