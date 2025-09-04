@@ -1285,31 +1285,47 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
       
 
       {/* XZ Horizontal Planes for all objects in move tool */}
-      {tool === 'move' && clayObjects.map((clay) => {
-        // Calculate color based on current Z position (real-time)
-        const zKey = Math.round(clay.position.z * 10) / 10
+      {tool === 'move' && (() => {
+        // Group objects by Z position
+        const zGroups = new Map<number, ClayObject[]>()
         
-        // Generate color directly from Z position
-        // Use a consistent function to map Z values to hues
-        const hue = ((zKey * 137.5 + 180) % 360 + 360) % 360 // Golden angle with offset
-        const color = `hsl(${hue}, 50%, 50%)`
+        clayObjects.forEach(clay => {
+          // Round Z position to nearest 0.1 to group similar heights
+          const zKey = Math.round(clay.position.z * 10) / 10
+          if (!zGroups.has(zKey)) {
+            zGroups.set(zKey, [])
+          }
+          zGroups.get(zKey)!.push(clay)
+        })
         
-        return (
-          <group key={clay.id} position={clay.position}>
-            {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[200, 200, 100, 100]} />
-              <meshBasicMaterial
-                color={color}
-                wireframe
-                transparent
-                opacity={selectedClayId === clay.id ? 0.3 : 0.1}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-          </group>
-        )
-      })}
+        // Sort Z positions for consistent color assignment
+        const sortedZKeys = Array.from(zGroups.keys()).sort((a, b) => a - b)
+        
+        return clayObjects.map((clay) => {
+          const zKey = Math.round(clay.position.z * 10) / 10
+          const zIndex = sortedZKeys.indexOf(zKey)
+          
+          // Generate color based on Z position
+          const hue = (zIndex * 137.5) % 360 // Golden angle for better color distribution
+          const color = `hsl(${hue}, 50%, 50%)`
+          
+          return (
+            <group key={clay.id} position={clay.position}>
+              {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[200, 200, 100, 100]} />
+                <meshBasicMaterial 
+                  color={color} 
+                  wireframe 
+                  transparent 
+                  opacity={selectedClayId === clay.id ? 0.3 : 0.1} 
+                  side={THREE.DoubleSide}
+                />
+              </mesh>
+            </group>
+          )
+        })
+      })()}
       
       {/* XZ Horizontal Plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
