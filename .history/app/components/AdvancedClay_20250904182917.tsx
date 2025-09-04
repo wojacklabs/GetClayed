@@ -574,13 +574,7 @@ function Clay({
           specular={0x111111}
           shininess={50}
           side={THREE.DoubleSide}
-          emissive={
-            isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize')
-              ? '#0066cc' 
-              : (isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize'))
-              ? '#444444'
-              : '#000000'
-          }
+          emissive={isSelected || isHovered ? '#444444' : '#000000'}
           emissiveIntensity={isSelected ? 0.3 : (isHovered ? 0.15 : 0)}
         />
       </mesh>
@@ -1462,8 +1456,6 @@ function RaycasterManager({
               removeClay(clayId)
             } else if (tool === 'rotateObject') {
               setSelectedClayId(clayId)
-            } else if (tool === 'resize') {
-              setSelectedClayId(clayId)
             }
           }
         }
@@ -1482,7 +1474,7 @@ function RaycasterManager({
 export default function AdvancedClay() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
-  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('rotate')
+  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
   const [currentColor, setCurrentColor] = useState('#ff6b6b')
   const [detail, setDetail] = useState(48)

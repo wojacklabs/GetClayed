@@ -1482,7 +1482,7 @@ function RaycasterManager({
 export default function AdvancedClay() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
-  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('rotate')
+  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
   const [currentColor, setCurrentColor] = useState('#ff6b6b')
   const [detail, setDetail] = useState(48)

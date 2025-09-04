@@ -157,13 +157,6 @@ function Clay({
   const [guideHovered, setGuideHovered] = useState(false)
   const { camera, raycaster, gl } = useThree()
   
-  // Resize state
-  const resizeRef = useRef({
-    active: false,
-    startY: 0,
-    initialSize: clay.size || 1
-  })
-  
   // Drag state
   const dragState = useRef({
     active: false,
@@ -248,14 +241,6 @@ function Clay({
         rotationRef.current.startX = e.clientX
         rotationRef.current.startY = e.clientY
         rotationRef.current.initialRotation.copy(meshRef.current.rotation)
-        return
-      }
-      
-      if (tool === 'resize' && isSelected) {
-        // Start resize
-        resizeRef.current.active = true
-        resizeRef.current.startY = e.clientY
-        resizeRef.current.initialSize = clay.size || 1
         return
       }
       
@@ -352,19 +337,6 @@ function Clay({
         return
       }
       
-      if (tool === 'resize' && resizeRef.current.active) {
-        // Handle resize
-        const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
-        const newSize = Math.max(0.1, resizeRef.current.initialSize + deltaY)
-        
-        const newClay = {
-          ...clay,
-          size: newSize
-        }
-        onUpdate(newClay)
-        return
-      }
-      
       if (dragState.current.active) {
         updateMousePosition(e)
       }
@@ -373,10 +345,6 @@ function Clay({
     const handleMouseUp = () => {
       if (rotationRef.current.active) {
         rotationRef.current.active = false
-      }
-      
-      if (resizeRef.current.active) {
-        resizeRef.current.active = false
       }
       
       if (dragState.current.active) {
@@ -574,13 +542,7 @@ function Clay({
           specular={0x111111}
           shininess={50}
           side={THREE.DoubleSide}
-          emissive={
-            isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize')
-              ? '#0066cc' 
-              : (isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize'))
-              ? '#444444'
-              : '#000000'
-          }
+          emissive={isSelected || isHovered ? '#444444' : '#000000'}
           emissiveIntensity={isSelected ? 0.3 : (isHovered ? 0.15 : 0)}
         />
       </mesh>
@@ -1462,8 +1424,6 @@ function RaycasterManager({
               removeClay(clayId)
             } else if (tool === 'rotateObject') {
               setSelectedClayId(clayId)
-            } else if (tool === 'resize') {
-              setSelectedClayId(clayId)
             }
           }
         }
@@ -1482,7 +1442,7 @@ function RaycasterManager({
 export default function AdvancedClay() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
-  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('rotate')
+  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
   const [currentColor, setCurrentColor] = useState('#ff6b6b')
   const [detail, setDetail] = useState(48)
