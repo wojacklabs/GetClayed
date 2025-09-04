@@ -336,7 +336,7 @@ export default function FolderStructure({
     const files = folderTree.children?.filter(item => item.type === 'file') || [];
     
     return (
-      <div className="flex gap-4">
+      <div className="flex gap-6">
         {/* Folders */}
         {folders.map(folder => (
           <div

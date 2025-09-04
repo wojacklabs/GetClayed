@@ -2592,7 +2592,6 @@ export default function AdvancedClay() {
           )}
         </div>
       </div>
-      </div>
       
       {/* Coordinate Display Overlay */}
       {(tool === 'move' || tool === 'add' || tool === 'push' || tool === 'pull') && (

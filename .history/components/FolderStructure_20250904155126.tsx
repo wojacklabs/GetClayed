@@ -336,7 +336,7 @@ export default function FolderStructure({
     const files = folderTree.children?.filter(item => item.type === 'file') || [];
     
     return (
-      <div className="flex gap-4">
+      <div className="flex gap-6">
         {/* Folders */}
         {folders.map(folder => (
           <div
@@ -423,12 +423,12 @@ export default function FolderStructure({
                     setRenamingItem(null);
                   }
                 }}
-                className="px-1 py-0.5 text-xs border border-blue-400 rounded text-center"
+                className="px-2 py-1 text-sm border border-blue-400 rounded text-center"
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="text-xs text-gray-700 text-center max-w-[80px] truncate">
+              <span className="text-sm text-gray-700 text-center max-w-[100px] truncate">
                 {file.name}
               </span>
             )}

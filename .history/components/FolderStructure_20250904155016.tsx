@@ -336,12 +336,12 @@ export default function FolderStructure({
     const files = folderTree.children?.filter(item => item.type === 'file') || [];
     
     return (
-      <div className="flex gap-4">
+      <div className="flex gap-6">
         {/* Folders */}
         {folders.map(folder => (
           <div
             key={folder.id}
-            className={`flex flex-col items-center cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+            className={`flex flex-col items-center cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors ${
               selectedItem === folder.id ? 'bg-blue-100' : ''
             } ${dragOverFolder === folder.id ? 'bg-blue-50 ring-2 ring-blue-300' : ''}`}
             onClick={() => {
@@ -353,8 +353,8 @@ export default function FolderStructure({
             onDrop={(e) => handleDrop(e, folder)}
             onContextMenu={(e) => handleContextMenu(e, folder)}
           >
-            <div className="mb-1">
-              <svg width="48" height="38" viewBox="0 0 80 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div className="mb-2">
+              <svg width="80" height="64" viewBox="0 0 80 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0 8C0 3.58172 3.58172 0 8 0H26.7639C28.5215 0 30.2135 0.632141 31.5279 1.78885L35.7082 5.57771C37.0226 6.73442 38.7146 7.36656 40.4721 7.36656H72C76.4183 7.36656 80 10.9483 80 15.3666V56C80 60.4183 76.4183 64 72 64H8C3.58172 64 0 60.4183 0 56V8Z" fill="#5EBBF2"/>
                 <path d="M0 20C0 15.5817 3.58172 12 8 12H72C76.4183 12 80 15.5817 80 20V56C80 60.4183 76.4183 64 72 64H8C3.58172 64 0 60.4183 0 56V20Z" fill="#7FC8F5"/>
               </svg>
@@ -373,12 +373,12 @@ export default function FolderStructure({
                     setRenamingItem(null);
                   }
                 }}
-                className="px-1 py-0.5 text-xs border border-blue-400 rounded text-center"
+                className="px-2 py-1 text-sm border border-blue-400 rounded text-center"
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="text-xs text-gray-700 text-center max-w-[80px] truncate">
+              <span className="text-sm text-gray-700 text-center max-w-[100px] truncate">
                 {folder.name}
               </span>
             )}
@@ -389,7 +389,7 @@ export default function FolderStructure({
         {files.map(file => (
           <div
             key={file.id}
-            className={`flex flex-col items-center cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+            className={`flex flex-col items-center cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors ${
               selectedItem === file.id ? 'bg-blue-100' : ''
             }`}
             onClick={() => {
@@ -400,8 +400,8 @@ export default function FolderStructure({
             onContextMenu={(e) => handleContextMenu(e, file)}
             draggable
           >
-            <div className="mb-1">
-              <svg width="34" height="43" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div className="mb-2">
+              <svg width="56" height="72" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0 8C0 3.58172 3.58172 0 8 0H36L56 20V64C56 68.4183 52.4183 72 48 72H8C3.58172 72 0 68.4183 0 64V8Z" fill="#E5E7EB"/>
                 <path d="M36 0L56 20H44C39.5817 20 36 16.4183 36 12V0Z" fill="#D1D5DB"/>
                 <rect x="10" y="32" width="36" height="2" rx="1" fill="#6B7280"/>
@@ -423,12 +423,12 @@ export default function FolderStructure({
                     setRenamingItem(null);
                   }
                 }}
-                className="px-1 py-0.5 text-xs border border-blue-400 rounded text-center"
+                className="px-2 py-1 text-sm border border-blue-400 rounded text-center"
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="text-xs text-gray-700 text-center max-w-[80px] truncate">
+              <span className="text-sm text-gray-700 text-center max-w-[100px] truncate">
                 {file.name}
               </span>
             )}
@@ -454,23 +454,23 @@ export default function FolderStructure({
               queryCache.delete(`projects-${walletAddress}`);
               fetchProjects();
             }}
-            className={`p-0.5 hover:bg-gray-100 rounded ${loading ? 'animate-spin' : ''}`}
+            className={`p-1 hover:bg-gray-100 rounded ${loading ? 'animate-spin' : ''}`}
             title="Refresh"
             disabled={loading}
           >
-            <RefreshCw size={12} />
+            <RefreshCw size={16} />
           </button>
           <button
             onClick={() => handleCreateFolder('root')}
-            className="p-0.5 hover:bg-gray-100 rounded"
+            className="p-1 hover:bg-gray-100 rounded"
             title="New Folder"
           >
-            <FolderPlus size={12} />
+            <FolderPlus size={16} />
           </button>
         </div>
       </div>
       
-      <div className="flex items-start justify-center py-4 px-2 overflow-x-auto">
+      <div className="flex items-start justify-center py-8 px-4 overflow-x-auto">
         {renderFolderGrid()}
       </div>
 
