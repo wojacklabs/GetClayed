@@ -577,7 +577,6 @@ function Clay({
       <mesh
         ref={meshRef}
         userData={{ clayId: clay.id }}
-        scale={clay.size || 1}
         onPointerEnter={onHover}
         onPointerLeave={onHoverEnd}
         onPointerMove={(e) => {
@@ -608,7 +607,6 @@ function Clay({
       </mesh>
       {isSelected && tool === 'move' && (
         <mesh
-          scale={clay.size || 1}
           onPointerDown={(e) => {
             if (tool === 'move' && meshRef.current && groupRef.current) {
               e.stopPropagation()

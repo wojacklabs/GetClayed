@@ -608,7 +608,6 @@ function Clay({
       </mesh>
       {isSelected && tool === 'move' && (
         <mesh
-          scale={clay.size || 1}
           onPointerDown={(e) => {
             if (tool === 'move' && meshRef.current && groupRef.current) {
               e.stopPropagation()
