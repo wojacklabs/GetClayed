@@ -620,19 +620,9 @@ function Clay({
         </mesh>
       )}
       {/* Size label */}
-      {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && meshRef.current && (
+      {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && (
         <Text
-          position={[0, (() => {
-            // Calculate label position based on bounding box
-            if (meshRef.current?.geometry) {
-              meshRef.current.geometry.computeBoundingBox()
-              const box = meshRef.current.geometry.boundingBox
-              if (box) {
-                return box.max.y * (clay.scale?.y || 1) + 0.5
-              }
-            }
-            return (clay.size || 1) * 1.2
-          })(), 0]}
+          position={[0, (clay.size || 1) * 1.2, 0]}
           fontSize={0.5}
           color="white"
           anchorX="center"
@@ -724,15 +714,11 @@ function Clay({
 function AddClayHelper({ 
   onAdd, 
   shape,
-  onHoverPoint,
-  currentDepth,
-  onDepthChange
+  onHoverPoint
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
   shape: 'sphere' | 'tetrahedron' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
   onHoverPoint?: (point: THREE.Vector3 | null) => void
-  currentDepth: number
-  onDepthChange: (depth: number) => void
 }) {
   const { camera, raycaster, gl } = useThree()
   const [dragStart, setDragStart] = useState<THREE.Vector3 | null>(null)
@@ -744,6 +730,7 @@ function AddClayHelper({
   const [isDraggingCurve, setIsDraggingCurve] = useState(false)
   const [curveControlPoint, setCurveControlPoint] = useState<THREE.Vector3 | null>(null)
   const [lineThickness, setLineThickness] = useState(0.05) // Much thinner default
+  const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth
   
   useEffect(() => {
     const canvas = gl.domElement
@@ -986,7 +973,7 @@ function AddClayHelper({
       } else {
         // Adjust Z-axis depth for all shapes
         const delta = e.deltaY * 0.01
-        onDepthChange(currentDepth + delta)
+        setCurrentDepth(prev => prev + delta)
       }
     }
     
@@ -1271,13 +1258,12 @@ function AddClayHelper({
 }
 
 // Screen-locked Isometric Grid Helper
-function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate, currentDepth }: {
+function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate }: {
   tool: string
   selectedClayId: string | null
   clayObjects: ClayObject[]
   hoveredPoint: THREE.Vector3 | null
   onCoordsUpdate: (coords: { x: number; y: number; z: number }) => void
-  currentDepth: number
 }) {
   const { camera } = useThree()
   const [cameraDir, setCameraDir] = useState(new THREE.Vector3())
@@ -1354,32 +1340,27 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
 
       
 
-      {/* Camera-perpendicular planes for all objects in move tool */}
+      {/* XZ Horizontal Planes for all objects in move tool */}
       {tool === 'move' && clayObjects.map((clay) => {
-        // Get camera-relative depth
-        const toObject = clay.position.clone().sub(camera.position)
-        const depth = toObject.dot(cameraDir)
+        // Calculate color based on current Z position (real-time)
+        const z = clay.position.z
         
-        // Define depth range for color mapping
-        const minDepth = 5
-        const maxDepth = 50
-        const depthRange = maxDepth - minDepth
+        // Define Z range for color mapping (e.g., -10 to 10)
+        const minZ = -10
+        const maxZ = 10
+        const zRange = maxZ - minZ
         
-        // Normalize depth to 0-1 range
-        const normalizedDepth = Math.max(0, Math.min(1, (depth - minDepth) / depthRange))
+        // Normalize Z position to 0-1 range
+        const normalizedZ = Math.max(0, Math.min(1, (z - minZ) / zRange))
         
-        // Map to hue range (blue to red: 240 to 0)
-        const hue = 240 - (normalizedDepth * 240)
+        // Map to hue range (e.g., blue to red: 240 to 0)
+        const hue = 240 - (normalizedZ * 240) // Blue (240) when low, Red (0) when high
         const color = `hsl(${hue}, 70%, 50%)`
-        
-        // Calculate plane rotation to face camera
-        const quaternion = new THREE.Quaternion()
-        quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cameraDir.clone().negate())
         
         return (
           <group key={clay.id} position={clay.position}>
-            {/* Plane perpendicular to camera */}
-            <mesh quaternion={quaternion}>
+            {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[200, 200, 100, 100]} />
               <meshBasicMaterial
                 color={color}
@@ -1393,15 +1374,11 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         )
       })}
       
-      {/* Camera-perpendicular plane for push, pull tools */}
+      {/* XZ Horizontal Plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
         <group position={hoveredPoint}>
-          {/* Plane perpendicular to camera */}
-          <mesh quaternion={(() => {
-            const q = new THREE.Quaternion()
-            q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cameraDir.clone().negate())
-            return q
-          })()}>
+          {/* XZ horizontal plane that moves up/down (Y changes) */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[200, 200, 100, 100]} />
             <meshBasicMaterial 
               color="#888888" 
@@ -1414,19 +1391,11 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         </group>
       )}
       
-      {/* Camera-perpendicular plane for add tool */}
+      {/* XZ Horizontal Plane for add tool */}
       {tool === 'add' && (
-        <group position={(() => {
-          // Calculate position at current depth along camera direction
-          const depthPosition = camera.position.clone().add(cameraDir.clone().multiplyScalar(currentDepth))
-          return depthPosition
-        })()}>
-          {/* Plane perpendicular to camera */}
-          <mesh quaternion={(() => {
-            const q = new THREE.Quaternion()
-            q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cameraDir.clone().negate())
-            return q
-          })()}>
+        <group position={new THREE.Vector3(0, 0, hoveredPoint?.z || 0)}>
+          {/* XZ horizontal plane for add tool at current Z depth */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[200, 200, 100, 100]} />
             <meshBasicMaterial 
               color="#888888" 
@@ -1543,7 +1512,6 @@ export default function AdvancedClay() {
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
   const [cameraRelativeCoords, setCameraRelativeCoords] = useState({ x: 0, y: 0, z: 0 })
-  const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth for add tool
   
   // Track current project
   const [currentProjectInfo, setCurrentProjectInfo] = useState<{
@@ -2288,8 +2256,6 @@ export default function AdvancedClay() {
               onAdd={addNewClay} 
               shape={selectedShape}
               onHoverPoint={setHoveredPoint}
-              currentDepth={currentDepth}
-              onDepthChange={setCurrentDepth}
             />
           )}
           
@@ -2301,7 +2267,6 @@ export default function AdvancedClay() {
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
               onCoordsUpdate={setCameraRelativeCoords}
-              currentDepth={currentDepth}
             />
           )}
           
