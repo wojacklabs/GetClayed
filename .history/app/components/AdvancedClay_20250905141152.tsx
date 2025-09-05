@@ -620,19 +620,9 @@ function Clay({
         </mesh>
       )}
       {/* Size label */}
-      {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && meshRef.current && (
+      {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && (
         <Text
-          position={[0, (() => {
-            // Calculate label position based on bounding box
-            if (meshRef.current?.geometry) {
-              meshRef.current.geometry.computeBoundingBox()
-              const box = meshRef.current.geometry.boundingBox
-              if (box) {
-                return box.max.y * (clay.scale?.y || 1) + 0.5
-              }
-            }
-            return (clay.size || 1) * 1.2
-          })(), 0]}
+          position={[0, (clay.size || 1) * 1.2, 0]}
           fontSize={0.5}
           color="white"
           anchorX="center"
@@ -1271,13 +1261,12 @@ function AddClayHelper({
 }
 
 // Screen-locked Isometric Grid Helper
-function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate, currentDepth }: {
+function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate }: {
   tool: string
   selectedClayId: string | null
   clayObjects: ClayObject[]
   hoveredPoint: THREE.Vector3 | null
   onCoordsUpdate: (coords: { x: number; y: number; z: number }) => void
-  currentDepth: number
 }) {
   const { camera } = useThree()
   const [cameraDir, setCameraDir] = useState(new THREE.Vector3())
@@ -2301,7 +2290,6 @@ export default function AdvancedClay() {
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
               onCoordsUpdate={setCameraRelativeCoords}
-              currentDepth={currentDepth}
             />
           )}
           
