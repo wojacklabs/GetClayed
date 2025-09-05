@@ -619,30 +619,20 @@ function Clay({
           />
         </mesh>
       )}
-              {/* Size label */}
-        {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && meshRef.current && (
-          <Text
-            position={[0, (() => {
-              // Calculate label position based on bounding box
-              if (meshRef.current?.geometry) {
-                meshRef.current.geometry.computeBoundingBox()
-                const box = meshRef.current.geometry.boundingBox
-                if (box) {
-                  return box.max.y * (clay.scale?.y || 1) + 0.5
-                }
-              }
-              return (clay.size || 1) * 1.2
-            })(), 0]}
-            fontSize={0.5}
-            color="white"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.1}
-            outlineColor="black"
-          >
-            {(clay.size || 1).toFixed(2)}
-          </Text>
-        )}
+      {/* Size label */}
+      {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && (
+        <Text
+          position={[0, (clay.size || 1) * 1.2, 0]}
+          fontSize={0.5}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.1}
+          outlineColor="black"
+        >
+          {(clay.size || 1).toFixed(2)}
+        </Text>
+      )}
       {isSelected && tool === 'move' && (
         <mesh
           scale={clay.size || 1}

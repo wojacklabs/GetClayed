@@ -619,30 +619,20 @@ function Clay({
           />
         </mesh>
       )}
-              {/* Size label */}
-        {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && meshRef.current && (
-          <Text
-            position={[0, (() => {
-              // Calculate label position based on bounding box
-              if (meshRef.current?.geometry) {
-                meshRef.current.geometry.computeBoundingBox()
-                const box = meshRef.current.geometry.boundingBox
-                if (box) {
-                  return box.max.y * (clay.scale?.y || 1) + 0.5
-                }
-              }
-              return (clay.size || 1) * 1.2
-            })(), 0]}
-            fontSize={0.5}
-            color="white"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.1}
-            outlineColor="black"
-          >
-            {(clay.size || 1).toFixed(2)}
-          </Text>
-        )}
+      {/* Size label */}
+      {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && (
+        <Text
+          position={[0, (clay.size || 1) * 1.2, 0]}
+          fontSize={0.5}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.1}
+          outlineColor="black"
+        >
+          {(clay.size || 1).toFixed(2)}
+        </Text>
+      )}
       {isSelected && tool === 'move' && (
         <mesh
           scale={clay.size || 1}
@@ -1353,74 +1343,72 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
 
       
 
-      {/* Camera-perpendicular planes for all objects in move tool */}
+      {/* XZ Horizontal Planes for all objects in move tool */}
       {tool === 'move' && clayObjects.map((clay) => {
-        // Get camera-relative depth
-        const toObject = clay.position.clone().sub(camera.position)
-        const depth = toObject.dot(cameraDir)
+        // Calculate color based on current Z position (real-time)
+        const z = clay.position.z
         
-        // Define depth range for color mapping
-        const minDepth = 5
-        const maxDepth = 50
-        const depthRange = maxDepth - minDepth
+        // Define Z range for color mapping (e.g., -10 to 10)
+        const minZ = -10
+        const maxZ = 10
+        const zRange = maxZ - minZ
         
-        // Normalize depth to 0-1 range
-        const normalizedDepth = Math.max(0, Math.min(1, (depth - minDepth) / depthRange))
+        // Normalize Z position to 0-1 range
+        const normalizedZ = Math.max(0, Math.min(1, (z - minZ) / zRange))
         
-        // Map to hue range (blue to red: 240 to 0)
-        const hue = 240 - (normalizedDepth * 240)
+        // Map to hue range (e.g., blue to red: 240 to 0)
+        const hue = 240 - (normalizedZ * 240) // Blue (240) when low, Red (0) when high
         const color = `hsl(${hue}, 70%, 50%)`
         
         return (
-          <mesh 
-            key={clay.id} 
-            position={clay.position}
-            onUpdate={self => self.lookAt(camera.position)}
-          >
-            <planeGeometry args={[200, 200, 100, 100]} />
-            <meshBasicMaterial
-              color={color}
-              wireframe
-              transparent
-              opacity={selectedClayId === clay.id ? 0.3 : 0.1}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
+          <group key={clay.id} position={clay.position}>
+            {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[200, 200, 100, 100]} />
+              <meshBasicMaterial
+                color={color}
+                wireframe
+                transparent
+                opacity={selectedClayId === clay.id ? 0.3 : 0.1}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+          </group>
         )
       })}
       
-      {/* Camera-perpendicular plane for push, pull tools */}
+      {/* XZ Horizontal Plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
-        <mesh 
-          position={hoveredPoint}
-          onUpdate={self => self.lookAt(camera.position)}
-        >
-          <planeGeometry args={[200, 200, 100, 100]} />
-          <meshBasicMaterial 
-            color="#888888" 
-            wireframe 
-            transparent 
-            opacity={0.2} 
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+        <group position={hoveredPoint}>
+          {/* XZ horizontal plane that moves up/down (Y changes) */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial 
+              color="#888888" 
+              wireframe 
+              transparent 
+              opacity={0.2} 
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
       )}
       
-      {/* Camera-perpendicular plane for add tool */}
-      {tool === 'add' && hoveredPoint && (
-        <mesh 
-          position={hoveredPoint}
-          onUpdate={self => self.lookAt(camera.position)}
-        >
-          <planeGeometry args={[200, 200, 100, 100]} />
-          <meshBasicMaterial 
-            color="#888888" 
-            wireframe 
-            transparent 
-            opacity={0.3} 
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+      {/* XZ Horizontal Plane for add tool */}
+      {tool === 'add' && (
+        <group position={new THREE.Vector3(0, 0, hoveredPoint?.z || 0)}>
+          {/* XZ horizontal plane for add tool at current Z depth */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial 
+              color="#888888" 
+              wireframe 
+              transparent 
+              opacity={0.2} 
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
       )}
     </group>
   )
