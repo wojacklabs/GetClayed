@@ -730,7 +730,7 @@ function AddClayHelper({
   const [isDraggingCurve, setIsDraggingCurve] = useState(false)
   const [curveControlPoint, setCurveControlPoint] = useState<THREE.Vector3 | null>(null)
   const [lineThickness, setLineThickness] = useState(0.05) // Much thinner default
-      const [currentDepth, setCurrentDepth] = useState(10) // Camera-relative depth
+  const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth
   
   useEffect(() => {
     const canvas = gl.domElement

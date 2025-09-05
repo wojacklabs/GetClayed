@@ -730,7 +730,7 @@ function AddClayHelper({
   const [isDraggingCurve, setIsDraggingCurve] = useState(false)
   const [curveControlPoint, setCurveControlPoint] = useState<THREE.Vector3 | null>(null)
   const [lineThickness, setLineThickness] = useState(0.05) // Much thinner default
-      const [currentDepth, setCurrentDepth] = useState(10) // Camera-relative depth
+  const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth
   
   useEffect(() => {
     const canvas = gl.domElement
@@ -742,18 +742,8 @@ function AddClayHelper({
       
       raycaster.setFromCamera(new THREE.Vector2(x, y), camera)
       
-      // Get camera direction
-      const cameraDirection = new THREE.Vector3()
-      camera.getWorldDirection(cameraDirection)
-      
-      // Calculate the point at current depth along camera direction
-      const planePoint = camera.position.clone().add(cameraDirection.multiplyScalar(currentDepth))
-      
-      // Create plane perpendicular to camera at the depth point
-      const planeNormal = cameraDirection.clone().negate()
-      const plane = new THREE.Plane()
-      plane.setFromNormalAndCoplanarPoint(planeNormal, planePoint)
-      
+      // Create plane at current depth
+      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -currentDepth)
       const intersection = new THREE.Vector3()
       
       if (raycaster.ray.intersectPlane(plane, intersection)) {
@@ -1400,21 +1390,21 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         </mesh>
       )}
       
-      {/* Camera-perpendicular plane for add tool */}
-      {tool === 'add' && hoveredPoint && (
-        <mesh 
-          position={hoveredPoint}
-          onUpdate={self => self.lookAt(camera.position)}
-        >
-          <planeGeometry args={[200, 200, 100, 100]} />
-          <meshBasicMaterial 
-            color="#888888" 
-            wireframe 
-            transparent 
-            opacity={0.3} 
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+      {/* XZ Horizontal Plane for add tool */}
+      {tool === 'add' && (
+        <group position={new THREE.Vector3(0, 0, hoveredPoint?.z || 0)}>
+          {/* XZ horizontal plane for add tool at current Z depth */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial 
+              color="#888888" 
+              wireframe 
+              transparent 
+              opacity={0.2} 
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
       )}
     </group>
   )
