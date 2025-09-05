@@ -1399,21 +1399,21 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         </group>
       )}
       
-      {/* Horizontal plane for add tool with camera-based depth indication */}
+      {/* Camera-perpendicular plane for add tool */}
       {tool === 'add' && hoveredPoint && (
-        <group position={new THREE.Vector3(0, hoveredPoint.y, 0)}>
-          {/* Horizontal plane (XZ plane) at hover Y position */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[200, 200, 100, 100]} />
-            <meshBasicMaterial 
-              color="#888888" 
-              wireframe 
-              transparent 
-              opacity={0.3} 
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-        </group>
+        <mesh 
+          position={hoveredPoint}
+          onUpdate={self => self.lookAt(camera.position)}
+        >
+          <planeGeometry args={[200, 200, 100, 100]} />
+          <meshBasicMaterial 
+            color="#888888" 
+            wireframe 
+            transparent 
+            opacity={0.3} 
+            side={THREE.DoubleSide}
+          />
+        </mesh>
       )}
     </group>
   )
