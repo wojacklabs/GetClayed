@@ -1396,19 +1396,23 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
       
       {/* Camera-perpendicular plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
-        <mesh 
-          position={hoveredPoint}
-          onUpdate={self => self.lookAt(camera.position)}
-        >
-          <planeGeometry args={[200, 200, 100, 100]} />
-          <meshBasicMaterial 
-            color="#888888" 
-            wireframe 
-            transparent 
-            opacity={0.2} 
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+        <group position={hoveredPoint}>
+          {/* Plane perpendicular to camera */}
+          <mesh quaternion={(() => {
+            const q = new THREE.Quaternion()
+            q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cameraDir.clone().negate())
+            return q
+          })()}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial 
+              color="#888888" 
+              wireframe 
+              transparent 
+              opacity={0.2} 
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
       )}
       
       {/* Camera-perpendicular plane for add tool */}
