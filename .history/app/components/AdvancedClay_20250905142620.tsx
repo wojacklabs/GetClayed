@@ -1376,56 +1376,71 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         const hue = 240 - (normalizedDepth * 240)
         const color = `hsl(${hue}, 70%, 50%)`
         
+        // Calculate plane rotation to face camera
+        const quaternion = new THREE.Quaternion()
+        quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cameraDir.clone().negate())
+        
         return (
-          <mesh 
-            key={clay.id} 
-            position={clay.position}
-            onUpdate={self => self.lookAt(camera.position)}
-          >
-            <planeGeometry args={[200, 200, 100, 100]} />
-            <meshBasicMaterial
-              color={color}
-              wireframe
-              transparent
-              opacity={selectedClayId === clay.id ? 0.3 : 0.1}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
+          <group key={clay.id} position={clay.position}>
+            {/* Plane perpendicular to camera */}
+            <mesh quaternion={quaternion}>
+              <planeGeometry args={[200, 200, 100, 100]} />
+              <meshBasicMaterial
+                color={color}
+                wireframe
+                transparent
+                opacity={selectedClayId === clay.id ? 0.3 : 0.1}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+          </group>
         )
       })}
       
       {/* Camera-perpendicular plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
-        <mesh 
-          position={hoveredPoint}
-          onUpdate={self => self.lookAt(camera.position)}
-        >
-          <planeGeometry args={[200, 200, 100, 100]} />
-          <meshBasicMaterial 
-            color="#888888" 
-            wireframe 
-            transparent 
-            opacity={0.2} 
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+        <group position={hoveredPoint}>
+          {/* Plane perpendicular to camera */}
+          <mesh quaternion={(() => {
+            const q = new THREE.Quaternion()
+            q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cameraDir.clone().negate())
+            return q
+          })()}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial 
+              color="#888888" 
+              wireframe 
+              transparent 
+              opacity={0.2} 
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
       )}
       
       {/* Camera-perpendicular plane for add tool */}
       {tool === 'add' && (
-        <mesh 
-          position={camera.position.clone().add(cameraDir.clone().multiplyScalar(currentDepth))}
-          onUpdate={self => self.lookAt(camera.position)}
-        >
-          <planeGeometry args={[200, 200, 100, 100]} />
-          <meshBasicMaterial 
-            color="#888888" 
-            wireframe 
-            transparent 
-            opacity={0.3} 
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+        <group position={(() => {
+          // Calculate position at current depth along camera direction
+          const depthPosition = camera.position.clone().add(cameraDir.clone().multiplyScalar(currentDepth))
+          return depthPosition
+        })()}>
+          {/* Plane perpendicular to camera */}
+          <mesh quaternion={(() => {
+            const q = new THREE.Quaternion()
+            q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cameraDir.clone().negate())
+            return q
+          })()}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial 
+              color="#888888" 
+              wireframe 
+              transparent 
+              opacity={0.2} 
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
       )}
     </group>
   )
@@ -1532,7 +1547,7 @@ export default function AdvancedClay() {
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
   const [cameraRelativeCoords, setCameraRelativeCoords] = useState({ x: 0, y: 0, z: 0 })
-  const [currentDepth, setCurrentDepth] = useState(10) // Z-axis depth for add tool (default at reasonable distance)
+  const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth for add tool
   
   // Track current project
   const [currentProjectInfo, setCurrentProjectInfo] = useState<{
