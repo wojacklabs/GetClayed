@@ -408,7 +408,7 @@ function Clay({
         onUpdate(newClay)
       } else if (tool === 'resize' && resizeRef.current.active) {
         const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
-        const newSize = Math.max(0.5, Math.min(10, resizeRef.current.initialSize + deltaY))
+        const newSize = Math.max(0.1, resizeRef.current.initialSize + deltaY)
         
         const newClay = {
           ...clay,
@@ -900,8 +900,7 @@ function AddClayHelper({
           const p1 = clickPoints[0]
           const p2 = point
           const center = p1.clone().add(p2).multiplyScalar(0.5)
-          const rawSize = getScreenConsistentSize(p1, p2)
-          const size = Math.max(0.5, Math.min(10, rawSize)) // Apply min/max limits
+          const size = getScreenConsistentSize(p1, p2)
           
           onAdd(center, size, lineThickness, undefined, [p1, p2])
           setClickPoints([])
@@ -927,8 +926,7 @@ function AddClayHelper({
           const p2 = point
           const center = p1.clone().add(p2).multiplyScalar(0.5)
           // Use screen-consistent size for 2D shapes
-          const rawSize = getScreenConsistentSize(p1, p2)
-          const size = Math.max(0.5, Math.min(10, rawSize)) // Apply min/max limits
+          const size = getScreenConsistentSize(p1, p2)
           
           onAdd(center, size, lineThickness, undefined, [p1, p2])
           setClickPoints([])
@@ -973,8 +971,7 @@ function AddClayHelper({
             )
             
             // Calculate size based on the base edge using screen space
-            const rawBaseSize = getScreenConsistentSize(p1, p2) * 0.8
-            const baseSize = Math.max(0.5, Math.min(10, rawBaseSize))
+            const baseSize = getScreenConsistentSize(p1, p2) * 0.8 || 1
             
             // Calculate the direction from base center to apex
             const apexVector = p3.clone().sub(baseCenter)
@@ -1036,9 +1033,7 @@ function AddClayHelper({
     
     const handleMouseUp = (e: MouseEvent) => {
       if (shape === 'sphere' && isDragging && dragStart && dragEnd) {
-        const minSize = 0.5 // Minimum size for visibility
-        const maxSize = 10 // Maximum size limit
-        const size = Math.max(minSize, Math.min(maxSize, getScreenConsistentSize(dragStart, dragEnd)))
+        const size = Math.max(0.1, Math.min(5, getScreenConsistentSize(dragStart, dragEnd)))
         const center = dragStart.clone().add(dragEnd).multiplyScalar(0.5)
         
         // Get camera-relative tilted plane normal
@@ -1268,7 +1263,7 @@ function AddClayHelper({
             )}
             {shape === 'circle' && (
               <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
-                <circleGeometry args={[Math.max(0.5, Math.min(10, getScreenConsistentSize(clickPoints[0], currentPoint))), 32]} />
+                <circleGeometry args={[getScreenConsistentSize(clickPoints[0], currentPoint), 32]} />
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
               </mesh>
             )}

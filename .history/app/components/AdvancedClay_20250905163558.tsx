@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { TrackballControls, Environment, Box, Line, Text, Billboard } from '@react-three/drei'
+import { TrackballControls, Environment, Box, Line, Text } from '@react-three/drei'
 import { useRef, useState, useEffect, Suspense, useCallback } from 'react'
 import * as THREE from 'three'
 import { 
@@ -161,7 +161,7 @@ function Clay({
   const resizeRef = useRef({
     active: false,
     startY: 0,
-    initialSize: clay.size || 2
+    initialSize: clay.size || 1
   })
   
   // Drag state
@@ -271,6 +271,10 @@ function Clay({
       if (tool !== 'push' && tool !== 'pull') return
       if (!meshRef.current) return
       
+      // Prevent TrackballControls from starting
+      e.stopPropagation()
+      e.preventDefault()
+      
       updateMousePosition(e)
       dragState.current.initialMousePos.copy(dragState.current.mousePos)  // Store initial mouse position
       
@@ -331,12 +335,20 @@ function Clay({
       }
     }
     
-    const handleMouseUp = () => {
+    const handleMouseUp = (e?: MouseEvent) => {
       if (dragState.current.active) {
         dragState.current.active = false
         dragState.current.targetVertex = -1
         dragState.current.vertices = []
+        
+        // Immediately disable deforming state
         onDeformingChange(false)
+        
+        // Stop event propagation to prevent camera controls from activating
+        if (e) {
+          e.stopPropagation()
+          e.preventDefault()
+        }
         
         // Trigger update for history
         if (tool === 'move' && isSelected) {
@@ -408,7 +420,7 @@ function Clay({
         onUpdate(newClay)
       } else if (tool === 'resize' && resizeRef.current.active) {
         const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
-        const newSize = Math.max(0.5, Math.min(10, resizeRef.current.initialSize + deltaY))
+        const newSize = Math.max(0.1, resizeRef.current.initialSize + deltaY)
         
         const newClay = {
           ...clay,
@@ -446,16 +458,11 @@ function Clay({
     
     // Handle move tool with free 3D dragging
     if (tool === 'move' && isSelected) {
-      // Get camera's coordinate system
-      const cameraDirection = new THREE.Vector3()
-      camera.getWorldDirection(cameraDirection)
-      
-      // Calculate camera's right vector (screen X axis)
-      const worldUp = new THREE.Vector3(0, 1, 0)
-      const cameraRight = new THREE.Vector3().crossVectors(cameraDirection, worldUp).normalize()
-      
-      // Calculate camera's up vector (screen Y axis)
-      const cameraUp = new THREE.Vector3().crossVectors(cameraRight, cameraDirection).normalize()
+      // Get camera's coordinate system from matrix (more accurate)
+      const cameraMatrix = camera.matrixWorld
+      const cameraRight = new THREE.Vector3().setFromMatrixColumn(cameraMatrix, 0).normalize()
+      const cameraUp = new THREE.Vector3().setFromMatrixColumn(cameraMatrix, 1).normalize()
+      const cameraDirection = new THREE.Vector3().setFromMatrixColumn(cameraMatrix, 2).normalize().negate()
       
       // Get mouse movement in screen space
       const mouseDelta = {
@@ -481,14 +488,14 @@ function Clay({
         viewWidth = orthographicCamera.right - orthographicCamera.left
       }
       
-      // Scale mouse movement to world units
-      const screenX = (mouseDelta.x / 2) * viewWidth
-      const screenY = (mouseDelta.y / 2) * viewHeight
+      // Scale mouse movement to world units with moveSpeed
+      const screenX = (mouseDelta.x / 2) * viewWidth * 0.5
+      const screenY = (mouseDelta.y / 2) * viewHeight * 0.5
       
       // Apply movement in camera coordinate system
       const movement = new THREE.Vector3()
         .addScaledVector(cameraRight, screenX)
-        .addScaledVector(cameraUp, screenY)
+        .addScaledVector(cameraUp, -screenY) // Negative Y for correct screen-to-world mapping
       
       // Apply depth movement from scroll (along camera forward/backward)
       const depthMovement = cameraDirection.clone().multiplyScalar(dragState.current.currentDepth)
@@ -577,6 +584,7 @@ function Clay({
       <mesh
         ref={meshRef}
         userData={{ clayId: clay.id }}
+        scale={clay.size || 1}
         onPointerEnter={onHover}
         onPointerLeave={onHoverEnd}
         onPointerMove={(e) => {
@@ -606,7 +614,7 @@ function Clay({
       {/* Hover outline */}
       {isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize') && (
         <mesh
-          scale={1.02}
+          scale={(clay.size || 1) * 1.02}
           userData={{ isOutline: true }}
         >
           <meshBasicMaterial
@@ -620,48 +628,21 @@ function Clay({
       )}
       {/* Size label */}
       {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && (
-        <Billboard
-          follow={true}
-          lockX={false}
-          lockY={false}
-          lockZ={false}
-          position={(() => {
-            // Calculate actual height of the shape
-            if (!clay.geometry.boundingBox) {
-              clay.geometry.computeBoundingBox()
-            }
-            const box = clay.geometry.boundingBox!
-            const size = new THREE.Vector3()
-            box.getSize(size)
-            // Position text above the shape with fixed offset
-            return [0, size.y * 0.5 + 0.5, 0]
-          })()}
+        <Text
+          position={[0, (clay.size || 1) * 1.2, 0]}
+          fontSize={0.5}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.1}
+          outlineColor="black"
         >
-          <Text
-            fontSize={0.25}
-            color="white"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.05}
-            outlineColor="black"
-          >
-            {(() => {
-              // Calculate actual size based on bounding box
-              if (!clay.geometry.boundingBox) {
-                clay.geometry.computeBoundingBox()
-              }
-              const box = clay.geometry.boundingBox!
-              const size = new THREE.Vector3()
-              box.getSize(size)
-              // Get the maximum dimension (furthest two points)
-              const maxDimension = Math.max(size.x, size.y, size.z)
-              return maxDimension.toFixed(2)
-            })()}
-          </Text>
-        </Billboard>
+          {(clay.size || 1).toFixed(2)}
+        </Text>
       )}
       {isSelected && tool === 'move' && (
         <mesh
+          scale={clay.size || 1}
           onPointerDown={(e) => {
             if (tool === 'move' && meshRef.current && groupRef.current) {
               e.stopPropagation()
@@ -756,61 +737,7 @@ function AddClayHelper({
   const [isDraggingCurve, setIsDraggingCurve] = useState(false)
   const [curveControlPoint, setCurveControlPoint] = useState<THREE.Vector3 | null>(null)
   const [lineThickness, setLineThickness] = useState(0.05) // Much thinner default
-  const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth
-  
-  // Convert screen-space distance to world-space size
-  const getScreenConsistentSize = useCallback((p1: THREE.Vector3, p2: THREE.Vector3): number => {
-    // Get canvas dimensions
-    const canvas = gl.domElement
-    const rect = canvas.getBoundingClientRect()
-    
-    // Clone points to avoid modifying originals
-    const screenP1 = p1.clone()
-    const screenP2 = p2.clone()
-    
-    // Project points to normalized device coordinates
-    screenP1.project(camera)
-    screenP2.project(camera)
-    
-    // Convert from NDC (-1 to 1) to pixel coordinates
-    const pixelP1 = {
-      x: (screenP1.x + 1) * rect.width * 0.5,
-      y: (-screenP1.y + 1) * rect.height * 0.5
-    }
-    const pixelP2 = {
-      x: (screenP2.x + 1) * rect.width * 0.5,
-      y: (-screenP2.y + 1) * rect.height * 0.5
-    }
-    
-    // Calculate distance in pixels
-    const pixelDistance = Math.sqrt(
-      Math.pow(pixelP2.x - pixelP1.x, 2) + 
-      Math.pow(pixelP2.y - pixelP1.y, 2)
-    )
-    
-    // Get the average world position
-    const avgPosition = p1.clone().add(p2).multiplyScalar(0.5)
-    const cameraDistance = camera.position.distanceTo(avgPosition)
-    
-    // Convert pixel distance to world size based on camera type
-    let worldSize: number
-    
-    if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-      const perspCamera = camera as THREE.PerspectiveCamera
-      const fov = perspCamera.fov * Math.PI / 180
-      const viewHeight = 2 * Math.tan(fov / 2) * cameraDistance
-      const pixelsPerWorldUnit = rect.height / viewHeight
-      worldSize = pixelDistance / pixelsPerWorldUnit
-    } else {
-      // For orthographic camera
-      const orthoCamera = camera as THREE.OrthographicCamera
-      const viewHeight = orthoCamera.top - orthoCamera.bottom
-      const pixelsPerWorldUnit = rect.height / viewHeight
-      worldSize = pixelDistance / pixelsPerWorldUnit
-    }
-    
-    return worldSize
-  }, [camera, gl])
+      const [currentDepth, setCurrentDepth] = useState(50) // Camera-relative depth, same as initial object
   
   useEffect(() => {
     const canvas = gl.domElement
@@ -820,53 +747,27 @@ function AddClayHelper({
       const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
       const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
       
-      // Fixed z-depth for all shapes (same as initial sphere)
-      const fixedZ = 0
-      
-      // Method 1: Try raycaster intersection first
       raycaster.setFromCamera(new THREE.Vector2(x, y), camera)
-      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -fixedZ)
+      
+      // Get camera direction
+      const cameraDirection = new THREE.Vector3()
+      camera.getWorldDirection(cameraDirection)
+      
+      // Calculate the point at current depth along camera direction
+      const planePoint = camera.position.clone().add(cameraDirection.multiplyScalar(currentDepth))
+      
+      // Create plane perpendicular to camera at the depth point
+      const planeNormal = cameraDirection.clone().negate()
+      const plane = new THREE.Plane()
+      plane.setFromNormalAndCoplanarPoint(planeNormal, planePoint)
+      
       const intersection = new THREE.Vector3()
       
       if (raycaster.ray.intersectPlane(plane, intersection)) {
-        // Check if the intersection is reasonable
-        const maxDistance = 100
-        if (Math.abs(intersection.x) < maxDistance && Math.abs(intersection.y) < maxDistance) {
-          intersection.z = fixedZ // Ensure exact z value
-          return intersection
-        }
+        return intersection
       }
       
-      // Method 2: If raycaster fails or gives extreme values, use projection method
-      // This is more stable for extreme camera angles
-      const vector = new THREE.Vector3(x, y, 0.5)
-      vector.unproject(camera)
-      
-      // Direction from camera to unprojected point
-      const direction = vector.sub(camera.position).normalize()
-      
-      // Calculate distance to z-plane
-      if (Math.abs(direction.z) > 0.001) {
-        const t = (fixedZ - camera.position.z) / direction.z
-        
-        if (t > 0) {
-          const result = new THREE.Vector3(
-            camera.position.x + direction.x * t,
-            camera.position.y + direction.y * t,
-            fixedZ
-          )
-          
-          // Clamp to reasonable values
-          const maxCoord = 100
-          result.x = Math.max(-maxCoord, Math.min(maxCoord, result.x))
-          result.y = Math.max(-maxCoord, Math.min(maxCoord, result.y))
-          
-          return result
-        }
-      }
-      
-      // Last resort: return a point at screen center depth
-      return new THREE.Vector3(0, 0, fixedZ)
+      return null
     }
     
     const handleMouseDown = (e: MouseEvent) => {
@@ -876,20 +777,7 @@ function AddClayHelper({
       if (shape === 'sphere') {
         // Sphere uses drag method
         setDragStart(point)
-        // Simply offset in camera's right direction for consistent initial size
-        const cameraDirection = new THREE.Vector3()
-        camera.getWorldDirection(cameraDirection)
-        
-        // Get camera's right vector
-        const cameraRight = new THREE.Vector3()
-        const cameraUp = new THREE.Vector3(0, 1, 0)
-        cameraRight.crossVectors(cameraDirection, cameraUp).normalize()
-        
-        // Add small offset in camera's right direction
-        const initialSize = 0.5 // Initial size in world units
-        const offsetPoint = point.clone().add(cameraRight.multiplyScalar(initialSize))
-        
-        setDragEnd(offsetPoint)
+        setDragEnd(point)
         setIsDragging(true)
       } else if (shape === 'line') {
         // Line uses 2 click points
@@ -900,8 +788,7 @@ function AddClayHelper({
           const p1 = clickPoints[0]
           const p2 = point
           const center = p1.clone().add(p2).multiplyScalar(0.5)
-          const rawSize = getScreenConsistentSize(p1, p2)
-          const size = Math.max(0.5, Math.min(10, rawSize)) // Apply min/max limits
+          const size = p1.distanceTo(p2)
           
           onAdd(center, size, lineThickness, undefined, [p1, p2])
           setClickPoints([])
@@ -926,9 +813,7 @@ function AddClayHelper({
           const p1 = clickPoints[0]
           const p2 = point
           const center = p1.clone().add(p2).multiplyScalar(0.5)
-          // Use screen-consistent size for 2D shapes
-          const rawSize = getScreenConsistentSize(p1, p2)
-          const size = Math.max(0.5, Math.min(10, rawSize)) // Apply min/max limits
+          const size = p1.distanceTo(p2)
           
           onAdd(center, size, lineThickness, undefined, [p1, p2])
           setClickPoints([])
@@ -972,9 +857,8 @@ function AddClayHelper({
               (p1.z + p2.z) / 2
             )
             
-            // Calculate size based on the base edge using screen space
-            const rawBaseSize = getScreenConsistentSize(p1, p2) * 0.8
-            const baseSize = Math.max(0.5, Math.min(10, rawBaseSize))
+            // Calculate size based on the base edge
+            const baseSize = p1.distanceTo(p2) * 0.8 || 1
             
             // Calculate the direction from base center to apex
             const apexVector = p3.clone().sub(baseCenter)
@@ -1036,9 +920,7 @@ function AddClayHelper({
     
     const handleMouseUp = (e: MouseEvent) => {
       if (shape === 'sphere' && isDragging && dragStart && dragEnd) {
-        const minSize = 0.5 // Minimum size for visibility
-        const maxSize = 10 // Maximum size limit
-        const size = Math.max(minSize, Math.min(maxSize, getScreenConsistentSize(dragStart, dragEnd)))
+        const size = Math.max(0.1, Math.min(5, dragStart.distanceTo(dragEnd) * 0.5))
         const center = dragStart.clone().add(dragEnd).multiplyScalar(0.5)
         
         // Get camera-relative tilted plane normal
@@ -1069,7 +951,7 @@ function AddClayHelper({
         const p1 = clickPoints[0]
         const p2 = clickPoints[1]
         const center = p1.clone().add(p2).multiplyScalar(0.5)
-        const size = getScreenConsistentSize(p1, p2)
+        const size = p1.distanceTo(p2)
         
         // Create control points array with the dragged control point
         const controlPoints = [p1, curveControlPoint, p2]
@@ -1099,8 +981,9 @@ function AddClayHelper({
         const delta = e.deltaY * -0.0001
         setLineThickness(prev => Math.max(0.01, Math.min(0.5, prev + delta)))
       } else {
-        // Don't change depth with scroll - keep shapes at z=0
-        // Scroll can be used for other purposes in the future
+        // Adjust Z-axis depth for all shapes
+        const delta = e.deltaY * 0.01
+        setCurrentDepth(prev => prev + delta)
       }
     }
     
@@ -1114,14 +997,14 @@ function AddClayHelper({
       canvas.removeEventListener('mouseleave', handleMouseLeave)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth, getScreenConsistentSize])
+  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth])
   
   // Render for sphere (drag method)
   if (shape === 'sphere') {
     if (!dragEnd) return null
     
     if (isDragging && dragStart && dragEnd) {
-      const size = Math.max(0.1, Math.min(5, getScreenConsistentSize(dragStart, dragEnd)))
+      const size = Math.max(0.1, Math.min(5, dragStart.distanceTo(dragEnd) * 0.5))
       const center = dragStart.clone().add(dragEnd).multiplyScalar(0.5)
       
       return (
@@ -1268,7 +1151,7 @@ function AddClayHelper({
             )}
             {shape === 'circle' && (
               <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
-                <circleGeometry args={[Math.max(0.5, Math.min(10, getScreenConsistentSize(clickPoints[0], currentPoint))), 32]} />
+                <circleGeometry args={[clickPoints[0].distanceTo(currentPoint) / 2, 32]} />
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
               </mesh>
             )}
@@ -1464,29 +1347,63 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
   
   return (
     <group>
+      {/* Global reference grid */}
+      {(tool === 'move' || tool === 'add') && (
+        <group>
+          {/* XZ plane (horizontal) */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+            <planeGeometry args={[1000, 1000, 100, 100]} />
+            <meshBasicMaterial
+              color="#444444"
+              wireframe
+              transparent
+              opacity={0.1}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          
+          {/* Camera view axes */}
+          <group>
+            {/* X axis (camera right) - Red */}
+            <mesh>
+              <boxGeometry args={[100, 0.1, 0.1]} />
+              <meshBasicMaterial color="#ff0000" />
+            </mesh>
+            {/* Y axis (camera up) - Green */}
+            <mesh>
+              <boxGeometry args={[0.1, 100, 0.1]} />
+              <meshBasicMaterial color="#00ff00" />
+            </mesh>
+            {/* Z axis (camera forward) - Blue */}
+            <mesh>
+              <boxGeometry args={[0.1, 0.1, 100]} />
+              <meshBasicMaterial color="#0000ff" />
+            </mesh>
+          </group>
+        </group>
+      )}
 
-      
-
-      {/* XZ Horizontal Planes for all objects in move tool */}
+      {/* Camera-aligned grid planes for all objects in move tool */}
       {tool === 'move' && clayObjects.map((clay) => {
-        // Calculate color based on current Z position (real-time)
-        const z = clay.position.z
+        // Calculate depth from camera to object along camera direction
+        const toObject = clay.position.clone().sub(camera.position)
+        const depth = toObject.dot(cameraDir)
         
-        // Define Z range for color mapping (e.g., -10 to 10)
-        const minZ = -10
-        const maxZ = 10
-        const zRange = maxZ - minZ
+        // Define depth range for color mapping
+        const minDepth = 20
+        const maxDepth = 80
+        const depthRange = maxDepth - minDepth
         
-        // Normalize Z position to 0-1 range
-        const normalizedZ = Math.max(0, Math.min(1, (z - minZ) / zRange))
+        // Normalize depth to 0-1 range
+        const normalizedDepth = Math.max(0, Math.min(1, (depth - minDepth) / depthRange))
         
-        // Map to hue range (e.g., blue to red: 240 to 0)
-        const hue = 240 - (normalizedZ * 240) // Blue (240) when low, Red (0) when high
+        // Map to hue range (blue to red: 240 to 0)
+        const hue = 240 - (normalizedDepth * 240)
         const color = `hsl(${hue}, 70%, 50%)`
         
         return (
           <group key={clay.id} position={clay.position}>
-            {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
+            {/* Horizontal XZ plane */}
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[200, 200, 100, 100]} />
               <meshBasicMaterial
@@ -1501,10 +1418,10 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         )
       })}
       
-      {/* XZ Horizontal Plane for push, pull tools */}
+      {/* Horizontal plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
         <group position={hoveredPoint}>
-          {/* XZ horizontal plane that moves up/down (Y changes) */}
+          {/* Horizontal plane (XZ plane) */}
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[200, 200, 100, 100]} />
             <meshBasicMaterial 
@@ -1518,17 +1435,17 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
         </group>
       )}
       
-      {/* XZ Horizontal Plane for add tool */}
-      {tool === 'add' && (
-        <group position={new THREE.Vector3(0, 0, hoveredPoint?.z || 0)}>
-          {/* XZ horizontal plane for add tool at current Z depth */}
+      {/* Horizontal plane for add tool with camera-based depth indication */}
+      {tool === 'add' && hoveredPoint && (
+        <group position={new THREE.Vector3(0, hoveredPoint.y, 0)}>
+          {/* Horizontal plane (XZ plane) at hover Y position */}
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[200, 200, 100, 100]} />
             <meshBasicMaterial 
               color="#888888" 
               wireframe 
               transparent 
-              opacity={0.2} 
+              opacity={0.3} 
               side={THREE.DoubleSide}
             />
           </mesh>
@@ -1558,7 +1475,7 @@ function RaycasterManager({
   
   useEffect(() => {
     const handlePointerClick = (event: PointerEvent) => {
-      if (tool !== 'paint' && tool !== 'delete' && tool !== 'rotateObject') return
+      if (tool !== 'paint' && tool !== 'delete' && tool !== 'rotateObject' && tool !== 'move') return
       
       // Calculate mouse position in normalized device coordinates
       const rect = gl.domElement.getBoundingClientRect()
@@ -1606,10 +1523,17 @@ function RaycasterManager({
               removeClay(clayId)
             } else if (tool === 'rotateObject') {
               setSelectedClayId(clayId)
-            } else if (tool === 'resize') {
-              setSelectedClayId(clayId)
+            } else if (tool === 'move') {
+              // Move tool is handled by ClayMesh component
+              // Just prevent deselection here
+              return
             }
           }
+        }
+      } else {
+        // No intersection - clicked on background
+        if (tool === 'move') {
+          setSelectedClayId(null)
         }
       }
     }
@@ -1625,8 +1549,20 @@ function RaycasterManager({
 
 export default function AdvancedClay() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
-  const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
-  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('rotate')
+  const [clayObjects, setClayObjects] = useState<ClayObject[]>(() => {
+    // Create initial sphere at a comfortable distance
+    const initialGeometry = new THREE.SphereGeometry(2, 48, 48)
+    return [{
+      id: 'initial-clay',
+      geometry: initialGeometry,
+      color: '#ff6b6b',
+      position: new THREE.Vector3(0, 0, 0), // Place at origin
+      rotation: new THREE.Euler(0, 0, 0),
+      scale: new THREE.Vector3(1, 1, 1),
+      size: 2
+    }]
+  })
+  const [tool, setTool] = useState<'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('move')
   const [brushSize, setBrushSize] = useState(0.8)
   const [currentColor, setCurrentColor] = useState('#ff6b6b')
   const [detail, setDetail] = useState(48)
@@ -1785,38 +1721,37 @@ export default function AdvancedClay() {
       
       case 'rectangle':
         if (controlPoints && controlPoints.length === 2) {
-          // Use the size passed from AddClayHelper which uses getScreenConsistentSize
-          const aspect = Math.abs(controlPoints[1].x - controlPoints[0].x) / Math.abs(controlPoints[1].y - controlPoints[0].y)
-          const width = aspect > 1 ? size : size * aspect
-          const height = aspect > 1 ? size / aspect : size
-          const rectSegments = 20
-          geometry = new THREE.PlaneGeometry(width, height, rectSegments, rectSegments)
+          // Create a detailed rectangle with many vertices
+          const relativeP1 = controlPoints[0].clone().sub(position)
+          const relativeP2 = controlPoints[1].clone().sub(position)
+          const width = Math.abs(relativeP1.x - relativeP2.x) || size
+          const height = Math.abs(relativeP1.y - relativeP2.y) || size
+          geometry = createDetailedGeometry('rectangle', Math.max(width, height))
+          geometry.scale(width / Math.max(width, height), height / Math.max(width, height), 1)
         } else {
           geometry = createDetailedGeometry('rectangle', size)
         }
         break
       
       case 'triangle':
+        // Create a detailed triangle with many vertices
+        geometry = createDetailedGeometry('triangle', size)
         if (controlPoints && controlPoints.length === 2) {
-          // Use the size passed from AddClayHelper which uses getScreenConsistentSize
-          const aspect = Math.abs(controlPoints[1].x - controlPoints[0].x) / Math.abs(controlPoints[1].y - controlPoints[0].y)
-          geometry = createDetailedGeometry('triangle', size)
-          // Scale to match aspect ratio
-          if (aspect > 1) {
-            geometry.scale(1, 1 / aspect, 1)
-          } else {
-            geometry.scale(aspect, 1, 1)
-          }
-        } else {
-          geometry = createDetailedGeometry('triangle', size)
+          const relativeP1 = controlPoints[0].clone().sub(position)
+          const relativeP2 = controlPoints[1].clone().sub(position)
+          const width = Math.abs(relativeP1.x - relativeP2.x) || size
+          const height = Math.abs(relativeP1.y - relativeP2.y) || size
+          geometry.scale(width / size, height / size, 1)
         }
         break
       
       case 'circle':
         // Create a detailed circle
         if (controlPoints && controlPoints.length === 2) {
-          // Use the size passed from AddClayHelper which uses getScreenConsistentSize
-          geometry = new THREE.CircleGeometry(size, 64)
+          const relativeP1 = controlPoints[0].clone().sub(position)
+          const relativeP2 = controlPoints[1].clone().sub(position)
+          const radius = relativeP1.distanceTo(relativeP2) / 2
+          geometry = createDetailedGeometry('circle', radius * 2)
         } else {
           geometry = createDetailedGeometry('circle', size)
         }
@@ -1824,7 +1759,6 @@ export default function AdvancedClay() {
       
       case 'sphere':
       default:
-        // size represents the diameter
         geometry = new THREE.SphereGeometry(size, detail, detail)
         break
     }
@@ -1850,7 +1784,7 @@ export default function AdvancedClay() {
       addToHistory(newClays)
       return newClays
     })
-    setTool('rotate')
+    setTool('move')
   }, [detail, currentColor, addToHistory, selectedShape])
   
   const handleUndo = useCallback(() => {
@@ -2320,7 +2254,7 @@ export default function AdvancedClay() {
       {/* Canvas */}
       <div className="flex-1 relative overflow-hidden">
       <Canvas 
-        camera={{ position: [5, 5, 5], fov: 50 }}
+        camera={{ position: [15, 15, 15], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
       >
@@ -2330,13 +2264,14 @@ export default function AdvancedClay() {
           <directionalLight position={[-10, -10, -5]} intensity={0.3} />
           
           <TrackballControls 
-            enabled={tool === 'rotate' && !isDeforming}
+            enabled={!isDeforming}
             rotateSpeed={1.5}
             zoomSpeed={1.5}
-            noPan={true}
+            noPan={false}
+            panSpeed={0.8}
             minDistance={1}
             maxDistance={100}
-            staticMoving={false}
+            staticMoving={true}
             dynamicDampingFactor={0.1}
           />
           
@@ -2406,6 +2341,7 @@ export default function AdvancedClay() {
       {/* Coordinate Display Overlay */}
       {(tool === 'move' || tool === 'add' || tool === 'push' || tool === 'pull') && (
         <div className="absolute bottom-4 right-4 bg-black/70 text-white p-2 rounded-md font-mono text-xs z-10">
+          <div className="text-gray-400 text-[10px] mb-1">Camera View</div>
           <div>X: {cameraRelativeCoords.x.toFixed(2)}</div>
           <div>Y: {cameraRelativeCoords.y.toFixed(2)}</div>
           <div>Z: {cameraRelativeCoords.z.toFixed(2)}</div>
@@ -2447,17 +2383,6 @@ export default function AdvancedClay() {
           <div className="flex items-center justify-center gap-2">
           {/* Main Tools */}
           <div className="flex gap-2 bg-gray-100 rounded-lg p-2">
-                          <button
-                onClick={() => setTool('rotate')}
-                className={`p-3 rounded-lg transition-all ${
-                  tool === 'rotate' 
-                    ? 'bg-gray-800 text-white shadow-md' 
-                    : 'bg-white hover:bg-gray-50 text-gray-700'
-                }`}
-                title="Rotate View"
-              >
-                <SwitchCamera size={20} />
-              </button>
               <button
                 onClick={() => setTool('rotateObject')}
                 className={`p-3 rounded-lg transition-all ${

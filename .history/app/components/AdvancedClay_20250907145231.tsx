@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { TrackballControls, Environment, Box, Line, Text, Billboard } from '@react-three/drei'
+import { TrackballControls, Environment, Box, Line, Text } from '@react-three/drei'
 import { useRef, useState, useEffect, Suspense, useCallback } from 'react'
 import * as THREE from 'three'
 import { 
@@ -408,7 +408,7 @@ function Clay({
         onUpdate(newClay)
       } else if (tool === 'resize' && resizeRef.current.active) {
         const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
-        const newSize = Math.max(0.5, Math.min(10, resizeRef.current.initialSize + deltaY))
+        const newSize = Math.max(0.1, resizeRef.current.initialSize + deltaY)
         
         const newClay = {
           ...clay,
@@ -577,6 +577,7 @@ function Clay({
       <mesh
         ref={meshRef}
         userData={{ clayId: clay.id }}
+        scale={(clay.size || 2) / 2} // Convert diameter to scale
         onPointerEnter={onHover}
         onPointerLeave={onHoverEnd}
         onPointerMove={(e) => {
@@ -606,7 +607,7 @@ function Clay({
       {/* Hover outline */}
       {isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize') && (
         <mesh
-          scale={1.02}
+          scale={((clay.size || 2) / 2) * 1.02} // Convert diameter to scale
           userData={{ isOutline: true }}
         >
           <meshBasicMaterial
@@ -620,11 +621,7 @@ function Clay({
       )}
       {/* Size label */}
       {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && (
-        <Billboard
-          follow={true}
-          lockX={false}
-          lockY={false}
-          lockZ={false}
+        <Text
           position={(() => {
             // Calculate actual height of the shape
             if (!clay.geometry.boundingBox) {
@@ -634,34 +631,21 @@ function Clay({
             const size = new THREE.Vector3()
             box.getSize(size)
             // Position text above the shape with fixed offset
-            return [0, size.y * 0.5 + 0.5, 0]
+            return [0, size.y * 0.5 + 0.8, 0]
           })()}
+          fontSize={0.5}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.1}
+          outlineColor="black"
         >
-          <Text
-            fontSize={0.25}
-            color="white"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.05}
-            outlineColor="black"
-          >
-            {(() => {
-              // Calculate actual size based on bounding box
-              if (!clay.geometry.boundingBox) {
-                clay.geometry.computeBoundingBox()
-              }
-              const box = clay.geometry.boundingBox!
-              const size = new THREE.Vector3()
-              box.getSize(size)
-              // Get the maximum dimension (furthest two points)
-              const maxDimension = Math.max(size.x, size.y, size.z)
-              return maxDimension.toFixed(2)
-            })()}
-          </Text>
-        </Billboard>
+          {(clay.size || 2).toFixed(2)}
+        </Text>
       )}
       {isSelected && tool === 'move' && (
         <mesh
+          scale={(clay.size || 2) / 2} // Convert diameter to scale
           onPointerDown={(e) => {
             if (tool === 'move' && meshRef.current && groupRef.current) {
               e.stopPropagation()
@@ -820,53 +804,64 @@ function AddClayHelper({
       const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
       const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
       
-      // Fixed z-depth for all shapes (same as initial sphere)
-      const fixedZ = 0
+      const fixedDepth = currentDepth
       
-      // Method 1: Try raycaster intersection first
-      raycaster.setFromCamera(new THREE.Vector2(x, y), camera)
-      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -fixedZ)
-      const intersection = new THREE.Vector3()
+      // Method 1: Direct unprojection approach
+      // Create two points in NDC space at different depths
+      const nearPoint = new THREE.Vector3(x, y, -1) // Near plane
+      const farPoint = new THREE.Vector3(x, y, 1)   // Far plane
       
-      if (raycaster.ray.intersectPlane(plane, intersection)) {
-        // Check if the intersection is reasonable
-        const maxDistance = 100
-        if (Math.abs(intersection.x) < maxDistance && Math.abs(intersection.y) < maxDistance) {
-          intersection.z = fixedZ // Ensure exact z value
-          return intersection
-        }
-      }
+      // Unproject both points to world space
+      nearPoint.unproject(camera)
+      farPoint.unproject(camera)
       
-      // Method 2: If raycaster fails or gives extreme values, use projection method
-      // This is more stable for extreme camera angles
-      const vector = new THREE.Vector3(x, y, 0.5)
-      vector.unproject(camera)
+      // Create a ray from near to far
+      const rayDirection = farPoint.sub(nearPoint).normalize()
       
-      // Direction from camera to unprojected point
-      const direction = vector.sub(camera.position).normalize()
-      
-      // Calculate distance to z-plane
-      if (Math.abs(direction.z) > 0.001) {
-        const t = (fixedZ - camera.position.z) / direction.z
+      // If ray is nearly parallel to the z-plane, use a simpler approach
+      if (Math.abs(rayDirection.z) < 0.01) {
+        // Get view dimensions at the fixed depth
+        const cameraDistance = Math.abs(camera.position.z - fixedDepth)
+        let viewWidth: number, viewHeight: number
         
-        if (t > 0) {
-          const result = new THREE.Vector3(
-            camera.position.x + direction.x * t,
-            camera.position.y + direction.y * t,
-            fixedZ
-          )
-          
-          // Clamp to reasonable values
-          const maxCoord = 100
-          result.x = Math.max(-maxCoord, Math.min(maxCoord, result.x))
-          result.y = Math.max(-maxCoord, Math.min(maxCoord, result.y))
-          
-          return result
+        if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+          const perspCamera = camera as THREE.PerspectiveCamera
+          const fov = perspCamera.fov * Math.PI / 180
+          viewHeight = 2 * Math.tan(fov / 2) * cameraDistance
+          viewWidth = viewHeight * perspCamera.aspect
+        } else {
+          // Orthographic camera
+          const orthoCamera = camera as THREE.OrthographicCamera
+          viewWidth = orthoCamera.right - orthoCamera.left
+          viewHeight = orthoCamera.top - orthoCamera.bottom
         }
+        
+        // Simple mapping from screen to world
+        return new THREE.Vector3(
+          x * viewWidth * 0.5,
+          y * viewHeight * 0.5,
+          fixedDepth
+        )
       }
       
-      // Last resort: return a point at screen center depth
-      return new THREE.Vector3(0, 0, fixedZ)
+      // Calculate intersection with z=fixedDepth plane
+      const t = (fixedDepth - nearPoint.z) / rayDirection.z
+      
+      // Clamp t to reasonable values to prevent extreme positions
+      const clampedT = Math.max(0, Math.min(t, 1000))
+      
+      const intersection = new THREE.Vector3(
+        nearPoint.x + rayDirection.x * clampedT,
+        nearPoint.y + rayDirection.y * clampedT,
+        fixedDepth
+      )
+      
+      // Additional bounds checking to prevent extreme values
+      const maxCoord = 100 // Maximum reasonable coordinate value
+      intersection.x = Math.max(-maxCoord, Math.min(maxCoord, intersection.x))
+      intersection.y = Math.max(-maxCoord, Math.min(maxCoord, intersection.y))
+      
+      return intersection
     }
     
     const handleMouseDown = (e: MouseEvent) => {
@@ -876,20 +871,7 @@ function AddClayHelper({
       if (shape === 'sphere') {
         // Sphere uses drag method
         setDragStart(point)
-        // Simply offset in camera's right direction for consistent initial size
-        const cameraDirection = new THREE.Vector3()
-        camera.getWorldDirection(cameraDirection)
-        
-        // Get camera's right vector
-        const cameraRight = new THREE.Vector3()
-        const cameraUp = new THREE.Vector3(0, 1, 0)
-        cameraRight.crossVectors(cameraDirection, cameraUp).normalize()
-        
-        // Add small offset in camera's right direction
-        const initialSize = 0.5 // Initial size in world units
-        const offsetPoint = point.clone().add(cameraRight.multiplyScalar(initialSize))
-        
-        setDragEnd(offsetPoint)
+        setDragEnd(point)
         setIsDragging(true)
       } else if (shape === 'line') {
         // Line uses 2 click points
@@ -900,8 +882,7 @@ function AddClayHelper({
           const p1 = clickPoints[0]
           const p2 = point
           const center = p1.clone().add(p2).multiplyScalar(0.5)
-          const rawSize = getScreenConsistentSize(p1, p2)
-          const size = Math.max(0.5, Math.min(10, rawSize)) // Apply min/max limits
+          const size = getScreenConsistentSize(p1, p2)
           
           onAdd(center, size, lineThickness, undefined, [p1, p2])
           setClickPoints([])
@@ -927,8 +908,7 @@ function AddClayHelper({
           const p2 = point
           const center = p1.clone().add(p2).multiplyScalar(0.5)
           // Use screen-consistent size for 2D shapes
-          const rawSize = getScreenConsistentSize(p1, p2)
-          const size = Math.max(0.5, Math.min(10, rawSize)) // Apply min/max limits
+          const size = getScreenConsistentSize(p1, p2)
           
           onAdd(center, size, lineThickness, undefined, [p1, p2])
           setClickPoints([])
@@ -973,8 +953,7 @@ function AddClayHelper({
             )
             
             // Calculate size based on the base edge using screen space
-            const rawBaseSize = getScreenConsistentSize(p1, p2) * 0.8
-            const baseSize = Math.max(0.5, Math.min(10, rawBaseSize))
+            const baseSize = getScreenConsistentSize(p1, p2) * 0.8 || 1
             
             // Calculate the direction from base center to apex
             const apexVector = p3.clone().sub(baseCenter)
@@ -1036,9 +1015,7 @@ function AddClayHelper({
     
     const handleMouseUp = (e: MouseEvent) => {
       if (shape === 'sphere' && isDragging && dragStart && dragEnd) {
-        const minSize = 0.5 // Minimum size for visibility
-        const maxSize = 10 // Maximum size limit
-        const size = Math.max(minSize, Math.min(maxSize, getScreenConsistentSize(dragStart, dragEnd)))
+        const size = Math.max(0.1, Math.min(5, getScreenConsistentSize(dragStart, dragEnd)))
         const center = dragStart.clone().add(dragEnd).multiplyScalar(0.5)
         
         // Get camera-relative tilted plane normal
@@ -1099,8 +1076,9 @@ function AddClayHelper({
         const delta = e.deltaY * -0.0001
         setLineThickness(prev => Math.max(0.01, Math.min(0.5, prev + delta)))
       } else {
-        // Don't change depth with scroll - keep shapes at z=0
-        // Scroll can be used for other purposes in the future
+        // Adjust Z-axis depth for all shapes
+        const delta = e.deltaY * 0.01
+        setCurrentDepth(prev => prev + delta)
       }
     }
     
@@ -1127,7 +1105,7 @@ function AddClayHelper({
       return (
         <>
           <mesh position={center}>
-            <sphereGeometry args={[size, 32, 32]} />
+            <sphereGeometry args={[size / 2, 32, 32]} />
             <meshPhongMaterial color="#888888" opacity={0.5} transparent />
           </mesh>
           <lineSegments>
@@ -1268,7 +1246,7 @@ function AddClayHelper({
             )}
             {shape === 'circle' && (
               <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
-                <circleGeometry args={[Math.max(0.5, Math.min(10, getScreenConsistentSize(clickPoints[0], currentPoint))), 32]} />
+                <circleGeometry args={[getScreenConsistentSize(clickPoints[0], currentPoint) / 2, 32]} />
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
               </mesh>
             )}
@@ -1672,7 +1650,7 @@ export default function AdvancedClay() {
   
   // Initialize with one clay
   useEffect(() => {
-    const geometry = new THREE.SphereGeometry(2, detail, detail)
+    const geometry = new THREE.SphereGeometry(1, detail, detail) // radius = 1, diameter = 2
     // Ensure clean userData
     geometry.userData = { deformed: false };
     
@@ -1816,7 +1794,8 @@ export default function AdvancedClay() {
         // Create a detailed circle
         if (controlPoints && controlPoints.length === 2) {
           // Use the size passed from AddClayHelper which uses getScreenConsistentSize
-          geometry = new THREE.CircleGeometry(size, 64)
+          // size represents the diameter
+          geometry = new THREE.CircleGeometry(size / 2, 64)
         } else {
           geometry = createDetailedGeometry('circle', size)
         }
@@ -1824,8 +1803,8 @@ export default function AdvancedClay() {
       
       case 'sphere':
       default:
-        // size represents the diameter
-        geometry = new THREE.SphereGeometry(size, detail, detail)
+        // Use size as diameter for consistency
+        geometry = new THREE.SphereGeometry(size / 2, detail, detail)
         break
     }
     
@@ -1868,7 +1847,7 @@ export default function AdvancedClay() {
   }, [redo])
   
   const resetClay = () => {
-    const geometry = new THREE.SphereGeometry(2, detail, detail)
+    const geometry = new THREE.SphereGeometry(1, detail, detail) // radius = 1, diameter = 2
     const initialClay: ClayObject = {
       id: 'clay-1',
       geometry: geometry,
@@ -2188,7 +2167,7 @@ export default function AdvancedClay() {
     }
     
     // Reset to initial state
-    const geometry = new THREE.SphereGeometry(2, detail, detail)
+    const geometry = new THREE.SphereGeometry(1, detail, detail) // radius = 1, diameter = 2
     geometry.userData = { deformed: false };
     
     const initialClay: ClayObject = {

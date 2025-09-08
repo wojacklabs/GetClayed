@@ -408,7 +408,7 @@ function Clay({
         onUpdate(newClay)
       } else if (tool === 'resize' && resizeRef.current.active) {
         const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
-        const newSize = Math.max(0.5, Math.min(10, resizeRef.current.initialSize + deltaY))
+        const newSize = Math.max(0.1, resizeRef.current.initialSize + deltaY)
         
         const newClay = {
           ...clay,
@@ -973,8 +973,7 @@ function AddClayHelper({
             )
             
             // Calculate size based on the base edge using screen space
-            const rawBaseSize = getScreenConsistentSize(p1, p2) * 0.8
-            const baseSize = Math.max(0.5, Math.min(10, rawBaseSize))
+            const baseSize = getScreenConsistentSize(p1, p2) * 0.8 || 1
             
             // Calculate the direction from base center to apex
             const apexVector = p3.clone().sub(baseCenter)
@@ -1268,7 +1267,7 @@ function AddClayHelper({
             )}
             {shape === 'circle' && (
               <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
-                <circleGeometry args={[Math.max(0.5, Math.min(10, getScreenConsistentSize(clickPoints[0], currentPoint))), 32]} />
+                <circleGeometry args={[getScreenConsistentSize(clickPoints[0], currentPoint), 32]} />
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
               </mesh>
             )}
