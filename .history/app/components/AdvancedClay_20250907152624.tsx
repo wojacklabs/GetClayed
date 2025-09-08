@@ -408,7 +408,7 @@ function Clay({
         onUpdate(newClay)
       } else if (tool === 'resize' && resizeRef.current.active) {
         const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
-        const newSize = Math.max(0.5, Math.min(10, resizeRef.current.initialSize + deltaY))
+        const newSize = Math.max(0.1, resizeRef.current.initialSize + deltaY)
         
         const newClay = {
           ...clay,
@@ -820,53 +820,77 @@ function AddClayHelper({
       const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
       const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
       
-      // Fixed z-depth for all shapes (same as initial sphere)
-      const fixedZ = 0
+      const fixedDepth = currentDepth
       
-      // Method 1: Try raycaster intersection first
+      // Method 1: Ray-plane intersection
       raycaster.setFromCamera(new THREE.Vector2(x, y), camera)
-      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -fixedZ)
+      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -fixedDepth)
       const intersection = new THREE.Vector3()
       
       if (raycaster.ray.intersectPlane(plane, intersection)) {
-        // Check if the intersection is reasonable
-        const maxDistance = 100
-        if (Math.abs(intersection.x) < maxDistance && Math.abs(intersection.y) < maxDistance) {
-          intersection.z = fixedZ // Ensure exact z value
+        // Increase bounds for better coverage at screen edges
+        const maxCoord = 200 // Increased limit
+        
+        // Check if intersection is within reasonable bounds
+        if (Math.abs(intersection.x) < maxCoord && Math.abs(intersection.y) < maxCoord) {
           return intersection
         }
       }
       
-      // Method 2: If raycaster fails or gives extreme values, use projection method
-      // This is more stable for extreme camera angles
-      const vector = new THREE.Vector3(x, y, 0.5)
-      vector.unproject(camera)
+      // Method 2: Unproject with proper depth calculation
+      // This method is more stable for extreme camera angles
+      const nearPoint = new THREE.Vector3(x, y, 0)
+      const farPoint = new THREE.Vector3(x, y, 1)
       
-      // Direction from camera to unprojected point
-      const direction = vector.sub(camera.position).normalize()
+      nearPoint.unproject(camera)
+      farPoint.unproject(camera)
       
-      // Calculate distance to z-plane
-      if (Math.abs(direction.z) > 0.001) {
-        const t = (fixedZ - camera.position.z) / direction.z
+      // Direction from near to far
+      const direction = farPoint.sub(nearPoint).normalize()
+      
+      // Check if ray is not parallel to the plane
+      if (Math.abs(direction.z) > 0.0001) {
+        const t = (fixedDepth - nearPoint.z) / direction.z
         
-        if (t > 0) {
+        // Only use if t is positive and reasonable
+        if (t > 0 && t < 10000) {
           const result = new THREE.Vector3(
-            camera.position.x + direction.x * t,
-            camera.position.y + direction.y * t,
-            fixedZ
+            nearPoint.x + direction.x * t,
+            nearPoint.y + direction.y * t,
+            fixedDepth
           )
           
-          // Clamp to reasonable values
-          const maxCoord = 100
-          result.x = Math.max(-maxCoord, Math.min(maxCoord, result.x))
-          result.y = Math.max(-maxCoord, Math.min(maxCoord, result.y))
-          
-          return result
+          // Final bounds check
+          const maxCoord = 200
+          if (Math.abs(result.x) < maxCoord && Math.abs(result.y) < maxCoord) {
+            return result
+          }
         }
       }
       
-      // Last resort: return a point at screen center depth
-      return new THREE.Vector3(0, 0, fixedZ)
+      // Method 3: Screen-space projection (last resort)
+      // This should rarely be needed with the improved methods above
+      const cameraDistance = Math.abs(camera.position.z - fixedDepth)
+      
+      if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+        const perspCamera = camera as THREE.PerspectiveCamera
+        const fov = perspCamera.fov * Math.PI / 180
+        const height = 2 * Math.tan(fov / 2) * cameraDistance
+        const width = height * perspCamera.aspect
+        
+        return new THREE.Vector3(
+          x * width * 0.5,
+          y * height * 0.5,
+          fixedDepth
+        )
+      } else {
+        const orthoCamera = camera as THREE.OrthographicCamera
+        return new THREE.Vector3(
+          x * (orthoCamera.right - orthoCamera.left) * 0.5,
+          y * (orthoCamera.top - orthoCamera.bottom) * 0.5,
+          fixedDepth
+        )
+      }
     }
     
     const handleMouseDown = (e: MouseEvent) => {
@@ -900,8 +924,7 @@ function AddClayHelper({
           const p1 = clickPoints[0]
           const p2 = point
           const center = p1.clone().add(p2).multiplyScalar(0.5)
-          const rawSize = getScreenConsistentSize(p1, p2)
-          const size = Math.max(0.5, Math.min(10, rawSize)) // Apply min/max limits
+          const size = getScreenConsistentSize(p1, p2)
           
           onAdd(center, size, lineThickness, undefined, [p1, p2])
           setClickPoints([])
@@ -927,8 +950,7 @@ function AddClayHelper({
           const p2 = point
           const center = p1.clone().add(p2).multiplyScalar(0.5)
           // Use screen-consistent size for 2D shapes
-          const rawSize = getScreenConsistentSize(p1, p2)
-          const size = Math.max(0.5, Math.min(10, rawSize)) // Apply min/max limits
+          const size = getScreenConsistentSize(p1, p2)
           
           onAdd(center, size, lineThickness, undefined, [p1, p2])
           setClickPoints([])
@@ -973,8 +995,7 @@ function AddClayHelper({
             )
             
             // Calculate size based on the base edge using screen space
-            const rawBaseSize = getScreenConsistentSize(p1, p2) * 0.8
-            const baseSize = Math.max(0.5, Math.min(10, rawBaseSize))
+            const baseSize = getScreenConsistentSize(p1, p2) * 0.8 || 1
             
             // Calculate the direction from base center to apex
             const apexVector = p3.clone().sub(baseCenter)
@@ -1036,9 +1057,7 @@ function AddClayHelper({
     
     const handleMouseUp = (e: MouseEvent) => {
       if (shape === 'sphere' && isDragging && dragStart && dragEnd) {
-        const minSize = 0.5 // Minimum size for visibility
-        const maxSize = 10 // Maximum size limit
-        const size = Math.max(minSize, Math.min(maxSize, getScreenConsistentSize(dragStart, dragEnd)))
+        const size = Math.max(0.1, Math.min(5, getScreenConsistentSize(dragStart, dragEnd)))
         const center = dragStart.clone().add(dragEnd).multiplyScalar(0.5)
         
         // Get camera-relative tilted plane normal
@@ -1099,8 +1118,9 @@ function AddClayHelper({
         const delta = e.deltaY * -0.0001
         setLineThickness(prev => Math.max(0.01, Math.min(0.5, prev + delta)))
       } else {
-        // Don't change depth with scroll - keep shapes at z=0
-        // Scroll can be used for other purposes in the future
+        // Adjust Z-axis depth for all shapes
+        const delta = e.deltaY * 0.01
+        setCurrentDepth(prev => prev + delta)
       }
     }
     
@@ -1268,7 +1288,7 @@ function AddClayHelper({
             )}
             {shape === 'circle' && (
               <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
-                <circleGeometry args={[Math.max(0.5, Math.min(10, getScreenConsistentSize(clickPoints[0], currentPoint))), 32]} />
+                <circleGeometry args={[getScreenConsistentSize(clickPoints[0], currentPoint), 32]} />
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
               </mesh>
             )}
