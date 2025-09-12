@@ -248,13 +248,11 @@ export async function downloadChunks(
       }
     }
     
-    // Chunks are already base64 strings, just join them
     const reassembled = chunks.join('');
     console.log('[ChunkDownload] Total base64 length:', reassembled.length);
-    console.log('[ChunkDownload] Individual chunk lengths:', chunks.map(c => c ? c.length : 0));
+    console.log('[ChunkDownload] Individual chunk lengths:', chunks.map(c => c.length));
     
     try {
-      // Decode the complete base64 string
       const decoded = Buffer.from(reassembled, 'base64').toString('utf-8');
       console.log('[ChunkDownload] Decoded length:', decoded.length);
       console.log('[ChunkDownload] First 100 chars:', decoded.substring(0, 100));
@@ -262,23 +260,15 @@ export async function downloadChunks(
       
       // Validate JSON
       try {
-        const parsed = JSON.parse(decoded);
-        console.log('[ChunkDownload] JSON validation successful');
+        JSON.parse(decoded);
       } catch (jsonError) {
         console.error('[ChunkDownload] Invalid JSON after decode:', jsonError);
         console.error('[ChunkDownload] Last 500 chars to check for truncation:', decoded.substring(decoded.length - 500));
-        
-        // Try to find where JSON ends
-        const lastBrace = decoded.lastIndexOf('}');
-        if (lastBrace !== decoded.length - 1) {
-          console.error('[ChunkDownload] JSON appears truncated. Last } at position:', lastBrace, 'of', decoded.length);
-        }
       }
       
       return decoded;
     } catch (decodeError) {
       console.error('[ChunkDownload] Base64 decode error:', decodeError);
-      console.error('[ChunkDownload] First chunk sample:', chunks[0]?.substring(0, 100));
       throw new Error('Failed to decode chunks from base64');
     }
     
