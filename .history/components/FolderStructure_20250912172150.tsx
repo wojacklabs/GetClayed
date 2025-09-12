@@ -401,7 +401,7 @@ export default function FolderStructure({
             draggable
           >
             <div className="mb-1">
-              <svg width="26" height="33" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="34" height="43" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0 8C0 3.58172 3.58172 0 8 0H36L56 20V64C56 68.4183 52.4183 72 48 72H8C3.58172 72 0 68.4183 0 64V8Z" fill="#E5E7EB"/>
                 <path d="M36 0L56 20H44C39.5817 20 36 16.4183 36 12V0Z" fill="#D1D5DB"/>
                 <rect x="10" y="32" width="36" height="2" rx="1" fill="#6B7280"/>
@@ -428,7 +428,7 @@ export default function FolderStructure({
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="text-xs text-gray-700 text-center w-16 truncate" title={file.name}>
+              <span className="text-xs text-gray-700 text-center max-w-[80px] truncate">
                 {file.name}
               </span>
             )}

@@ -428,7 +428,7 @@ export default function FolderStructure({
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="text-xs text-gray-700 text-center w-16 truncate" title={file.name}>
+              <span className="text-xs text-gray-700 text-center max-w-[80px] truncate">
                 {file.name}
               </span>
             )}

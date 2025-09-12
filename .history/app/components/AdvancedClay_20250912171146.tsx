@@ -2397,16 +2397,6 @@ export default function AdvancedClay() {
         projectName={chunkUploadProgress.projectName}
       />
       
-      {/* Chunk download progress dialog */}
-      <ChunkUploadProgress 
-        isOpen={chunkDownloadProgress.isOpen}
-        currentChunk={chunkDownloadProgress.currentChunk}
-        totalChunks={chunkDownloadProgress.totalChunks}
-        percentage={chunkDownloadProgress.percentage}
-        projectName={chunkDownloadProgress.projectName}
-        isDownload={true}
-      />
-      
       {/* Folder Structure - Only show when wallet connected */}
       {walletAddress && (
         <FolderStructure

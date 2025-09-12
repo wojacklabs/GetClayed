@@ -2157,17 +2157,11 @@ export default function AdvancedClay() {
     try {
       console.log('Loading project:', projectId)
       
-      // Get project name from metadata if available
-      const projectName = projectId.substring(0, 20) + '...'; // Truncate for display
+      // Show loading state
+      const loadingAlert = alert('Loading project...')
       
-      // Download project from Irys with progress callback
-      const project = await downloadClayProject(projectId, (progress) => {
-        setChunkDownloadProgress({
-          ...progress,
-          isOpen: true,
-          projectName: projectName
-        });
-      })
+      // Download project from Irys
+      const project = await downloadClayProject(projectId)
       console.log('Downloaded project:', project)
       
       // Get mutable reference info
@@ -2208,14 +2202,9 @@ export default function AdvancedClay() {
         isDirty: false
       });
       
-      // Close download progress dialog
-      setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
-      
       alert(`Project "${project.name}" loaded successfully!`)
     } catch (error) {
       console.error('Failed to load project:', error)
-      // Close download progress dialog on error
-      setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
       alert('Failed to load project. Please try again.')
     }
   }
@@ -2395,16 +2384,6 @@ export default function AdvancedClay() {
         totalChunks={chunkUploadProgress.totalChunks}
         percentage={chunkUploadProgress.percentage}
         projectName={chunkUploadProgress.projectName}
-      />
-      
-      {/* Chunk download progress dialog */}
-      <ChunkUploadProgress 
-        isOpen={chunkDownloadProgress.isOpen}
-        currentChunk={chunkDownloadProgress.currentChunk}
-        totalChunks={chunkDownloadProgress.totalChunks}
-        percentage={chunkDownloadProgress.percentage}
-        projectName={chunkDownloadProgress.projectName}
-        isDownload={true}
       />
       
       {/* Folder Structure - Only show when wallet connected */}
