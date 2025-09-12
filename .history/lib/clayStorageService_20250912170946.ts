@@ -322,19 +322,11 @@ export async function downloadClayProject(
       
       // Download and reassemble chunks
       // Pass chunk IDs directly to handle indexing delays
-      const reassembled = await downloadChunks(data.chunkSetId, data.totalChunks, data.chunks, onProgress);
+      const reassembled = await downloadChunks(data.chunkSetId, data.totalChunks, data.chunks);
+      const project = JSON.parse(reassembled);
       
-      try {
-        const project = JSON.parse(reassembled);
-        console.log('[downloadClayProject] Successfully reassembled chunked project');
-        return project;
-      } catch (parseError) {
-        console.error('[downloadClayProject] Failed to parse reassembled JSON:', parseError);
-        console.error('[downloadClayProject] Reassembled string length:', reassembled.length);
-        console.error('[downloadClayProject] First 200 chars:', reassembled.substring(0, 200));
-        console.error('[downloadClayProject] Last 200 chars:', reassembled.substring(reassembled.length - 200));
-        throw new Error('Failed to parse reassembled project data');
-      }
+      console.log('[downloadClayProject] Successfully reassembled chunked project');
+      return project;
     }
     
     // Regular project data

@@ -59,14 +59,12 @@ export function ChunkUploadProgress({
             {percentage.toFixed(0)}% complete
           </p>
           
-          {!isDownload && (
-            <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
-              <p className="text-xs text-yellow-800">
-                ⚠️ Please approve each transaction in your wallet.
-                Do not close this window until all chunks are uploaded.
-              </p>
-            </div>
-          )}
+          <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
+            <p className="text-xs text-yellow-800">
+              ⚠️ Please approve each transaction in your wallet.
+              Do not close this window until all chunks are uploaded.
+            </p>
+          </div>
         </div>
       </div>
     </>,

@@ -7,7 +7,6 @@ interface ChunkUploadProgressProps {
   totalChunks: number;
   percentage: number;
   projectName: string;
-  isDownload?: boolean;
 }
 
 export function ChunkUploadProgress({ 
@@ -15,8 +14,7 @@ export function ChunkUploadProgress({
   currentChunk, 
   totalChunks, 
   percentage,
-  projectName,
-  isDownload = false
+  projectName 
 }: ChunkUploadProgressProps) {
   const [mounted, setMounted] = React.useState(false);
 
@@ -30,17 +28,16 @@ export function ChunkUploadProgress({
     <>
       {/* Dialog without backdrop */}
       <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4 pointer-events-none">
-        <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full pointer-events-auto">
+        <div className="pointer-events-auto">
+        <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
           <h3 className="text-lg font-semibold mb-4">
-            {isDownload ? 'Loading' : 'Uploading'} Large Project: {projectName}
+            Uploading Large Project: {projectName}
           </h3>
           
           <div className="mb-4">
             <p className="text-sm text-gray-600 mb-2">
-              {isDownload 
-                ? `Downloading ${totalChunks} chunks from Arweave...`
-                : `Your project exceeds 100KB and is being split into ${totalChunks} chunks. You'll need to sign ${totalChunks} transactions.`
-              }
+              Your project exceeds 100KB and is being split into {totalChunks} chunks.
+              You'll need to sign {totalChunks} transactions.
             </p>
             <p className="text-sm font-medium text-gray-800">
               Current chunk: {currentChunk} of {totalChunks}
@@ -59,14 +56,12 @@ export function ChunkUploadProgress({
             {percentage.toFixed(0)}% complete
           </p>
           
-          {!isDownload && (
-            <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
-              <p className="text-xs text-yellow-800">
-                ⚠️ Please approve each transaction in your wallet.
-                Do not close this window until all chunks are uploaded.
-              </p>
-            </div>
-          )}
+          <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
+            <p className="text-xs text-yellow-800">
+              ⚠️ Please approve each transaction in your wallet.
+              Do not close this window until all chunks are uploaded.
+            </p>
+          </div>
         </div>
       </div>
     </>,

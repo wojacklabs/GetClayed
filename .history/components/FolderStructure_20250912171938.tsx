@@ -292,7 +292,7 @@ export default function FolderStructure({
             </>
           )}
           {node.type === 'file' && (
-            <svg width="12" height="16" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+            <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M0 2C0 0.895431 0.895431 0 2 0H9L14 5V16C14 17.1046 13.1046 18 12 18H2C0.895431 18 0 17.1046 0 16V2Z" fill="#9CA3AF"/>
               <path d="M9 0L14 5H11C9.89543 5 9 4.10457 9 3V0Z" fill="#6B7280"/>
             </svg>
@@ -318,7 +318,7 @@ export default function FolderStructure({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <span className="text-sm truncate" title={node.name}>{node.name}</span>
+            <span className="text-sm">{node.name}</span>
           )}
         </div>
         
@@ -336,7 +336,7 @@ export default function FolderStructure({
     const files = folderTree.children?.filter(item => item.type === 'file') || [];
     
     return (
-      <div className="flex gap-3 min-w-max">
+      <div className="flex gap-4">
         {/* Folders */}
         {folders.map(folder => (
           <div
@@ -354,7 +354,7 @@ export default function FolderStructure({
             onContextMenu={(e) => handleContextMenu(e, folder)}
           >
             <div className="mb-1">
-              <svg width="36" height="29" viewBox="0 0 80 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="48" height="38" viewBox="0 0 80 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0 8C0 3.58172 3.58172 0 8 0H26.7639C28.5215 0 30.2135 0.632141 31.5279 1.78885L35.7082 5.57771C37.0226 6.73442 38.7146 7.36656 40.4721 7.36656H72C76.4183 7.36656 80 10.9483 80 15.3666V56C80 60.4183 76.4183 64 72 64H8C3.58172 64 0 60.4183 0 56V8Z" fill="#5EBBF2"/>
                 <path d="M0 20C0 15.5817 3.58172 12 8 12H72C76.4183 12 80 15.5817 80 20V56C80 60.4183 76.4183 64 72 64H8C3.58172 64 0 60.4183 0 56V20Z" fill="#7FC8F5"/>
               </svg>
@@ -378,7 +378,7 @@ export default function FolderStructure({
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="text-xs text-gray-700 text-center w-16 truncate" title={folder.name}>
+              <span className="text-xs text-gray-700 text-center max-w-[80px] truncate">
                 {folder.name}
               </span>
             )}
@@ -401,7 +401,7 @@ export default function FolderStructure({
             draggable
           >
             <div className="mb-1">
-              <svg width="26" height="33" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="34" height="43" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0 8C0 3.58172 3.58172 0 8 0H36L56 20V64C56 68.4183 52.4183 72 48 72H8C3.58172 72 0 68.4183 0 64V8Z" fill="#E5E7EB"/>
                 <path d="M36 0L56 20H44C39.5817 20 36 16.4183 36 12V0Z" fill="#D1D5DB"/>
                 <rect x="10" y="32" width="36" height="2" rx="1" fill="#6B7280"/>
@@ -428,7 +428,7 @@ export default function FolderStructure({
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="text-xs text-gray-700 text-center w-16 truncate" title={file.name}>
+              <span className="text-xs text-gray-700 text-center max-w-[80px] truncate">
                 {file.name}
               </span>
             )}
@@ -446,26 +446,26 @@ export default function FolderStructure({
 
   return (
     <div className="relative bg-gray-50 border-b border-gray-200">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-        <h3 className="text-sm font-medium text-gray-700">Projects</h3>
+      <div className="flex items-center justify-between px-3 py-1 border-b border-gray-100">
+        <h3 className="text-xs font-medium text-gray-700">Projects</h3>
         <div className="flex items-center gap-1">
           <button
             onClick={() => {
               queryCache.delete(`projects-${walletAddress}`);
               fetchProjects();
             }}
-            className={`p-1 hover:bg-gray-100 rounded ${loading ? 'animate-spin' : ''}`}
+            className={`p-0.5 hover:bg-gray-100 rounded ${loading ? 'animate-spin' : ''}`}
             title="Refresh"
             disabled={loading}
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={12} />
           </button>
           <button
             onClick={() => handleCreateFolder('root')}
-            className="p-1 hover:bg-gray-100 rounded"
+            className="p-0.5 hover:bg-gray-100 rounded"
             title="New Folder"
           >
-            <FolderPlus size={14} />
+            <FolderPlus size={12} />
           </button>
         </div>
       </div>

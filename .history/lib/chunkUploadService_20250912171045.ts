@@ -228,29 +228,8 @@ export async function downloadChunks(
     }
     
     // Reassemble chunks
-    console.log('[ChunkDownload] Reassembling chunks...');
-    
-    // Check for null/undefined chunks
-    for (let i = 0; i < chunks.length; i++) {
-      if (!chunks[i]) {
-        console.error(`[ChunkDownload] Chunk ${i} is missing!`);
-        throw new Error(`Chunk ${i} is missing`);
-      }
-    }
-    
     const reassembled = chunks.join('');
-    console.log('[ChunkDownload] Total base64 length:', reassembled.length);
-    
-    try {
-      const decoded = Buffer.from(reassembled, 'base64').toString('utf-8');
-      console.log('[ChunkDownload] Decoded length:', decoded.length);
-      console.log('[ChunkDownload] First 100 chars:', decoded.substring(0, 100));
-      console.log('[ChunkDownload] Last 100 chars:', decoded.substring(decoded.length - 100));
-      return decoded;
-    } catch (decodeError) {
-      console.error('[ChunkDownload] Base64 decode error:', decodeError);
-      throw new Error('Failed to decode chunks from base64');
-    }
+    return Buffer.from(reassembled, 'base64').toString('utf-8');
     
   } catch (error) {
     console.error('[ChunkDownload] Error downloading chunks:', error);
