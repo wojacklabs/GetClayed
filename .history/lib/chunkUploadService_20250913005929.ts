@@ -21,22 +21,15 @@ const CHUNK_SIZE = 50 * 1024; // 50KB chunks, will be ~67KB after base64 encodin
 
 /**
  * Split large data into chunks for upload
- * Ensures clean string boundaries to avoid JSON parsing issues
  */
 export function splitIntoChunks(data: string): string[] {
   const chunks: string[] = [];
+  const dataBytes = Buffer.from(data, 'utf-8');
   
-  // Convert to base64 first, then chunk
-  // This ensures we don't split in the middle of a UTF-8 character
-  const base64Data = Buffer.from(data, 'utf-8').toString('base64');
-  
-  // Split base64 string into chunks
-  for (let i = 0; i < base64Data.length; i += CHUNK_SIZE) {
-    chunks.push(base64Data.slice(i, i + CHUNK_SIZE));
+  for (let i = 0; i < dataBytes.length; i += CHUNK_SIZE) {
+    const chunk = dataBytes.slice(i, i + CHUNK_SIZE);
+    chunks.push(chunk.toString('base64'));
   }
-  
-  console.log(`[ChunkUpload] Created ${chunks.length} chunks from ${data.length} chars (${base64Data.length} base64 chars)`);
-  console.log(`[ChunkUpload] Chunk sizes:`, chunks.map(c => c.length));
   
   return chunks;
 }
@@ -248,37 +241,17 @@ export async function downloadChunks(
       }
     }
     
-    // Chunks are already base64 strings, just join them
     const reassembled = chunks.join('');
     console.log('[ChunkDownload] Total base64 length:', reassembled.length);
-    console.log('[ChunkDownload] Individual chunk lengths:', chunks.map(c => c ? c.length : 0));
     
     try {
-      // Decode the complete base64 string
       const decoded = Buffer.from(reassembled, 'base64').toString('utf-8');
       console.log('[ChunkDownload] Decoded length:', decoded.length);
       console.log('[ChunkDownload] First 100 chars:', decoded.substring(0, 100));
       console.log('[ChunkDownload] Last 100 chars:', decoded.substring(decoded.length - 100));
-      
-      // Validate JSON
-      try {
-        const parsed = JSON.parse(decoded);
-        console.log('[ChunkDownload] JSON validation successful');
-      } catch (jsonError) {
-        console.error('[ChunkDownload] Invalid JSON after decode:', jsonError);
-        console.error('[ChunkDownload] Last 500 chars to check for truncation:', decoded.substring(decoded.length - 500));
-        
-        // Try to find where JSON ends
-        const lastBrace = decoded.lastIndexOf('}');
-        if (lastBrace !== decoded.length - 1) {
-          console.error('[ChunkDownload] JSON appears truncated. Last } at position:', lastBrace, 'of', decoded.length);
-        }
-      }
-      
       return decoded;
     } catch (decodeError) {
       console.error('[ChunkDownload] Base64 decode error:', decodeError);
-      console.error('[ChunkDownload] First chunk sample:', chunks[0]?.substring(0, 100));
       throw new Error('Failed to decode chunks from base64');
     }
     
