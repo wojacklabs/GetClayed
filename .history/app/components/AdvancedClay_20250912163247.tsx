@@ -396,25 +396,9 @@ function Clay({
           rotation: meshRef.current.rotation.clone()
         }
         onUpdate(newClay)
-      } else if (tool === 'resize' && resizeRef.current.active && groupRef.current) {
-        // Calculate current distance from object center to mouse position
-        const rect = gl.domElement.getBoundingClientRect()
-        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-        const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
-        
-        // Get object center in screen space
-        const objectWorldPos = new THREE.Vector3()
-        groupRef.current.getWorldPosition(objectWorldPos)
-        const screenPos = objectWorldPos.clone().project(camera)
-        
-        // Calculate current distance in screen space
-        const dx = x - screenPos.x
-        const dy = y - screenPos.y
-        const currentDistance = Math.sqrt(dx * dx + dy * dy)
-        
-        // Calculate scale based on distance ratio
-        const distanceRatio = currentDistance / (resizeRef.current.initialDistance || 1)
-        const scaleFactor = Math.max(0.1, Math.min(5, resizeRef.current.initialScale * distanceRatio))
+      } else if (tool === 'resize' && resizeRef.current.active) {
+        const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
+        const scaleFactor = Math.max(0.1, Math.min(5, resizeRef.current.initialScale + deltaY))
         
         const newScale = new THREE.Vector3(scaleFactor, scaleFactor, scaleFactor)
         
@@ -444,7 +428,7 @@ function Clay({
         window.removeEventListener('mouseup', handleToolMouseUp)
       }
     }
-  }, [tool, isSelected, clay, onUpdate, gl, camera])
+  }, [tool, isSelected, clay, onUpdate])
   
   // Frame update for dragging
   useFrame(() => {
@@ -1540,39 +1524,22 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
 
       
 
-      {/* XZ Horizontal Planes for all objects in move and rotate tools */}
-      {(tool === 'move' || tool === 'rotate') && clayObjects.map((clay) => {
-        // Calculate color based on current Z position (real-time)
-        const z = clay.position.z
-        
-        // Define Z range for color mapping (e.g., -10 to 10)
-        const minZ = -10
-        const maxZ = 10
-        const zRange = maxZ - minZ
-        
-        // Normalize Z position to 0-1 range
-        const normalizedZ = Math.max(0, Math.min(1, (z - minZ) / zRange))
-        
-        // Map to hue range (e.g., blue to red: 240 to 0)
-        const hue = 240 - (normalizedZ * 240) // Blue (240) when low, Red (0) when high
-        const color = `hsl(${hue}, 70%, 50%)`
-        
-        return (
-          <group key={clay.id} position={clay.position}>
-            {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[200, 200, 100, 100]} />
-              <meshBasicMaterial
-                color={color}
-                wireframe
-                transparent
-                opacity={tool === 'move' ? (selectedClayId === clay.id ? 0.3 : 0.1) : 0.1}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-          </group>
-        )
-      })}
+      {/* XZ Horizontal Plane for move and rotate tools */}
+      {(tool === 'move' || tool === 'rotate') && (
+        <group position={[0, 0, 0]}>
+          {/* XZ horizontal plane at origin */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial
+              color={tool === 'rotate' ? "#4a90e2" : "#888888"}
+              wireframe
+              transparent
+              opacity={0.15}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+      )}
       
       {/* XZ Horizontal Plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (

@@ -1540,8 +1540,8 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
 
       
 
-      {/* XZ Horizontal Planes for all objects in move and rotate tools */}
-      {(tool === 'move' || tool === 'rotate') && clayObjects.map((clay) => {
+      {/* XZ Horizontal Planes for all objects in move tool */}
+      {tool === 'move' && clayObjects.map((clay) => {
         // Calculate color based on current Z position (real-time)
         const z = clay.position.z
         
@@ -1566,13 +1566,30 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
                 color={color}
                 wireframe
                 transparent
-                opacity={tool === 'move' ? (selectedClayId === clay.id ? 0.3 : 0.1) : 0.1}
+                opacity={selectedClayId === clay.id ? 0.3 : 0.1}
                 side={THREE.DoubleSide}
               />
             </mesh>
           </group>
         )
       })}
+      
+      {/* XZ Horizontal Plane for rotate tool */}
+      {tool === 'rotate' && (
+        <group position={[0, 0, 0]}>
+          {/* XZ horizontal plane at origin */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial
+              color="#4a90e2"
+              wireframe
+              transparent
+              opacity={0.15}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+      )}
       
       {/* XZ Horizontal Plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
