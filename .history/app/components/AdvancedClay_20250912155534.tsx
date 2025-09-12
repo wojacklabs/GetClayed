@@ -22,8 +22,7 @@ import {
   Spline,
   Download,
   FilePlus,
-  Maximize2,
-  RotateCcw
+  Maximize2
 } from 'lucide-react'
 import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
@@ -161,10 +160,8 @@ function Clay({
   // Resize state
   const resizeRef = useRef({
     active: false,
-    startX: 0,
     startY: 0,
-    initialScale: clay.scale instanceof THREE.Vector3 ? clay.scale.x : (clay.scale || 1),
-    initialDistance: 0
+    initialSize: clay.size || 2
   })
   
   // Drag state
@@ -396,31 +393,13 @@ function Clay({
           rotation: meshRef.current.rotation.clone()
         }
         onUpdate(newClay)
-      } else if (tool === 'resize' && resizeRef.current.active && groupRef.current) {
-        // Calculate current distance from object center to mouse position
-        const rect = gl.domElement.getBoundingClientRect()
-        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-        const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
-        
-        // Get object center in screen space
-        const objectWorldPos = new THREE.Vector3()
-        groupRef.current.getWorldPosition(objectWorldPos)
-        const screenPos = objectWorldPos.clone().project(camera)
-        
-        // Calculate current distance in screen space
-        const dx = x - screenPos.x
-        const dy = y - screenPos.y
-        const currentDistance = Math.sqrt(dx * dx + dy * dy)
-        
-        // Calculate scale based on distance ratio
-        const distanceRatio = currentDistance / (resizeRef.current.initialDistance || 1)
-        const scaleFactor = Math.max(0.1, Math.min(5, resizeRef.current.initialScale * distanceRatio))
-        
-        const newScale = new THREE.Vector3(scaleFactor, scaleFactor, scaleFactor)
+      } else if (tool === 'resize' && resizeRef.current.active) {
+        const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
+        const newSize = Math.max(0.5, Math.min(10, resizeRef.current.initialSize + deltaY))
         
         const newClay = {
           ...clay,
-          scale: newScale
+          size: newSize
         }
         onUpdate(newClay)
       }
@@ -444,7 +423,7 @@ function Clay({
         window.removeEventListener('mouseup', handleToolMouseUp)
       }
     }
-  }, [tool, isSelected, clay, onUpdate, gl, camera])
+  }, [tool, isSelected, clay, onUpdate])
   
   // Frame update for dragging
   useFrame(() => {
@@ -582,7 +561,7 @@ function Clay({
     <group ref={groupRef} position={clay.position} rotation={clay.rotation || new THREE.Euler()}>
       <mesh
         ref={meshRef}
-        scale={clay.scale || 1}
+        scale={clay.size || 1}
         userData={{ clayId: clay.id }}
         onPointerEnter={onHover}
         onPointerLeave={onHoverEnd}
@@ -601,24 +580,8 @@ function Clay({
             rotationRef.current.initialRotation.copy(meshRef.current.rotation)
           } else if (tool === 'resize' && isSelected) {
             resizeRef.current.active = true
-            resizeRef.current.startX = e.clientX
             resizeRef.current.startY = e.clientY
-            resizeRef.current.initialScale = clay.scale instanceof THREE.Vector3 ? clay.scale.x : (clay.scale || 1)
-            
-            // Calculate initial distance from object center to mouse position
-            const rect = gl.domElement.getBoundingClientRect()
-            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
-            
-            // Get object center in screen space
-            const objectWorldPos = new THREE.Vector3()
-            groupRef.current?.getWorldPosition(objectWorldPos)
-            const screenPos = objectWorldPos.clone().project(camera)
-            
-            // Calculate distance in screen space
-            const dx = x - screenPos.x
-            const dy = y - screenPos.y
-            resizeRef.current.initialDistance = Math.sqrt(dx * dx + dy * dy)
+            resizeRef.current.initialSize = clay.size || 2
           } else {
             onSelect()
           }
@@ -641,7 +604,7 @@ function Clay({
       {/* Hover outline */}
       {isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize') && (
         <mesh
-          scale={clay.scale instanceof THREE.Vector3 ? clay.scale.x * 1.02 : (clay.scale || 1) * 1.02}
+          scale={(clay.size || 1) * 1.02}
           userData={{ isOutline: true }}
         >
           <meshBasicMaterial
@@ -668,13 +631,8 @@ function Clay({
             const box = clay.geometry.boundingBox!
             const size = new THREE.Vector3()
             box.getSize(size)
-            
-            // Apply scale to get actual size
-            const scale = clay.scale instanceof THREE.Vector3 ? clay.scale.y : (clay.scale || 1)
-            const actualHeight = size.y * scale
-            
             // Position text above the shape with fixed offset
-            return [0, actualHeight * 0.5 + 0.5, 0]
+            return [0, size.y * 0.5 + 0.5, 0]
           })()}
         >
           <Text
@@ -693,12 +651,8 @@ function Clay({
               const box = clay.geometry.boundingBox!
               const size = new THREE.Vector3()
               box.getSize(size)
-              
-              // Apply scale to get actual size
-              const scale = clay.scale instanceof THREE.Vector3 ? clay.scale.x : (clay.scale || 1)
-              
               // Get the maximum dimension (furthest two points)
-              const maxDimension = Math.max(size.x, size.y, size.z) * scale
+              const maxDimension = Math.max(size.x, size.y, size.z)
               return maxDimension.toFixed(2)
             })()}
           </Text>
@@ -735,14 +689,11 @@ function Clay({
             const size = new THREE.Vector3()
             box.getSize(size)
             
-            // Apply scale to get actual size
-            const scale = clay.scale instanceof THREE.Vector3 ? clay.scale : new THREE.Vector3(clay.scale || 1, clay.scale || 1, clay.scale || 1)
-            
             // Add 20% padding
             return [
-              size.x * scale.x * 1.2,
-              size.y * scale.y * 1.2,
-              size.z * scale.z * 1.2
+              size.x * 1.2,
+              size.y * 1.2,
+              size.z * 1.2
             ]
           })()} />
           <meshBasicMaterial 
@@ -764,14 +715,11 @@ function Clay({
             const size = new THREE.Vector3()
             box.getSize(size)
             
-            // Apply scale to get actual size
-            const scale = clay.scale instanceof THREE.Vector3 ? clay.scale : new THREE.Vector3(clay.scale || 1, clay.scale || 1, clay.scale || 1)
-            
             // Add 20% padding
             return [
-              size.x * scale.x * 1.2,
-              size.y * scale.y * 1.2,
-              size.z * scale.z * 1.2
+              size.x * 1.2,
+              size.y * 1.2,
+              size.z * 1.2
             ]
           })()} />
           <meshBasicMaterial 
@@ -784,29 +732,6 @@ function Clay({
       )}
     </group>
   )
-}
-
-// Camera Reset Component
-function CameraReset({ resetTrigger }: { resetTrigger: number }) {
-  const { camera } = useThree()
-  
-  useEffect(() => {
-    if (resetTrigger > 0) {
-      // Reset camera to initial position
-      camera.position.set(5, 5, 5)
-      camera.lookAt(0, 0, 0)
-      camera.up.set(0, 1, 0)
-      
-      // If using perspective camera, reset other properties
-      if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-        const perspCamera = camera as THREE.PerspectiveCamera
-        perspCamera.fov = 50
-        perspCamera.updateProjectionMatrix()
-      }
-    }
-  }, [resetTrigger, camera])
-  
-  return null
 }
 
 // Add Clay Helper with drag to size
@@ -1540,8 +1465,8 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
 
       
 
-      {/* XZ Horizontal Planes for all objects in move and rotate tools */}
-      {(tool === 'move' || tool === 'rotate') && clayObjects.map((clay) => {
+      {/* XZ Horizontal Planes for all objects in move tool */}
+      {tool === 'move' && clayObjects.map((clay) => {
         // Calculate color based on current Z position (real-time)
         const z = clay.position.z
         
@@ -1566,7 +1491,7 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
                 color={color}
                 wireframe
                 transparent
-                opacity={tool === 'move' ? (selectedClayId === clay.id ? 0.3 : 0.1) : 0.1}
+                opacity={selectedClayId === clay.id ? 0.3 : 0.1}
                 side={THREE.DoubleSide}
               />
             </mesh>
@@ -1607,7 +1532,6 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
           </mesh>
         </group>
       )}
-      
     </group>
   )
 }
@@ -1713,7 +1637,6 @@ export default function AdvancedClay() {
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
   const [cameraRelativeCoords, setCameraRelativeCoords] = useState({ x: 0, y: 0, z: 0 })
-  const [cameraResetTrigger, setCameraResetTrigger] = useState(0)
   
   // Track current project
   const [currentProjectInfo, setCurrentProjectInfo] = useState<{
@@ -1735,6 +1658,7 @@ export default function AdvancedClay() {
   
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
+  const controlsRef = useRef<any>(null)
   
   // Mark project as dirty when clay objects change
   useEffect(() => {
@@ -2414,9 +2338,6 @@ export default function AdvancedClay() {
             dynamicDampingFactor={0.1}
           />
           
-          {/* Camera Reset Component */}
-          <CameraReset resetTrigger={cameraResetTrigger} />
-          
           {/* Raycaster Manager for global click handling */}
           <RaycasterManager 
             tool={tool}
@@ -2466,7 +2387,7 @@ export default function AdvancedClay() {
           )}
           
           {/* Grid for reference */}
-          {(tool === 'add' || tool === 'move' || tool === 'push' || tool === 'pull' || tool === 'rotate') && (
+          {(tool === 'add' || tool === 'move' || tool === 'push' || tool === 'pull') && (
             <DynamicGridHelper 
               tool={tool}
               selectedClayId={selectedClayId}
@@ -2705,22 +2626,6 @@ export default function AdvancedClay() {
           </div>
           
           {/* Context-specific controls */}
-          {tool === 'rotate' && (
-            <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-2">
-              <button
-                onClick={() => {
-                  // Trigger camera reset
-                  setCameraResetTrigger(prev => prev + 1)
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all"
-                title="Reset camera to initial position"
-              >
-                <RotateCcw size={16} />
-                <span className="text-sm">Reset Camera</span>
-              </button>
-            </div>
-          )}
-          
           {tool === 'paint' && (
             <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-2">
               {[

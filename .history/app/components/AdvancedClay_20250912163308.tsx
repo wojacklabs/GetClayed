@@ -1540,39 +1540,22 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
 
       
 
-      {/* XZ Horizontal Planes for all objects in move and rotate tools */}
-      {(tool === 'move' || tool === 'rotate') && clayObjects.map((clay) => {
-        // Calculate color based on current Z position (real-time)
-        const z = clay.position.z
-        
-        // Define Z range for color mapping (e.g., -10 to 10)
-        const minZ = -10
-        const maxZ = 10
-        const zRange = maxZ - minZ
-        
-        // Normalize Z position to 0-1 range
-        const normalizedZ = Math.max(0, Math.min(1, (z - minZ) / zRange))
-        
-        // Map to hue range (e.g., blue to red: 240 to 0)
-        const hue = 240 - (normalizedZ * 240) // Blue (240) when low, Red (0) when high
-        const color = `hsl(${hue}, 70%, 50%)`
-        
-        return (
-          <group key={clay.id} position={clay.position}>
-            {/* XZ horizontal plane (Y is fixed, X and Z vary) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[200, 200, 100, 100]} />
-              <meshBasicMaterial
-                color={color}
-                wireframe
-                transparent
-                opacity={tool === 'move' ? (selectedClayId === clay.id ? 0.3 : 0.1) : 0.1}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-          </group>
-        )
-      })}
+      {/* XZ Horizontal Plane for move and rotate tools */}
+      {(tool === 'move' || tool === 'rotate') && (
+        <group position={[0, 0, 0]}>
+          {/* XZ horizontal plane at origin */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[200, 200, 100, 100]} />
+            <meshBasicMaterial
+              color={tool === 'rotate' ? "#4a90e2" : "#888888"}
+              wireframe
+              transparent
+              opacity={0.15}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+      )}
       
       {/* XZ Horizontal Plane for push, pull tools */}
       {(tool === 'push' || tool === 'pull') && hoveredPoint && (
