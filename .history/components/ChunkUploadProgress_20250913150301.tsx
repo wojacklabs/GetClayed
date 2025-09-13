@@ -38,7 +38,7 @@ export function ChunkUploadProgress({
           <div className="mb-4">
             <p className="text-sm text-gray-600 mb-2">
               {isDownload 
-                ? `Downloading ${totalChunks} chunks from Server...`
+                ? `Downloading ${totalChunks} chunks from Storage...`
                 : `Your project exceeds 100KB and is being split into ${totalChunks} chunks. You'll need to sign ${totalChunks} transactions.`
               }
             </p>

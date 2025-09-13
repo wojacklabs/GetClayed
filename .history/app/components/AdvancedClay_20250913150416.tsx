@@ -1704,7 +1704,7 @@ export default function AdvancedClay() {
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
   const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
-  const [currentColor, setCurrentColor] = useState('#B8C5D6')
+  const [currentColor, setCurrentColor] = useState('#ff6b6b')
   const [detail, setDetail] = useState(48)
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
@@ -2070,20 +2070,20 @@ export default function AdvancedClay() {
         const paymentTx = await payForUpload(provider)
         console.log('Service fee payment transaction:', paymentTx)
         
-        showPopup(`Service fee paid successfully! TX: ${paymentTx}`, 'success')
+        alert(`Service fee paid successfully! TX: ${paymentTx}`)
       } catch (error: any) {
         console.error('Service fee payment failed:', error)
         if (error?.message?.includes('User rejected')) {
-          showPopup('Transaction cancelled by user', 'info')
+          alert('Transaction cancelled by user')
           return
         } else if (error?.message?.includes('Not connected to Irys testnet')) {
-          showPopup('Please switch to Irys testnet network in your wallet.', 'warning')
+          alert('Please switch to Irys testnet network in your wallet.')
           return
         } else if (error?.message?.includes('Insufficient funds')) {
-          showPopup(error.message, 'error')
+          alert(error.message)
           return
         } else {
-          showPopup('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.', 'error')
+          alert('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.')
           return
         }
       }
@@ -2108,7 +2108,7 @@ export default function AdvancedClay() {
         console.log('Upload result:', uploadResult)
       } catch (uploadError: any) {
         console.error('Irys upload failed:', uploadError)
-        showPopup('Failed to upload project to Irys. Please try again.', 'error')
+        alert('Failed to upload project to Irys. Please try again.')
         return
       }
 
@@ -2138,17 +2138,9 @@ export default function AdvancedClay() {
       
       const viewUrl = `https://gateway.irys.xyz/mutable/${result.rootTxId}`;
       if (result.wasChunked) {
-        showPopup(
-          `Large project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nUploaded in ${chunkUploadProgress.totalChunks} chunks.\nView at: ${viewUrl}`,
-          'success',
-          { autoClose: false }
-        )
+        alert(`Large project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nUploaded in ${chunkUploadProgress.totalChunks} chunks.\nView at: ${viewUrl}`)
       } else {
-        showPopup(
-          `Project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nView at: ${viewUrl}`,
-          'success',
-          { autoClose: false }
-        )
+        alert(`Project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nView at: ${viewUrl}`)
       }
       
       // Clear cache to refresh projects list
@@ -2156,13 +2148,13 @@ export default function AdvancedClay() {
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
-        showPopup('Transaction cancelled by user', 'info')
+        alert('Transaction cancelled by user')
       } else if (error?.message?.includes('Insufficient balance')) {
-        showPopup('Insufficient balance. Your project is over 100KB and requires IRYS tokens. Please add funds to your wallet.', 'error')
+        alert('Insufficient balance. Your project is over 100KB and requires IRYS tokens. Please add funds to your wallet.')
       } else if (error?.message?.includes('over 100KB')) {
-        showPopup('Project size exceeds 100KB free tier. Payment is required.', 'warning')
+        alert('Project size exceeds 100KB free tier. Payment is required.')
       } else {
-        showPopup('Failed to save project. Please try again.', 'error')
+        alert('Failed to save project. Please try again.')
       }
     }
   }
@@ -2225,12 +2217,12 @@ export default function AdvancedClay() {
       // Close download progress dialog
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
       
-      showPopup(`Project "${project.name}" loaded successfully!`, 'success')
+      alert(`Project "${project.name}" loaded successfully!`)
     } catch (error) {
       console.error('Failed to load project:', error)
       // Close download progress dialog on error
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
-      showPopup('Failed to load project. Please try again.', 'error')
+      alert('Failed to load project. Please try again.')
     }
   }
 
@@ -2242,7 +2234,7 @@ export default function AdvancedClay() {
   const handleProjectDelete = async (projectId: string) => {
     try {
       if (!irysUploader || !walletAddress) {
-        showPopup('Please connect your wallet first', 'warning')
+        alert('Please connect your wallet first')
         return
       }
       
@@ -2255,10 +2247,10 @@ export default function AdvancedClay() {
       // Clear cache to refresh list
       queryCache.delete(`projects-${walletAddress}`)
       
-      showPopup('Project deleted successfully!', 'success')
+      alert('Project deleted successfully!')
     } catch (error) {
       console.error('Failed to delete project:', error)
-      showPopup('Failed to delete project. Please try again.', 'error')
+      alert('Failed to delete project. Please try again.')
     }
   }
 
@@ -2273,7 +2265,6 @@ export default function AdvancedClay() {
   }
 
   const handleExportGLB = async () => {
-    // TODO: Replace with popup input dialog
     const projectName = prompt('Enter project name for GLB export:')
     if (!projectName) return
 
@@ -2284,7 +2275,7 @@ export default function AdvancedClay() {
       })
     } catch (error) {
       console.error('Failed to export GLB:', error)
-      showPopup('Failed to export GLB file', 'error')
+      alert('Failed to export GLB file')
     }
   }
   
@@ -2919,9 +2910,6 @@ export default function AdvancedClay() {
       </div>
       
       {/* Coordinate Display Overlay - moved inside Canvas container */}
-      
-      {/* Popup Notification */}
-      <PopupComponent />
     </div>
   )
 }
