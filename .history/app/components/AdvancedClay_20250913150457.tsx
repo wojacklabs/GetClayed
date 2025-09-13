@@ -1704,7 +1704,7 @@ export default function AdvancedClay() {
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
   const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
-  const [currentColor, setCurrentColor] = useState('#B8C5D6')
+  const [currentColor, setCurrentColor] = useState('#ff6b6b')
   const [detail, setDetail] = useState(48)
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
@@ -2225,12 +2225,12 @@ export default function AdvancedClay() {
       // Close download progress dialog
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
       
-      showPopup(`Project "${project.name}" loaded successfully!`, 'success')
+      alert(`Project "${project.name}" loaded successfully!`)
     } catch (error) {
       console.error('Failed to load project:', error)
       // Close download progress dialog on error
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
-      showPopup('Failed to load project. Please try again.', 'error')
+      alert('Failed to load project. Please try again.')
     }
   }
 
@@ -2242,7 +2242,7 @@ export default function AdvancedClay() {
   const handleProjectDelete = async (projectId: string) => {
     try {
       if (!irysUploader || !walletAddress) {
-        showPopup('Please connect your wallet first', 'warning')
+        alert('Please connect your wallet first')
         return
       }
       
@@ -2255,10 +2255,10 @@ export default function AdvancedClay() {
       // Clear cache to refresh list
       queryCache.delete(`projects-${walletAddress}`)
       
-      showPopup('Project deleted successfully!', 'success')
+      alert('Project deleted successfully!')
     } catch (error) {
       console.error('Failed to delete project:', error)
-      showPopup('Failed to delete project. Please try again.', 'error')
+      alert('Failed to delete project. Please try again.')
     }
   }
 
@@ -2273,7 +2273,6 @@ export default function AdvancedClay() {
   }
 
   const handleExportGLB = async () => {
-    // TODO: Replace with popup input dialog
     const projectName = prompt('Enter project name for GLB export:')
     if (!projectName) return
 
@@ -2284,7 +2283,7 @@ export default function AdvancedClay() {
       })
     } catch (error) {
       console.error('Failed to export GLB:', error)
-      showPopup('Failed to export GLB file', 'error')
+      alert('Failed to export GLB file')
     }
   }
   
@@ -2919,9 +2918,6 @@ export default function AdvancedClay() {
       </div>
       
       {/* Coordinate Display Overlay - moved inside Canvas container */}
-      
-      {/* Popup Notification */}
-      <PopupComponent />
     </div>
   )
 }

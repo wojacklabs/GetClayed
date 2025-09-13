@@ -1704,7 +1704,7 @@ export default function AdvancedClay() {
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
   const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
-  const [currentColor, setCurrentColor] = useState('#B8C5D6')
+  const [currentColor, setCurrentColor] = useState('#ff6b6b')
   const [detail, setDetail] = useState(48)
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
