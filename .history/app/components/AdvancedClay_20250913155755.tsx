@@ -1747,26 +1747,6 @@ export default function AdvancedClay() {
     projectName: ''
   })
   
-  // Profile states
-  const [showProfile, setShowProfile] = useState(false)
-  const [showProjectDetail, setShowProjectDetail] = useState<string | null>(null)
-  const [showProfileMenu, setShowProfileMenu] = useState(false)
-  
-  // Close profile menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (showProfileMenu) {
-        const target = e.target as HTMLElement
-        if (!target.closest('.profile-menu-container')) {
-          setShowProfileMenu(false)
-        }
-      }
-    }
-    
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
-  }, [showProfileMenu])
-  
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
   
@@ -2562,41 +2542,8 @@ export default function AdvancedClay() {
       <div className="bg-white shadow-lg border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Profile and Connect Wallet */}
+          {/* Left side - Connect Wallet */}
           <div className="flex items-center gap-2">
-            {/* Profile Button */}
-            <div className="relative profile-menu-container">
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
-                title="Profile"
-              >
-                <User size={20} />
-              </button>
-              
-              {/* Profile Menu */}
-              {showProfileMenu && (
-                <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 min-w-[160px]">
-                  <button
-                    onClick={() => {
-                      if (walletAddress) {
-                        setShowProfile(true)
-                        setShowProfileMenu(false)
-                      } else {
-                        showPopup('Please connect your wallet first', 'warning')
-                      }
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded transition-colors text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <User size={16} />
-                      My Profile
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-            
             <ConnectWallet 
               onConnect={async (address) => {
                 setWalletAddress(address)
@@ -2979,30 +2926,6 @@ export default function AdvancedClay() {
       
       {/* Popup Notification */}
       <PopupComponent />
-      
-      {/* Profile Page */}
-      {showProfile && walletAddress && (
-        <ProfilePage
-          walletAddress={walletAddress}
-          onClose={() => setShowProfile(false)}
-          onProjectSelect={(projectId) => {
-            setShowProfile(false)
-            setShowProjectDetail(projectId)
-          }}
-        />
-      )}
-      
-      {/* Project Detail View */}
-      {showProjectDetail && (
-        <ProjectDetailView
-          projectId={showProjectDetail}
-          walletAddress={walletAddress}
-          onBack={() => {
-            setShowProjectDetail(null)
-            setShowProfile(true)
-          }}
-        />
-      )}
     </div>
   )
 }

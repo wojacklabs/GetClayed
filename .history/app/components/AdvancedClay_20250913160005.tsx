@@ -1752,21 +1752,6 @@ export default function AdvancedClay() {
   const [showProjectDetail, setShowProjectDetail] = useState<string | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   
-  // Close profile menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (showProfileMenu) {
-        const target = e.target as HTMLElement
-        if (!target.closest('.profile-menu-container')) {
-          setShowProfileMenu(false)
-        }
-      }
-    }
-    
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
-  }, [showProfileMenu])
-  
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
   
@@ -2565,7 +2550,7 @@ export default function AdvancedClay() {
           {/* Left side - Profile and Connect Wallet */}
           <div className="flex items-center gap-2">
             {/* Profile Button */}
-            <div className="relative profile-menu-container">
+            <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"

@@ -2565,7 +2565,7 @@ export default function AdvancedClay() {
           {/* Left side - Profile and Connect Wallet */}
           <div className="flex items-center gap-2">
             {/* Profile Button */}
-            <div className="relative profile-menu-container">
+            <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
@@ -2596,6 +2596,17 @@ export default function AdvancedClay() {
                 </div>
               )}
             </div>
+            
+            <FolderStructure
+              walletAddress={walletAddress}
+              onProjectSelect={handleProjectSelect}
+              currentFolder={currentFolder}
+              onFolderChange={setCurrentFolder}
+              onProjectMove={handleProjectMove}
+              onProjectDelete={handleProjectDelete}
+              onFolderCreate={handleFolderCreate}
+              onFolderDelete={handleFolderDelete}
+            />
             
             <ConnectWallet 
               onConnect={async (address) => {

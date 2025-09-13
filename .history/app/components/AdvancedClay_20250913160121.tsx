@@ -2597,6 +2597,17 @@ export default function AdvancedClay() {
               )}
             </div>
             
+            <FolderStructure
+              walletAddress={walletAddress}
+              onProjectSelect={handleProjectSelect}
+              currentFolder={currentFolder}
+              onFolderChange={setCurrentFolder}
+              onProjectMove={handleProjectMove}
+              onProjectDelete={handleProjectDelete}
+              onFolderCreate={handleFolderCreate}
+              onFolderDelete={handleFolderDelete}
+            />
+            
             <ConnectWallet 
               onConnect={async (address) => {
                 setWalletAddress(address)
