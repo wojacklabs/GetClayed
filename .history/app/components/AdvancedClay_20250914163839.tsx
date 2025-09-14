@@ -51,7 +51,6 @@ import { ChunkUploadProgress as ChunkProgressType } from '../../lib/chunkUploadS
 import { usePopup } from '../../components/PopupNotification'
 import ProfilePage from '../../components/ProfilePage'
 import ProjectDetailView from '../../components/ProjectDetailView'
-import { downloadUserProfile } from '../../lib/profileService'
 
 interface ClayObject {
   id: string
@@ -1751,6 +1750,8 @@ export default function AdvancedClay() {
   })
   
   // Profile states
+  const [showProfile, setShowProfile] = useState(false)
+  const [showProjectDetail, setShowProjectDetail] = useState<string | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   
   // Close profile menu when clicking outside
@@ -2986,6 +2987,30 @@ export default function AdvancedClay() {
       
       {/* Popup Notification */}
       <PopupComponent />
+      
+      {/* Profile Page */}
+      {showProfile && walletAddress && (
+        <ProfilePage
+          walletAddress={walletAddress}
+          onClose={() => setShowProfile(false)}
+          onProjectSelect={(projectId) => {
+            setShowProfile(false)
+            setShowProjectDetail(projectId)
+          }}
+        />
+      )}
+      
+      {/* Project Detail View */}
+      {showProjectDetail && (
+        <ProjectDetailView
+          projectId={showProjectDetail}
+          walletAddress={walletAddress}
+          onBack={() => {
+            setShowProjectDetail(null)
+            setShowProfile(true)
+          }}
+        />
+      )}
     </div>
   )
 }

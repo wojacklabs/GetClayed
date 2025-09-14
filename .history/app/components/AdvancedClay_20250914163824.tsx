@@ -51,7 +51,6 @@ import { ChunkUploadProgress as ChunkProgressType } from '../../lib/chunkUploadS
 import { usePopup } from '../../components/PopupNotification'
 import ProfilePage from '../../components/ProfilePage'
 import ProjectDetailView from '../../components/ProjectDetailView'
-import { downloadUserProfile } from '../../lib/profileService'
 
 interface ClayObject {
   id: string
@@ -1751,6 +1750,8 @@ export default function AdvancedClay() {
   })
   
   // Profile states
+  const [showProfile, setShowProfile] = useState(false)
+  const [showProjectDetail, setShowProjectDetail] = useState<string | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   
   // Close profile menu when clicking outside
@@ -2579,16 +2580,10 @@ export default function AdvancedClay() {
               {showProfileMenu && (
                 <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 min-w-[160px]">
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       if (walletAddress) {
+                        setShowProfile(true)
                         setShowProfileMenu(false)
-                        // Check if user has display name
-                        const profile = await downloadUserProfile(walletAddress)
-                        if (profile?.displayName) {
-                          router.push(`/user/${profile.displayName}`)
-                        } else {
-                          router.push(`/user/${walletAddress}`)
-                        }
                       } else {
                         showPopup('Please connect your wallet first', 'warning')
                       }
@@ -2986,6 +2981,30 @@ export default function AdvancedClay() {
       
       {/* Popup Notification */}
       <PopupComponent />
+      
+      {/* Profile Page */}
+      {showProfile && walletAddress && (
+        <ProfilePage
+          walletAddress={walletAddress}
+          onClose={() => setShowProfile(false)}
+          onProjectSelect={(projectId) => {
+            setShowProfile(false)
+            setShowProjectDetail(projectId)
+          }}
+        />
+      )}
+      
+      {/* Project Detail View */}
+      {showProjectDetail && (
+        <ProjectDetailView
+          projectId={showProjectDetail}
+          walletAddress={walletAddress}
+          onBack={() => {
+            setShowProjectDetail(null)
+            setShowProfile(true)
+          }}
+        />
+      )}
     </div>
   )
 }

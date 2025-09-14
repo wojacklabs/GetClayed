@@ -184,11 +184,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       setProfile(updatedProfile)
       setIsEditing(false)
       showPopup('Profile updated successfully!', 'success')
-      
-      // Update URL if display name changed
-      if (updatedProfile.displayName && updatedProfile.displayName !== profile.displayName) {
-        router.replace(`/user/${updatedProfile.displayName}`)
-      }
     } catch (error) {
       console.error('Failed to update profile:', error)
       showPopup('Failed to update profile', 'error')
