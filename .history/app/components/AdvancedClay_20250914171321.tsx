@@ -1754,6 +1754,9 @@ export default function AdvancedClay() {
   // Profile states
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   
+  // Thumbnail capture ref
+  const captureRef = useRef<{ capture: () => Promise<string | null> } | null>(null)
+  
   // Close profile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

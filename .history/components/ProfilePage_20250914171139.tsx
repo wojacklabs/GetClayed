@@ -174,10 +174,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         })
         
         // Load thumbnail if available
-        const thumbnailId = project.tags?.['Thumbnail-ID']
-        if (thumbnailId) {
+        if (project.thumbnailId) {
           try {
-            const thumbnailUrl = await downloadProjectThumbnail(thumbnailId)
+            const thumbnailUrl = await downloadProjectThumbnail(project.thumbnailId)
             if (thumbnailUrl) {
               thumbnails.set(project.id, thumbnailUrl)
             }
@@ -522,21 +521,13 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {/* Thumbnail */}
-                  <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden">
-                    {projectThumbnails.has(project.id) ? (
-                      <img 
-                        src={projectThumbnails.get(project.id)} 
-                        alt={project.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-gray-400">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
-                          <path d="M12 2 L12 12 L20 8" strokeWidth="1.5" />
-                        </svg>
-                      </div>
-                    )}
+                  <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <div className="text-gray-400">
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+                        <path d="M12 2 L12 12 L20 8" strokeWidth="1.5" />
+                      </svg>
+                    </div>
                   </div>
                   
                   {/* Info */}

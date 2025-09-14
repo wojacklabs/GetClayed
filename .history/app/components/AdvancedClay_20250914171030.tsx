@@ -2047,8 +2047,20 @@ export default function AdvancedClay() {
       )
       serialized.id = projectId; // Ensure project has the correct ID
       
-      // TODO: Thumbnail capture will be implemented later
+      // Capture thumbnail
       let thumbnailId: string | undefined;
+      try {
+        const renderer = gl as THREE.WebGLRenderer;
+        const thumbnailDataUrl = await captureSceneThumbnail(renderer, scene, camera);
+        const compressedThumbnail = await compressImageDataUrl(thumbnailDataUrl);
+        
+        // Upload thumbnail
+        thumbnailId = await uploadProjectThumbnail(compressedThumbnail, projectId) || undefined;
+        console.log('Thumbnail uploaded:', thumbnailId);
+      } catch (thumbError) {
+        console.error('Failed to capture/upload thumbnail:', thumbError);
+        // Continue without thumbnail
+      }
       
       // Check project size
       const jsonString = JSON.stringify(serialized);
@@ -2132,8 +2144,7 @@ export default function AdvancedClay() {
               isOpen: true,
               projectName
             })
-          },
-          thumbnailId
+          }
         )
         console.log('Upload result:', uploadResult)
       } catch (uploadError: any) {

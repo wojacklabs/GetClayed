@@ -2047,9 +2047,6 @@ export default function AdvancedClay() {
       )
       serialized.id = projectId; // Ensure project has the correct ID
       
-      // TODO: Thumbnail capture will be implemented later
-      let thumbnailId: string | undefined;
-      
       // Check project size
       const jsonString = JSON.stringify(serialized);
       const sizeInKB = Buffer.from(jsonString).byteLength / 1024;
@@ -2132,8 +2129,7 @@ export default function AdvancedClay() {
               isOpen: true,
               projectName
             })
-          },
-          thumbnailId
+          }
         )
         console.log('Upload result:', uploadResult)
       } catch (uploadError: any) {

@@ -2047,7 +2047,7 @@ export default function AdvancedClay() {
       )
       serialized.id = projectId; // Ensure project has the correct ID
       
-      // TODO: Thumbnail capture will be implemented later
+      // Capture thumbnail will be handled in the ThreeCanvas component
       let thumbnailId: string | undefined;
       
       // Check project size

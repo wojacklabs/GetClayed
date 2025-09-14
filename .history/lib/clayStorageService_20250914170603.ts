@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import pako from 'pako';
-import { uploadToIrys, createIrysUploader } from './irys';
+import { uploadToIrys } from './irys';
 import axios from 'axios';
 import { uploadInChunks, downloadChunks, uploadChunkManifest, ChunkUploadProgress } from './chunkUploadService';
 import { v4 as uuidv4 } from 'uuid';
@@ -163,62 +163,6 @@ export function decompressClayProject(data: Uint8Array): ClayProject {
 }
 
 /**
- * Upload thumbnail to Irys
- */
-export async function uploadProjectThumbnail(
-  thumbnailDataUrl: string,
-  projectId: string
-): Promise<string | null> {
-  try {
-    const uploader = await createIrysUploader();
-    if (!uploader) return null;
-    
-    // Convert data URL to buffer
-    const base64Data = thumbnailDataUrl.split(',')[1];
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    // Direct upload thumbnails (they should be compressed already)
-    const tags = [
-      { name: 'Content-Type', value: 'image/jpeg' },
-      { name: 'App-Name', value: 'GetClayed' },
-      { name: 'Data-Type', value: 'project-thumbnail' },
-      { name: 'Project-ID', value: projectId }
-    ];
-    
-    const receipt = await uploader.upload(buffer, { tags });
-    return receipt.id;
-  } catch (error) {
-    console.error('[ClayStorage] Error uploading thumbnail:', error);
-    return null;
-  }
-}
-
-/**
- * Download thumbnail from Irys
- */
-export async function downloadProjectThumbnail(thumbnailId: string): Promise<string | null> {
-  try {
-    if (!thumbnailId) return null;
-    
-    // Direct download (thumbnails are not chunked)
-    const url = `https://gateway.irys.xyz/${thumbnailId}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error('[ClayStorage] Failed to download thumbnail:', response.status);
-      return null;
-    }
-    
-    const data = await response.arrayBuffer();
-    const buffer = Buffer.from(data);
-    return `data:image/jpeg;base64,${buffer.toString('base64')}`;
-  } catch (error) {
-    console.error('[ClayStorage] Error downloading thumbnail:', error);
-    return null;
-  }
-}
-
-/**
  * Upload clay project to Irys
  */
 export async function uploadClayProject(
@@ -226,8 +170,7 @@ export async function uploadClayProject(
   project: ClayProject,
   folder?: string,
   rootTxId?: string,
-  onProgress?: (progress: ChunkUploadProgress) => void,
-  thumbnailId?: string
+  onProgress?: (progress: ChunkUploadProgress) => void
 ): Promise<{ transactionId: string; rootTxId: string; isUpdate: boolean; wasChunked: boolean }> {
   // Convert to JSON without compression
   const jsonString = JSON.stringify(project);
@@ -267,11 +210,6 @@ export async function uploadClayProject(
   // Add folder tag if specified
   if (folder) {
     tags.push({ name: 'Folder', value: folder });
-  }
-  
-  // Add thumbnail tag if provided
-  if (thumbnailId) {
-    tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
   }
   
   // Add project tags

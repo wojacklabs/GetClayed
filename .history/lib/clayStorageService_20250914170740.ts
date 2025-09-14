@@ -177,7 +177,21 @@ export async function uploadProjectThumbnail(
     const base64Data = thumbnailDataUrl.split(',')[1];
     const buffer = Buffer.from(base64Data, 'base64');
     
-    // Direct upload thumbnails (they should be compressed already)
+    // Check if thumbnail is too large for direct upload (> 100KB)
+    if (buffer.length > 100 * 1024) {
+      // Use chunk upload for large thumbnails
+      const chunkResult = await uploadInChunks(buffer, {
+        tags: [
+          { name: 'Content-Type', value: 'image/jpeg' },
+          { name: 'App-Name', value: 'GetClayed' },
+          { name: 'Data-Type', value: 'project-thumbnail' },
+          { name: 'Project-ID', value: projectId }
+        ]
+      });
+      return chunkResult.manifestId;
+    }
+    
+    // Direct upload for small thumbnails
     const tags = [
       { name: 'Content-Type', value: 'image/jpeg' },
       { name: 'App-Name', value: 'GetClayed' },
@@ -200,16 +214,19 @@ export async function downloadProjectThumbnail(thumbnailId: string): Promise<str
   try {
     if (!thumbnailId) return null;
     
-    // Direct download (thumbnails are not chunked)
-    const url = `https://gateway.irys.xyz/${thumbnailId}`;
-    const response = await fetch(url);
+    // Check if it's a chunked upload
+    const manifestUrl = `https://uploader.irys.xyz/${thumbnailId}`;
+    const manifestResponse = await fetch(manifestUrl);
     
-    if (!response.ok) {
-      console.error('[ClayStorage] Failed to download thumbnail:', response.status);
-      return null;
+    if (manifestResponse.headers.get('content-type')?.includes('application/x.irys-manifest')) {
+      // It's chunked, download chunks
+      const chunks = await downloadChunks(thumbnailId);
+      // Convert buffer to data URL
+      return `data:image/jpeg;base64,${chunks.toString('base64')}`;
     }
     
-    const data = await response.arrayBuffer();
+    // Direct download
+    const data = await manifestResponse.arrayBuffer();
     const buffer = Buffer.from(data);
     return `data:image/jpeg;base64,${buffer.toString('base64')}`;
   } catch (error) {
@@ -226,8 +243,7 @@ export async function uploadClayProject(
   project: ClayProject,
   folder?: string,
   rootTxId?: string,
-  onProgress?: (progress: ChunkUploadProgress) => void,
-  thumbnailId?: string
+  onProgress?: (progress: ChunkUploadProgress) => void
 ): Promise<{ transactionId: string; rootTxId: string; isUpdate: boolean; wasChunked: boolean }> {
   // Convert to JSON without compression
   const jsonString = JSON.stringify(project);
@@ -267,11 +283,6 @@ export async function uploadClayProject(
   // Add folder tag if specified
   if (folder) {
     tags.push({ name: 'Folder', value: folder });
-  }
-  
-  // Add thumbnail tag if provided
-  if (thumbnailId) {
-    tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
   }
   
   // Add project tags
