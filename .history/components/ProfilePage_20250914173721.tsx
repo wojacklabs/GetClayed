@@ -555,39 +555,35 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
               </div>
               
               {/* Selected Date Details */}
-              {selectedDate && (
+              {selectedDate && selectedDateDetails.length > 0 && (
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-semibold text-sm mb-2">
                     Activity on {selectedDate.toLocaleDateString()} ({selectedDateDetails.length} contribution{selectedDateDetails.length !== 1 ? 's' : ''})
                   </h4>
-                  {selectedDateDetails.length > 0 ? (
-                    <div className="space-y-2">
-                      {selectedDateDetails.map((detail, idx) => (
-                        <div key={idx} className="text-sm text-gray-700">
-                          {detail.type === 'project' && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-green-600">●</span>
-                              <span>Created project: <strong>{detail.name}</strong></span>
-                            </div>
-                          )}
-                          {detail.type === 'like' && (
-                            <div className="flex items-center gap-2">
-                              <Heart size={12} className="text-red-500" />
-                              <span>Liked a project</span>
-                            </div>
-                          )}
-                          {detail.type === 'favorite' && (
-                            <div className="flex items-center gap-2">
-                              <Star size={12} className="text-yellow-500" />
-                              <span>Added a project to favorites</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No activity found</p>
-                  )}
+                  <div className="space-y-2">
+                    {selectedDateDetails.map((detail, idx) => (
+                      <div key={idx} className="text-sm text-gray-700">
+                        {detail.type === 'project' && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-600">●</span>
+                            <span>Created project: <strong>{detail.name}</strong></span>
+                          </div>
+                        )}
+                        {detail.type === 'like' && (
+                          <div className="flex items-center gap-2">
+                            <Heart size={12} className="text-red-500" />
+                            <span>Liked a project</span>
+                          </div>
+                        )}
+                        {detail.type === 'favorite' && (
+                          <div className="flex items-center gap-2">
+                            <Star size={12} className="text-yellow-500" />
+                            <span>Added a project to favorites</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
