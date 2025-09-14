@@ -409,55 +409,41 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
           <div className="overflow-x-auto">
             <div className="inline-block">
               {/* Month labels */}
-              <div className="relative h-4 mb-1 ml-8" style={{ width: `${52 * 7}px` }}>
+              <div className="flex mb-1 ml-8">
                 {(() => {
-                  // Use same date calculation as generateActivityData
-                  const weeks = 52
-                  const totalDays = weeks * 7
+                  // Calculate month positions based on actual grid
                   const today = new Date()
-                  today.setHours(0, 0, 0, 0)
+                  const monthLabels: { month: string; position: number; width: number }[] = []
                   
-                  // Start from Sunday of the first week (same as activity data)
-                  const startDate = new Date(today)
-                  startDate.setDate(startDate.getDate() - totalDays + 1)
-                  const startDay = startDate.getDay()
-                  if (startDay !== 0) {
-                    startDate.setDate(startDate.getDate() - startDay)
-                  }
-                  
-                  const monthPositions: { month: string; weekIndex: number }[] = []
-                  let currentMonth = ''
-                  
-                  // Go through each week to find month boundaries
+                  // Go through each week and determine which month it belongs to
                   for (let weekIndex = 0; weekIndex < 52; weekIndex++) {
-                    // Get the first day of this week
-                    const weekDate = new Date(startDate)
-                    weekDate.setDate(weekDate.getDate() + weekIndex * 7)
+                    const weekDate = new Date(today)
+                    weekDate.setDate(weekDate.getDate() - (52 - weekIndex - 1) * 7)
                     const monthName = weekDate.toLocaleDateString('en', { month: 'short' })
                     
-                    if (monthName !== currentMonth) {
-                      currentMonth = monthName
-                      monthPositions.push({ month: monthName, weekIndex })
+                    if (monthLabels.length === 0 || monthLabels[monthLabels.length - 1].month !== monthName) {
+                      monthLabels.push({
+                        month: monthName,
+                        position: weekIndex * 7, // 3px square + 4px gap = 7px per week
+                        width: 7
+                      })
+                    } else {
+                      monthLabels[monthLabels.length - 1].width += 7
                     }
                   }
                   
-                  return monthPositions.map((pos, idx) => {
-                    const nextPos = monthPositions[idx + 1]
-                    const weekCount = nextPos ? nextPos.weekIndex - pos.weekIndex : 52 - pos.weekIndex
-                    
-                    return (
-                      <div
-                        key={idx}
-                        className="text-xs text-gray-600 absolute"
-                        style={{ 
-                          left: `${pos.weekIndex * 7}px`,
-                          width: `${weekCount * 7}px`
-                        }}
-                      >
-                        {pos.month}
-                      </div>
-                    )
-                  })
+                  return monthLabels.map((label, idx) => (
+                    <div
+                      key={idx}
+                      className="text-xs text-gray-600 absolute"
+                      style={{ 
+                        left: `${label.position}px`,
+                        width: `${label.width}px`
+                      }}
+                    >
+                      {label.month}
+                    </div>
+                  ))
                 })()}
               </div>
               
