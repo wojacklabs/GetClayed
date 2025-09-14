@@ -245,6 +245,8 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
     return 'bg-green-600'
   }
   
+  // Remove loading state as the parent component handles it with skeleton
+  
   return (
     <div className="fixed inset-0 bg-gray-50 z-[9998] overflow-auto">
       <div className="max-w-6xl mx-auto p-8">
@@ -271,17 +273,7 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
             
             {/* Profile Info */}
             <div className="flex-grow">
-              {loading ? (
-                <div>
-                  <div className="h-8 w-48 bg-gray-200 rounded mb-2 animate-pulse"></div>
-                  <div className="h-4 w-32 bg-gray-200 rounded mb-4 animate-pulse"></div>
-                  <div className="h-4 w-64 bg-gray-200 rounded mb-2 animate-pulse"></div>
-                  <div className="flex gap-4 mt-4">
-                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                </div>
-              ) : isEditing ? (
+              {isEditing ? (
                 <div className="space-y-4">
                   <input
                     type="text"
@@ -377,39 +369,20 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
             
             {/* Stats */}
             <div className="flex gap-8 text-center">
-              {loading ? (
-                <>
-                  <div>
-                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
-                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                  <div>
-                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
-                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                  <div>
-                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
-                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <div className="text-2xl font-bold">{projects.length}</div>
-                    <div className="text-sm text-gray-600">Projects</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">
-                      {Array.from(projectStats.values()).reduce((sum, stats) => sum + stats.likes, 0)}
-                    </div>
-                    <div className="text-sm text-gray-600">Total Likes</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{favorites.length}</div>
-                    <div className="text-sm text-gray-600">Favorites</div>
-                  </div>
-                </>
-              )}
+              <div>
+                <div className="text-2xl font-bold">{projects.length}</div>
+                <div className="text-sm text-gray-600">Projects</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">
+                  {Array.from(projectStats.values()).reduce((sum, stats) => sum + stats.likes, 0)}
+                </div>
+                <div className="text-sm text-gray-600">Total Likes</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{favorites.length}</div>
+                <div className="text-sm text-gray-600">Favorites</div>
+              </div>
             </div>
           </div>
         </div>
