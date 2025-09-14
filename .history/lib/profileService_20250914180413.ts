@@ -102,16 +102,22 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
   try {
     if (!avatarId) return null;
     
-    // Direct download
-    const url = `https://gateway.irys.xyz/${avatarId}`;
-    const response = await fetch(url);
+    // Check if it's a chunked upload
+    const manifestUrl = `https://gateway.irys.xyz/${avatarId}`;
+    const manifestResponse = await fetch(manifestUrl);
     
-    if (!response.ok) {
-      console.error('[ProfileService] Failed to download avatar:', response.status);
-      return null;
+    if (manifestResponse.headers.get('content-type')?.includes('application/x.irys-manifest')) {
+      // It's chunked, download chunks
+      const manifestData = await manifestResponse.json();
+      const chunkIds = manifestData.paths ? Object.values(manifestData.paths).map((p: any) => p.id) : [];
+      const chunks = await downloadChunks(avatarId, chunkIds.length, chunkIds);
+      
+      // Convert base64 chunks to data URL
+      return `data:image/jpeg;base64,${chunks}`;
     }
     
-    const data = await response.arrayBuffer();
+    // Direct download
+    const data = await manifestResponse.arrayBuffer();
     const buffer = Buffer.from(data);
     return `data:image/jpeg;base64,${buffer.toString('base64')}`;
   } catch (error) {

@@ -36,14 +36,9 @@ function ViewOnlyClay({ clay }: { clay: any }) {
 }
 
 // Camera controls that only allow rotation
-function ViewOnlyControls({ controlsRef, cameraRef }: { controlsRef: any, cameraRef: any }) {
+function ViewOnlyControls() {
   const { camera, gl } = useThree()
-  
-  useEffect(() => {
-    if (cameraRef) {
-      cameraRef.current = camera
-    }
-  }, [camera, cameraRef])
+  const controlsRef = useRef<any>(null)
   
   return (
     <TrackballControls
@@ -172,17 +167,6 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
     }
   }
   
-  const handleResetCamera = () => {
-    if (cameraRef.current && controlsRef.current) {
-      // Reset camera position
-      cameraRef.current.position.set(10, 10, 10)
-      cameraRef.current.lookAt(0, 0, 0)
-      
-      // Reset controls
-      controlsRef.current.reset()
-    }
-  }
-  
   if (loading) {
     return (
       <div className="fixed inset-0 bg-gray-50 z-[9998] flex items-center justify-center">
@@ -269,55 +253,16 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
           <directionalLight position={[10, 10, 5]} intensity={0.4} />
           <Environment preset="studio" />
           
-          <ViewOnlyControls controlsRef={controlsRef} cameraRef={cameraRef} />
+          <ViewOnlyControls />
           
           {/* Render clay objects */}
           {clayObjects.map((clay) => (
-            <group key={clay.id}>
-              <ViewOnlyClay clay={clay} />
-              {showGrid && (
-                <Grid
-                  position={[clay.position.x, 0, clay.position.z]}
-                  args={[10, 10]}
-                  cellSize={0.5}
-                  cellThickness={0.5}
-                  cellColor="#6b7280"
-                  sectionSize={5}
-                  sectionThickness={1}
-                  sectionColor="#374151"
-                  fadeDistance={25}
-                  fadeStrength={1}
-                  followCamera={false}
-                  infiniteGrid={false}
-                />
-              )}
-            </group>
+            <ViewOnlyClay key={clay.id} clay={clay} />
           ))}
+          
+          {/* Grid */}
+          <gridHelper args={[50, 50, 0x888888, 0xcccccc]} />
         </Canvas>
-      </div>
-      
-      {/* Bottom UI Controls */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-white rounded-lg shadow-lg p-4 z-10">
-        <button
-          onClick={() => setShowGrid(!showGrid)}
-          className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
-            showGrid
-              ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}
-          title={showGrid ? 'Hide grids' : 'Show grids'}
-        >
-          <Maximize2 size={20} />
-          <span className="text-sm">{showGrid ? 'Hide Grid' : 'Show Grid'}</span>
-        </button>
-        <button
-          onClick={handleResetCamera}
-          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all flex items-center gap-2"
-          title="Reset camera angle"
-        >
-          <RotateCw size={20} />
-          <span className="text-sm">Reset Camera</span>
-        </button>
       </div>
       
       {/* Description */}

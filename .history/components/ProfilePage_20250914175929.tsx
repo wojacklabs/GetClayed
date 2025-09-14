@@ -44,8 +44,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
   const [activityData, setActivityData] = useState<Array<{ date: Date; count: number; details?: any[] }>>([])
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedDateDetails, setSelectedDateDetails] = useState<any[]>([])
-  const [profileImage, setProfileImage] = useState<string | null>(null)
-  const [uploadingImage, setUploadingImage] = useState(false)
   
   // Generate activity data from projects and interactions
   const generateActivityData = (userProjects: any[], userLikes?: any[], userFavorites?: any[]) => {
@@ -148,14 +146,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         github: userProfile.github || ''
       })
       
-      // Load avatar if exists
-      if (userProfile.avatarUrl) {
-        const avatarImage = await downloadProfileAvatar(userProfile.avatarUrl)
-        if (avatarImage) {
-          setProfileImage(avatarImage)
-        }
-      }
-      
       // Load projects
       const userProjects = await queryUserProjects(walletAddress)
       setProjects(userProjects)
@@ -204,52 +194,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       showPopup('Failed to load profile data', 'error')
     } finally {
       setLoading(false)
-    }
-  }
-  
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      showPopup('Image size must be less than 5MB', 'warning')
-      return
-    }
-    
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      showPopup('Please select an image file', 'warning')
-      return
-    }
-    
-    setUploadingImage(true)
-    
-    try {
-      // Convert to data URL
-      const reader = new FileReader()
-      reader.onload = async (event) => {
-        const dataUrl = event.target?.result as string
-        
-        // Upload to Irys
-        const avatarId = await uploadProfileAvatar(dataUrl)
-        if (avatarId) {
-          // Update profile with new avatar ID
-          if (profile) {
-            profile.avatarUrl = avatarId
-          }
-          setProfileImage(dataUrl)
-          showPopup('Profile image uploaded!', 'success')
-        } else {
-          showPopup('Failed to upload image', 'error')
-        }
-        setUploadingImage(false)
-      }
-      reader.readAsDataURL(file)
-    } catch (error) {
-      console.error('Failed to upload image:', error)
-      showPopup('Failed to upload image', 'error')
-      setUploadingImage(false)
     }
   }
   
@@ -320,30 +264,8 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
           <div className="flex items-start gap-8">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              <div className="relative">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center overflow-hidden">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <User size={48} className="text-white" />
-                  )}
-                </div>
-                {isEditing && (
-                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      disabled={uploadingImage}
-                    />
-                    {uploadingImage ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <Edit2 size={16} />
-                    )}
-                  </label>
-                )}
+              <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                <User size={48} className="text-white" />
               </div>
             </div>
             

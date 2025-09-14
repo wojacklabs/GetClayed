@@ -320,30 +320,8 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
           <div className="flex items-start gap-8">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              <div className="relative">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center overflow-hidden">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <User size={48} className="text-white" />
-                  )}
-                </div>
-                {isEditing && (
-                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      disabled={uploadingImage}
-                    />
-                    {uploadingImage ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <Edit2 size={16} />
-                    )}
-                  </label>
-                )}
+              <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                <User size={48} className="text-white" />
               </div>
             </div>
             
