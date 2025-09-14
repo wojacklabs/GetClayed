@@ -1751,6 +1751,8 @@ export default function AdvancedClay() {
   })
   
   // Profile states
+  const [showProfile, setShowProfile] = useState(false)
+  const [showProjectDetail, setShowProjectDetail] = useState<string | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   
   // Close profile menu when clicking outside

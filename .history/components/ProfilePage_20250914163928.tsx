@@ -20,7 +20,6 @@ interface ProjectStats {
 }
 
 export default function ProfilePage({ walletAddress, onClose, onProjectSelect }: ProfilePageProps) {
-  const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [projects, setProjects] = useState<any[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
@@ -184,11 +183,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       setProfile(updatedProfile)
       setIsEditing(false)
       showPopup('Profile updated successfully!', 'success')
-      
-      // Update URL if display name changed
-      if (updatedProfile.displayName && updatedProfile.displayName !== profile.displayName) {
-        router.replace(`/user/${updatedProfile.displayName}`)
-      }
     } catch (error) {
       console.error('Failed to update profile:', error)
       showPopup('Failed to update profile', 'error')
@@ -444,7 +438,7 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                 <div
                   key={project.id}
                   className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => router.push(`/project/${project.id}`)}
+                  onClick={() => onProjectSelect(project.id)}
                 >
                   {/* Thumbnail */}
                   <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
