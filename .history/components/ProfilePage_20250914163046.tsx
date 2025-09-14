@@ -35,8 +35,8 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
   const { showPopup } = usePopup()
   const [activityData, setActivityData] = useState<Array<{ date: Date; count: number }>>([])
   
-  // Generate activity data from projects and interactions
-  const generateActivityData = (userProjects: any[], userLikes?: any[], userFavorites?: any[]) => {
+  // Generate activity data from projects
+  const generateActivityData = (userProjects: any[]) => {
     // Create a map of date strings to counts
     const activityMap = new Map<string, number>()
     
@@ -47,24 +47,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       activityMap.set(dateStr, (activityMap.get(dateStr) || 0) + 1)
     })
     
-    // Count likes if provided
-    if (userLikes) {
-      userLikes.forEach(like => {
-        const date = new Date(like.timestamp)
-        const dateStr = date.toISOString().split('T')[0]
-        activityMap.set(dateStr, (activityMap.get(dateStr) || 0) + 1)
-      })
-    }
-    
-    // Count favorites if provided
-    if (userFavorites) {
-      userFavorites.forEach(fav => {
-        const date = new Date(fav.timestamp)
-        const dateStr = date.toISOString().split('T')[0]
-        activityMap.set(dateStr, (activityMap.get(dateStr) || 0) + 1)
-      })
-    }
-    
     // Generate last 52 weeks of data
     const weeks = 52
     const daysPerWeek = 7
@@ -74,17 +56,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
     
     const data: Array<{ date: Date; count: number }> = []
     
-    // Start from Sunday of the first week
-    const startDate = new Date(today)
-    startDate.setDate(startDate.getDate() - totalDays + 1)
-    const startDay = startDate.getDay()
-    if (startDay !== 0) {
-      startDate.setDate(startDate.getDate() - startDay)
-    }
-    
-    for (let i = 0; i < totalDays; i++) {
-      const date = new Date(startDate)
-      date.setDate(date.getDate() + i)
+    for (let i = totalDays - 1; i >= 0; i--) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
       
       data.push({
@@ -195,8 +169,8 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
   const getActivityLevel = (count: number) => {
     if (count === 0) return 'bg-gray-100'
     if (count === 1) return 'bg-green-200'
-    if (count <= 3) return 'bg-green-400'
-    if (count <= 5) return 'bg-green-500'
+    if (count === 2) return 'bg-green-400'
+    if (count === 3) return 'bg-green-500'
     return 'bg-green-600'
   }
   
@@ -352,78 +326,29 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         
         {/* Activity Chart */}
         <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <Activity size={20} />
-              Activity
-            </h3>
-            <div className="text-sm text-gray-600">
-              {activityData.reduce((sum, day) => sum + day.count, 0)} contributions in the last year
-            </div>
+          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Activity size={20} />
+            Activity
+          </h3>
+          <div className="flex flex-wrap gap-1">
+            {activityData.map((day, i) => (
+              <div
+                key={i}
+                className={`w-3 h-3 rounded-sm ${getActivityLevel(day.count)}`}
+                title={`${day.date.toDateString()}: ${day.count} contributions`}
+              />
+            ))}
           </div>
-          <div className="overflow-x-auto">
-            <div className="inline-block">
-              {/* Month labels */}
-              <div className="flex gap-1 mb-1 ml-8">
-                {Array.from({ length: 12 }, (_, i) => {
-                  const date = new Date()
-                  date.setMonth(date.getMonth() - (11 - i))
-                  return (
-                    <div key={i} className="w-[52px] text-xs text-gray-600">
-                      {date.toLocaleDateString('en', { month: 'short' })}
-                    </div>
-                  )
-                })}
-              </div>
-              
-              {/* Activity grid */}
-              <div className="flex gap-1">
-                {/* Day labels */}
-                <div className="flex flex-col gap-1 text-xs text-gray-600 pr-2">
-                  <div className="h-3">Mon</div>
-                  <div className="h-3"></div>
-                  <div className="h-3">Wed</div>
-                  <div className="h-3"></div>
-                  <div className="h-3">Fri</div>
-                  <div className="h-3"></div>
-                  <div className="h-3"></div>
-                </div>
-                
-                {/* Activity squares by week */}
-                <div className="flex gap-1">
-                  {Array.from({ length: 52 }, (_, weekIndex) => (
-                    <div key={weekIndex} className="flex flex-col gap-1">
-                      {Array.from({ length: 7 }, (_, dayIndex) => {
-                        const dataIndex = weekIndex * 7 + dayIndex
-                        const day = activityData[dataIndex]
-                        if (!day) return <div key={dayIndex} className="w-3 h-3" />
-                        
-                        return (
-                          <div
-                            key={dayIndex}
-                            className={`w-3 h-3 rounded-sm cursor-pointer hover:ring-1 hover:ring-gray-400 ${getActivityLevel(day.count)}`}
-                            title={`${day.date.toDateString()}: ${day.count} contribution${day.count !== 1 ? 's' : ''}`}
-                          />
-                        )
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Legend */}
-              <div className="flex items-center gap-4 mt-4 text-xs text-gray-600">
-                <span>Less</span>
-                <div className="flex gap-1">
-                  <div className="w-3 h-3 rounded-sm bg-gray-100"></div>
-                  <div className="w-3 h-3 rounded-sm bg-green-200"></div>
-                  <div className="w-3 h-3 rounded-sm bg-green-400"></div>
-                  <div className="w-3 h-3 rounded-sm bg-green-500"></div>
-                  <div className="w-3 h-3 rounded-sm bg-green-600"></div>
-                </div>
-                <span>More</span>
-              </div>
+          <div className="flex items-center gap-4 mt-4 text-xs text-gray-600">
+            <span>Less</span>
+            <div className="flex gap-1">
+              <div className="w-3 h-3 rounded-sm bg-gray-100"></div>
+              <div className="w-3 h-3 rounded-sm bg-green-200"></div>
+              <div className="w-3 h-3 rounded-sm bg-green-400"></div>
+              <div className="w-3 h-3 rounded-sm bg-green-500"></div>
+              <div className="w-3 h-3 rounded-sm bg-green-600"></div>
             </div>
+            <span>More</span>
           </div>
         </div>
         

@@ -352,15 +352,10 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         
         {/* Activity Chart */}
         <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <Activity size={20} />
-              Activity
-            </h3>
-            <div className="text-sm text-gray-600">
-              {activityData.reduce((sum, day) => sum + day.count, 0)} contributions in the last year
-            </div>
-          </div>
+          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Activity size={20} />
+            Activity
+          </h3>
           <div className="overflow-x-auto">
             <div className="inline-block">
               {/* Month labels */}
