@@ -174,10 +174,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         })
         
         // Load thumbnail if available
-        const thumbnailId = project.tags?.['Thumbnail-ID']
-        if (thumbnailId) {
+        if (project.thumbnailId) {
           try {
-            const thumbnailUrl = await downloadProjectThumbnail(thumbnailId)
+            const thumbnailUrl = await downloadProjectThumbnail(project.thumbnailId)
             if (thumbnailUrl) {
               thumbnails.set(project.id, thumbnailUrl)
             }
@@ -532,11 +531,10 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                     ) : (
                       <div className="text-gray-400">
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
-                          <path d="M12 2 L12 12 L20 8" strokeWidth="1.5" />
-                        </svg>
-                      </div>
-                    )}
+                        <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+                        <path d="M12 2 L12 12 L20 8" strokeWidth="1.5" />
+                      </svg>
+                    </div>
                   </div>
                   
                   {/* Info */}

@@ -60,9 +60,8 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   const [isLiked, setIsLiked] = useState(false)
   const [isFavorited, setIsFavorited] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
-  const [viewCount, setViewCount] = useState(0)
+  const [viewCount] = useState(Math.floor(Math.random() * 1000)) // Mock view count
   const { showPopup } = usePopup()
-  const [hasRecordedView, setHasRecordedView] = useState(false)
   
   useEffect(() => {
     loadProject()
@@ -85,17 +84,6 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       
       const likes = await getProjectLikeCount(projectId)
       setLikeCount(likes)
-      
-      // Get view count
-      const views = await getProjectViewCount(projectId)
-      setViewCount(views)
-      
-      // Record view if not already recorded
-      if (!hasRecordedView) {
-        await recordProjectView(projectId, walletAddress || undefined)
-        setViewCount(views + 1)
-        setHasRecordedView(true)
-      }
     } catch (error) {
       console.error('Failed to load project:', error)
       showPopup('Failed to load project', 'error')

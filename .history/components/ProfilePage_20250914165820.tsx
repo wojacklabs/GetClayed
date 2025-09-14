@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Heart, Star, Edit2, Globe, Twitter, Github, Calendar, Activity } from 'lucide-react'
-import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, getProjectLikeCount, getProjectViewCount } from '../lib/profileService'
-import { queryUserProjects, downloadProjectThumbnail } from '../lib/clayStorageService'
+import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, getProjectLikeCount } from '../lib/profileService'
+import { queryUserProjects } from '../lib/clayStorageService'
 import { usePopup } from './PopupNotification'
 
 interface ProfilePageProps {
@@ -19,16 +19,10 @@ interface ProjectStats {
   views: number
 }
 
-interface ProjectWithThumbnail {
-  project: any
-  thumbnailUrl?: string
-}
-
 export default function ProfilePage({ walletAddress, onClose, onProjectSelect }: ProfilePageProps) {
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [projects, setProjects] = useState<any[]>([])
-  const [projectThumbnails, setProjectThumbnails] = useState<Map<string, string>>(new Map())
   const [favorites, setFavorites] = useState<string[]>([])
   const [projectStats, setProjectStats] = useState<Map<string, ProjectStats>>(new Map())
   const [loading, setLoading] = useState(true)
@@ -47,17 +41,14 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
   
   // Generate activity data from projects and interactions
   const generateActivityData = (userProjects: any[], userLikes?: any[], userFavorites?: any[]) => {
-    // Create a map of date strings to activity details
-    const activityMap = new Map<string, { count: number; details: any[] }>()
+    // Create a map of date strings to counts
+    const activityMap = new Map<string, number>()
     
     // Count projects by date
     userProjects.forEach(project => {
       const date = new Date(project.timestamp)
       const dateStr = date.toISOString().split('T')[0] // YYYY-MM-DD format
-      const existing = activityMap.get(dateStr) || { count: 0, details: [] }
-      existing.count += 1
-      existing.details.push({ type: 'project', name: project.name || 'Untitled Project', id: project.id, timestamp: project.timestamp })
-      activityMap.set(dateStr, existing)
+      activityMap.set(dateStr, (activityMap.get(dateStr) || 0) + 1)
     })
     
     // Count likes if provided
@@ -65,10 +56,7 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       userLikes.forEach(like => {
         const date = new Date(like.timestamp)
         const dateStr = date.toISOString().split('T')[0]
-        const existing = activityMap.get(dateStr) || { count: 0, details: [] }
-        existing.count += 1
-        existing.details.push({ type: 'like', projectId: like.projectId, timestamp: like.timestamp })
-        activityMap.set(dateStr, existing)
+        activityMap.set(dateStr, (activityMap.get(dateStr) || 0) + 1)
       })
     }
     
@@ -77,10 +65,7 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       userFavorites.forEach(fav => {
         const date = new Date(fav.timestamp)
         const dateStr = date.toISOString().split('T')[0]
-        const existing = activityMap.get(dateStr) || { count: 0, details: [] }
-        existing.count += 1
-        existing.details.push({ type: 'favorite', projectId: fav.projectId, timestamp: fav.timestamp })
-        activityMap.set(dateStr, existing)
+        activityMap.set(dateStr, (activityMap.get(dateStr) || 0) + 1)
       })
     }
     
@@ -91,7 +76,7 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    const data: Array<{ date: Date; count: number; details?: any[] }> = []
+    const data: Array<{ date: Date; count: number }> = []
     
     // Start from Sunday of the first week
     const startDate = new Date(today)
@@ -105,12 +90,10 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       const date = new Date(startDate)
       date.setDate(date.getDate() + i)
       const dateStr = date.toISOString().split('T')[0]
-      const activity = activityMap.get(dateStr)
       
       data.push({
         date: new Date(date),
-        count: activity?.count || 0,
-        details: activity?.details || []
+        count: activityMap.get(dateStr) || 0
       })
     }
     
@@ -158,36 +141,17 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       const userFavorites = await getUserFavorites(walletAddress)
       setFavorites(userFavorites)
       
-      // Load project stats and thumbnails
+      // Load project stats
       const stats = new Map<string, ProjectStats>()
-      const thumbnails = new Map<string, string>()
-      
       for (const project of userProjects) {
-        const [likes, views] = await Promise.all([
-          getProjectLikeCount(project.id),
-          getProjectViewCount(project.id)
-        ])
+        const likes = await getProjectLikeCount(project.id)
         stats.set(project.id, {
           projectId: project.id,
           likes,
-          views
+          views: Math.floor(Math.random() * 1000) // Mock views for now
         })
-        
-        // Load thumbnail if available
-        const thumbnailId = project.tags?.['Thumbnail-ID']
-        if (thumbnailId) {
-          try {
-            const thumbnailUrl = await downloadProjectThumbnail(thumbnailId)
-            if (thumbnailUrl) {
-              thumbnails.set(project.id, thumbnailUrl)
-            }
-          } catch (error) {
-            console.error('Failed to load thumbnail for project:', project.id, error)
-          }
-        }
       }
       setProjectStats(stats)
-      setProjectThumbnails(thumbnails)
       
     } catch (error) {
       console.error('Failed to load profile data:', error)
@@ -448,10 +412,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                             key={dayIndex}
                             className={`w-3 h-3 rounded-sm cursor-pointer hover:ring-1 hover:ring-gray-400 ${getActivityLevel(day.count)}`}
                             title={`${day.date.toDateString()}: ${day.count} contribution${day.count !== 1 ? 's' : ''}`}
-                            onClick={() => {
-                              setSelectedDate(day.date)
-                              setSelectedDateDetails(day.details || [])
-                            }}
                           />
                         )
                       })}
@@ -472,39 +432,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                 </div>
                 <span>More</span>
               </div>
-              
-              {/* Selected Date Details */}
-              {selectedDate && selectedDateDetails.length > 0 && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-semibold text-sm mb-2">
-                    Activity on {selectedDate.toLocaleDateString()} ({selectedDateDetails.length} contribution{selectedDateDetails.length !== 1 ? 's' : ''})
-                  </h4>
-                  <div className="space-y-2">
-                    {selectedDateDetails.map((detail, idx) => (
-                      <div key={idx} className="text-sm text-gray-700">
-                        {detail.type === 'project' && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-green-600">●</span>
-                            <span>Created project: <strong>{detail.name}</strong></span>
-                          </div>
-                        )}
-                        {detail.type === 'like' && (
-                          <div className="flex items-center gap-2">
-                            <Heart size={12} className="text-red-500" />
-                            <span>Liked a project</span>
-                          </div>
-                        )}
-                        {detail.type === 'favorite' && (
-                          <div className="flex items-center gap-2">
-                            <Star size={12} className="text-yellow-500" />
-                            <span>Added a project to favorites</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -522,21 +449,13 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {/* Thumbnail */}
-                  <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden">
-                    {projectThumbnails.has(project.id) ? (
-                      <img 
-                        src={projectThumbnails.get(project.id)} 
-                        alt={project.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-gray-400">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
-                          <path d="M12 2 L12 12 L20 8" strokeWidth="1.5" />
-                        </svg>
-                      </div>
-                    )}
+                  <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <div className="text-gray-400">
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+                        <path d="M12 2 L12 12 L20 8" strokeWidth="1.5" />
+                      </svg>
+                    </div>
                   </div>
                   
                   {/* Info */}

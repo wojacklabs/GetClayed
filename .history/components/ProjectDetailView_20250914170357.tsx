@@ -85,17 +85,6 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       
       const likes = await getProjectLikeCount(projectId)
       setLikeCount(likes)
-      
-      // Get view count
-      const views = await getProjectViewCount(projectId)
-      setViewCount(views)
-      
-      // Record view if not already recorded
-      if (!hasRecordedView) {
-        await recordProjectView(projectId, walletAddress || undefined)
-        setViewCount(views + 1)
-        setHasRecordedView(true)
-      }
     } catch (error) {
       console.error('Failed to load project:', error)
       showPopup('Failed to load project', 'error')

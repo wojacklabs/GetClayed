@@ -200,16 +200,19 @@ export async function downloadProjectThumbnail(thumbnailId: string): Promise<str
   try {
     if (!thumbnailId) return null;
     
-    // Direct download (thumbnails are not chunked)
-    const url = `https://gateway.irys.xyz/${thumbnailId}`;
-    const response = await fetch(url);
+    // Check if it's a chunked upload
+    const manifestUrl = `https://uploader.irys.xyz/${thumbnailId}`;
+    const manifestResponse = await fetch(manifestUrl);
     
-    if (!response.ok) {
-      console.error('[ClayStorage] Failed to download thumbnail:', response.status);
-      return null;
+    if (manifestResponse.headers.get('content-type')?.includes('application/x.irys-manifest')) {
+      // It's chunked, download chunks
+      const chunks = await downloadChunks(thumbnailId);
+      // Convert buffer to data URL
+      return `data:image/jpeg;base64,${chunks.toString('base64')}`;
     }
     
-    const data = await response.arrayBuffer();
+    // Direct download
+    const data = await manifestResponse.arrayBuffer();
     const buffer = Buffer.from(data);
     return `data:image/jpeg;base64,${buffer.toString('base64')}`;
   } catch (error) {

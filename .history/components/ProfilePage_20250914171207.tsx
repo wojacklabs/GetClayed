@@ -174,10 +174,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         })
         
         // Load thumbnail if available
-        const thumbnailId = project.tags?.['Thumbnail-ID']
-        if (thumbnailId) {
+        if (project.thumbnailId) {
           try {
-            const thumbnailUrl = await downloadProjectThumbnail(thumbnailId)
+            const thumbnailUrl = await downloadProjectThumbnail(project.thumbnailId)
             if (thumbnailUrl) {
               thumbnails.set(project.id, thumbnailUrl)
             }

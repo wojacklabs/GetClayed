@@ -1754,6 +1754,9 @@ export default function AdvancedClay() {
   // Profile states
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   
+  // Thumbnail capture ref
+  const captureRef = useRef<{ capture: () => Promise<string | null> } | null>(null)
+  
   // Close profile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -2047,7 +2050,7 @@ export default function AdvancedClay() {
       )
       serialized.id = projectId; // Ensure project has the correct ID
       
-      // TODO: Thumbnail capture will be implemented later
+      // Capture thumbnail will be handled in the ThreeCanvas component
       let thumbnailId: string | undefined;
       
       // Check project size
