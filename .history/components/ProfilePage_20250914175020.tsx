@@ -377,39 +377,20 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
             
             {/* Stats */}
             <div className="flex gap-8 text-center">
-              {loading ? (
-                <>
-                  <div>
-                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
-                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                  <div>
-                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
-                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                  <div>
-                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
-                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <div className="text-2xl font-bold">{projects.length}</div>
-                    <div className="text-sm text-gray-600">Projects</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">
-                      {Array.from(projectStats.values()).reduce((sum, stats) => sum + stats.likes, 0)}
-                    </div>
-                    <div className="text-sm text-gray-600">Total Likes</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{favorites.length}</div>
-                    <div className="text-sm text-gray-600">Favorites</div>
-                  </div>
-                </>
-              )}
+              <div>
+                <div className="text-2xl font-bold">{projects.length}</div>
+                <div className="text-sm text-gray-600">Projects</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">
+                  {Array.from(projectStats.values()).reduce((sum, stats) => sum + stats.likes, 0)}
+                </div>
+                <div className="text-sm text-gray-600">Total Likes</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{favorites.length}</div>
+                <div className="text-sm text-gray-600">Favorites</div>
+              </div>
             </div>
           </div>
         </div>
