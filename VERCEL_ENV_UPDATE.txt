@@ -1,0 +1,45 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Vercel 환경변수 업데이트 (복사해서 사용하세요)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+최신 배포 (2025-11-11):
+
+변수 1:
+이름: NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS
+값: 0xC27812Eee59FFC15A947efBd55Fc7131eb05DA20
+
+변수 2:
+이름: NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS
+값: 0x95D3Ee66435cf3a0Ac4c0725b14E7dF116a5c575
+
+변수 3:
+이름: NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS
+값: 0x72CD5B6C5A8D466Db9B24c8697a1504C7F3E904b
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+단계:
+1. https://vercel.com 접속
+2. GetClayed 프로젝트 선택
+3. Settings 클릭
+4. Environment Variables 클릭
+5. 위 3개 변수 추가/업데이트 (이미 있으면 Edit으로 값 변경)
+6. Save 클릭
+7. Deployments 탭으로 이동
+8. 최신 배포 선택
+9. Redeploy 클릭
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+또는 Vercel CLI 사용:
+
+vercel env add NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS production
+→ 입력: 0xC27812Eee59FFC15A947efBd55Fc7131eb05DA20
+
+vercel env add NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS production
+→ 입력: 0x95D3Ee66435cf3a0Ac4c0725b14E7dF116a5c575
+
+vercel env add NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS production
+→ 입력: 0x72CD5B6C5A8D466Db9B24c8697a1504C7F3E904b
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
