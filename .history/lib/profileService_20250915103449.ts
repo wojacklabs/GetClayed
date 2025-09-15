@@ -74,64 +74,21 @@ function getProfileMutableReference(walletAddress: string): string | null {
 /**
  * Upload profile avatar image
  */
-export async function uploadProfileAvatar(
-  imageDataUrl: string,
-  walletAddress: string,
-  onProgress?: (progress: { currentChunk: number; totalChunks: number; percentage: number }) => void
-): Promise<string | null> {
+export async function uploadProfileAvatar(imageDataUrl: string): Promise<string | null> {
   try {
-    // Convert data URL to base64 string (without prefix)
+    // Convert data URL to buffer
     const base64Data = imageDataUrl.split(',')[1];
+    const buffer = Buffer.from(base64Data, 'base64');
     
-    // Check size
-    const sizeInKB = (base64Data.length * 0.75) / 1024; // Approximate size
-    console.log(`[ProfileService] Avatar size: ${sizeInKB.toFixed(2)} KB`);
+    // Direct upload (avatar images should be compressed on client side)
+    const tags = [
+      { name: 'Content-Type', value: 'image/jpeg' },
+      { name: 'App-Name', value: 'GetClayed' },
+      { name: 'Data-Type', value: 'profile-avatar' }
+    ];
     
-    if (sizeInKB < 80) {
-      // Direct upload for small images
-      const buffer = Buffer.from(base64Data, 'base64');
-      const tags = [
-        { name: 'Content-Type', value: 'image/jpeg' },
-        { name: 'App-Name', value: 'GetClayed' },
-        { name: 'Data-Type', value: 'profile-avatar' },
-        { name: 'Wallet-Address', value: walletAddress.toLowerCase() }
-      ];
-      
-      const receipt = await fixedKeyUploader.upload(buffer, tags);
-      return receipt.id;
-    } else {
-      // Chunked upload for larger images
-      console.log('[ProfileService] Avatar exceeds 80KB, using chunked upload');
-      
-      const avatarId = `avatar-${walletAddress}-${Date.now()}`;
-      
-      // Upload chunks
-      const chunkResult = await uploadInChunks(
-        fixedKeyUploader,
-        base64Data, // Upload base64 string directly
-        avatarId,
-        'profile-avatar',
-        walletAddress,
-        '',
-        undefined,
-        onProgress
-      );
-      
-      // Upload manifest
-      const manifestId = await uploadChunkManifest(
-        fixedKeyUploader,
-        avatarId,
-        'profile-avatar',
-        chunkResult.chunkMetadata[0].chunkSetId,
-        chunkResult.transactionIds.length,
-        chunkResult.transactionIds,
-        walletAddress,
-        '',
-        undefined
-      );
-      
-      return manifestId;
-    }
+    const receipt = await fixedKeyUploader.upload(buffer, tags);
+    return receipt.id;
   } catch (error) {
     console.error('[ProfileService] Error uploading avatar:', error);
     return null;
@@ -145,7 +102,7 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
   try {
     if (!avatarId) return null;
     
-    // Check if it's a manifest
+    // Direct download
     const url = `https://gateway.irys.xyz/${avatarId}`;
     const response = await fetch(url);
     
@@ -154,29 +111,9 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
       return null;
     }
     
-    // Check if it's a manifest (chunked upload)
-    const contentType = response.headers.get('content-type');
-    if (contentType?.includes('application/x.irys-manifest')) {
-      console.log('[ProfileService] Detected chunked avatar, downloading chunks...');
-      
-      // Parse manifest
-      const manifest = await response.json();
-      const chunkIds = manifest.paths ? Object.values(manifest.paths).map((p: any) => p.id) : [];
-      
-      if (chunkIds.length === 0) {
-        console.error('[ProfileService] No chunks found in manifest');
-        return null;
-      }
-      
-      // Download chunks
-      const base64Data = await downloadChunks(avatarId, chunkIds.length, chunkIds);
-      return `data:image/jpeg;base64,${base64Data}`;
-    } else {
-      // Direct download (non-chunked)
-      const data = await response.arrayBuffer();
-      const buffer = Buffer.from(data);
-      return `data:image/jpeg;base64,${buffer.toString('base64')}`;
-    }
+    const data = await response.arrayBuffer();
+    const buffer = Buffer.from(data);
+    return `data:image/jpeg;base64,${buffer.toString('base64')}`;
   } catch (error) {
     console.error('[ProfileService] Error downloading avatar:', error);
     return null;
@@ -284,38 +221,8 @@ export async function downloadUserProfile(walletAddress: string): Promise<UserPr
       return null;
     }
     
-    // Check if response is JSON or manifest
-    const contentType = response.headers.get('content-type');
-    if (contentType?.includes('application/x.irys-manifest')) {
-      console.log('[ProfileService] Detected chunked profile, downloading chunks...');
-      
-      // Get the actual transaction ID from the redirect
-      const finalUrl = response.url;
-      const txId = finalUrl.split('/').pop();
-      
-      if (!txId) {
-        console.error('[ProfileService] Could not extract transaction ID from URL');
-        return null;
-      }
-      
-      // Parse manifest
-      const manifest = await response.json();
-      const chunkIds = manifest.paths ? Object.values(manifest.paths).map((p: any) => p.id) : [];
-      
-      if (chunkIds.length === 0) {
-        console.error('[ProfileService] No chunks found in manifest');
-        return null;
-      }
-      
-      // Download chunks
-      const profileData = await downloadChunks(txId, chunkIds.length, chunkIds);
-      const profile = JSON.parse(profileData);
-      return profile;
-    } else {
-      // Direct download (non-chunked)
-      const data = await response.json();
-      return data as UserProfile;
-    }
+    const data = await response.json();
+    return data as UserProfile;
   } catch (error) {
     console.error('[ProfileService] Error downloading profile:', error);
     return null;
