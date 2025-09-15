@@ -6,7 +6,7 @@ import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User, Wallet
 import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { getProjectViewCount, getProjectLikeCount, downloadUserProfile, downloadProfileAvatar, getUserFollowing } from '@/lib/profileService'
 import { syncProjectMutableReferences } from '@/lib/mutableSyncService'
-import { ConnectWallet } from '@/components/ConnectWallet'
+// import ConnectWallet from '@/components/ConnectWallet'
 import Link from 'next/link'
 
 interface Project {
@@ -33,7 +33,27 @@ export default function HomePage() {
   const [userProfiles, setUserProfiles] = useState<Map<string, { displayName: string; avatarUrl?: string }>>(new Map())
   const [followingUsers, setFollowingUsers] = useState<string[]>([])
 
-  // Remove automatic wallet check - rely on ConnectWallet component instead
+  useEffect(() => {
+    // Check for connected wallet (EVM-based)
+    const checkWallet = async () => {
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        try {
+          const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' })
+          if (accounts && accounts.length > 0) {
+            setWalletAddress(accounts[0])
+            console.log('[HomePage] EVM wallet connected:', accounts[0])
+          } else {
+            console.log('[HomePage] No connected EVM accounts')
+          }
+        } catch (error) {
+          console.log('[HomePage] Error checking EVM wallet:', error)
+        }
+      }
+    }
+    
+    // Add a small delay to ensure wallet extension is loaded
+    setTimeout(checkWallet, 100)
+  }, [])
 
   useEffect(() => {
     loadProjects()
@@ -219,24 +239,13 @@ export default function HomePage() {
                 />
                 <Search className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               </div>
-              
-              {walletAddress ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
-                  <Link
-                    href="/project/new"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-                  >
-                    <Plus size={16} />
-                    <span>New</span>
-                  </Link>
-                </div>
-              ) : (
-                <ConnectWallet 
-                  onConnect={(address) => setWalletAddress(address)}
-                  onDisconnect={() => setWalletAddress(null)}
-                />
-              )}
+              <Link
+                href="/project/new"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+              >
+                <Plus size={16} />
+                <span>New</span>
+              </Link>
             </div>
           </div>
         </div>

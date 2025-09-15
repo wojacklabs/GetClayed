@@ -6,7 +6,7 @@ import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User, Wallet
 import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { getProjectViewCount, getProjectLikeCount, downloadUserProfile, downloadProfileAvatar, getUserFollowing } from '@/lib/profileService'
 import { syncProjectMutableReferences } from '@/lib/mutableSyncService'
-import { ConnectWallet } from '@/components/ConnectWallet'
+import ConnectWallet from '@/components/ConnectWallet'
 import Link from 'next/link'
 
 interface Project {
