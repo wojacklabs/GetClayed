@@ -264,7 +264,6 @@ export async function uploadUserProfile(
   rootTxId?: string,
   onProgress?: (progress: { currentChunk: number; totalChunks: number; percentage: number }) => void
 ): Promise<{ transactionId: string; rootTxId: string; isUpdate: boolean; wasChunked: boolean }> {
-  console.log(`[ProfileService] Uploading profile with avatarUrl: ${profile.avatarUrl}`);
   const jsonString = JSON.stringify(profile);
   const data = Buffer.from(jsonString, 'utf-8');
   
