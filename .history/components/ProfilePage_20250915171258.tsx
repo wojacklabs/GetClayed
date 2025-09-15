@@ -444,13 +444,13 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
             {/* Avatar */}
             <div className="flex-shrink-0">
               <div className="relative">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="w-24 h-24 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center overflow-hidden">
             {tempProfileImage ? (
               <img src={tempProfileImage} alt="Profile" className="w-full h-full object-cover" />
             ) : profileImage ? (
               <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <User size={32} className="text-gray-400" />
+              <User size={36} className="text-gray-600" />
             )}
                 </div>
                 {isEditing && (
@@ -558,28 +558,37 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
             </div>
             
             {/* Stats */}
-            <div className="flex gap-6">
+            <div className="flex gap-8 text-center">
               {loading ? (
                 <>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  <div>
+                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
+                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div>
+                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div>
+                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
+                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
                 </>
               ) : (
                 <>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">{projects.length}</span>
-                    <span className="text-gray-500 ml-1">projects</span>
+                  <div>
+                    <div className="text-2xl font-bold">{projects.length}</div>
+                    <div className="text-sm text-gray-600">Projects</div>
                   </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">
+                  <div>
+                    <div className="text-2xl font-bold">
                       {Array.from(projectStats.values()).reduce((sum, stats) => sum + stats.likes, 0)}
-                    </span>
-                    <span className="text-gray-500 ml-1">likes</span>
+                    </div>
+                    <div className="text-sm text-gray-600">Total Likes</div>
                   </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">{favorites.length}</span>
-                    <span className="text-gray-500 ml-1">favorites</span>
+                  <div>
+                    <div className="text-2xl font-bold">{favorites.length}</div>
+                    <div className="text-sm text-gray-600">Favorites</div>
                   </div>
                 </>
               )}
@@ -588,11 +597,13 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         </div>
         
         {/* Activity Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-900">Activity</h3>
-            <div className="text-xs text-gray-500">
-              {activityData.reduce((sum, day) => sum + day.count, 0)} contributions
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
+              Activity
+            </h3>
+            <div className="text-sm text-gray-600">
+              {activityData.reduce((sum, day) => sum + day.count, 0)} contributions in the last year
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -784,9 +795,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         </div>
         
         {/* Projects Grid */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <h3 className="text-sm font-medium mb-3 text-gray-900">Projects</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-bold mb-4 text-gray-900">Projects</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {projects.map((project) => {
               const stats = projectStats.get(project.id)
               return (

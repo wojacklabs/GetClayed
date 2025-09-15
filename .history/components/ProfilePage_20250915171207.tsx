@@ -378,65 +378,17 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
   
   return (
     <div className="fixed inset-0 bg-gray-100 z-[9998] overflow-auto">
-      {/* Minimal Header - Same as Project Detail */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-              title="Back"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-lg font-medium text-gray-900">Profile</h1>
-              <p className="text-xs text-gray-500">{formatAddress(walletAddress)}</p>
-            </div>
-          </div>
-          
-          {isEditing ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setIsEditing(false)
-                  setEditForm({
-                    displayName: profile?.displayName || '',
-                    bio: profile?.bio || '',
-                    website: profile?.website || '',
-                    twitter: profile?.twitter || '',
-                    github: profile?.github || ''
-                  })
-                  setTempProfileImage(null)
-                }}
-                disabled={isSaving}
-                className="px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveProfile}
-                disabled={isSaving}
-                className="px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isSaving && (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                )}
-                {isSaving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors text-sm"
-            >
-              Edit Profile
-            </button>
-          )}
-        </div>
-      </div>
-      
       <div className="max-w-6xl mx-auto p-6">
+        {/* Header */}
+        <div className="mb-6 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+          >
+            Close
+          </button>
+        </div>
         
         {/* Profile Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -444,13 +396,13 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
             {/* Avatar */}
             <div className="flex-shrink-0">
               <div className="relative">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="w-24 h-24 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center overflow-hidden">
             {tempProfileImage ? (
               <img src={tempProfileImage} alt="Profile" className="w-full h-full object-cover" />
             ) : profileImage ? (
               <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <User size={32} className="text-gray-400" />
+              <User size={36} className="text-gray-600" />
             )}
                 </div>
                 {isEditing && (
@@ -523,13 +475,42 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                       className="px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
                     />
                   </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={isSaving}
+                      className="px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {isSaving && (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      )}
+                      {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditing(false)
+                        setTempProfileImage(null) // Reset temporary image
+                      }}
+                      disabled={isSaving}
+                      className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div>
-                  <div className="mb-2">
-                    <h2 className="text-xl font-medium">
+                  <div className="flex items-center gap-4 mb-2">
+                    <h2 className="text-2xl font-bold">
                       {profile?.displayName || formatAddress(walletAddress)}
                     </h2>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="p-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-md transition-colors"
+                      title="Edit Profile"
+                    >
+                      <Edit2 size={14} />
+                    </button>
                   </div>
                   <p className="text-gray-600 mb-4">{formatAddress(walletAddress)}</p>
                   {profile?.bio && <p className="text-gray-700 mb-4">{profile.bio}</p>}
@@ -558,28 +539,37 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
             </div>
             
             {/* Stats */}
-            <div className="flex gap-6">
+            <div className="flex gap-8 text-center">
               {loading ? (
                 <>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  <div>
+                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
+                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div>
+                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div>
+                    <div className="h-8 w-12 bg-gray-200 rounded mb-1 animate-pulse mx-auto"></div>
+                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
                 </>
               ) : (
                 <>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">{projects.length}</span>
-                    <span className="text-gray-500 ml-1">projects</span>
+                  <div>
+                    <div className="text-2xl font-bold">{projects.length}</div>
+                    <div className="text-sm text-gray-600">Projects</div>
                   </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">
+                  <div>
+                    <div className="text-2xl font-bold">
                       {Array.from(projectStats.values()).reduce((sum, stats) => sum + stats.likes, 0)}
-                    </span>
-                    <span className="text-gray-500 ml-1">likes</span>
+                    </div>
+                    <div className="text-sm text-gray-600">Total Likes</div>
                   </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">{favorites.length}</span>
-                    <span className="text-gray-500 ml-1">favorites</span>
+                  <div>
+                    <div className="text-2xl font-bold">{favorites.length}</div>
+                    <div className="text-sm text-gray-600">Favorites</div>
                   </div>
                 </>
               )}
@@ -588,11 +578,13 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         </div>
         
         {/* Activity Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-900">Activity</h3>
-            <div className="text-xs text-gray-500">
-              {activityData.reduce((sum, day) => sum + day.count, 0)} contributions
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
+              Activity
+            </h3>
+            <div className="text-sm text-gray-600">
+              {activityData.reduce((sum, day) => sum + day.count, 0)} contributions in the last year
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -784,9 +776,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         </div>
         
         {/* Projects Grid */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <h3 className="text-sm font-medium mb-3 text-gray-900">Projects</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-bold mb-4 text-gray-900">Projects</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {projects.map((project) => {
               const stats = projectStats.get(project.id)
               return (
