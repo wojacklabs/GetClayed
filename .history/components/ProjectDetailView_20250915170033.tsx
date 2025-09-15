@@ -318,38 +318,40 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         </Canvas>
       </div>
       
-      {/* Bottom UI Controls - Minimal style */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white rounded-md border border-gray-200 p-1 z-10">
+      {/* Bottom UI Controls */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-white rounded-lg shadow-lg p-4 z-10">
         <button
           onClick={() => setShowGrid(!showGrid)}
-          className={`px-3 py-1.5 rounded transition-all text-sm ${
+          className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
             showGrid
-              ? 'bg-gray-800 text-white'
-              : 'hover:bg-gray-100 text-gray-700'
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
           }`}
-          title={showGrid ? 'Hide grid' : 'Show grid per clay'}
+          title={showGrid ? 'Hide grids' : 'Show grids'}
         >
-          <span>Grid</span>
+          <Maximize2 size={20} />
+          <span className="text-sm">{showGrid ? 'Hide Grid' : 'Show Grid'}</span>
         </button>
         <button
           onClick={handleResetCamera}
-          className="px-3 py-1.5 hover:bg-gray-100 text-gray-700 rounded transition-all text-sm"
-          title="Reset camera"
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all flex items-center gap-2"
+          title="Reset camera angle"
         >
-          <span>Reset</span>
+          <RotateCw size={20} />
+          <span className="text-sm">Reset Camera</span>
         </button>
       </div>
       
-      {/* Description - Minimal style */}
+      {/* Description */}
       {project?.description && (
-        <div className="absolute bottom-16 left-4 right-4 max-w-2xl mx-auto">
-          <div className="bg-white/90 backdrop-blur-sm rounded-md border border-gray-200 p-3">
-            <p className="text-sm text-gray-700">{project.description}</p>
+        <div className="absolute bottom-0 left-0 right-0 bg-white shadow-lg p-4">
+          <div className="max-w-6xl mx-auto">
+            <p className="text-gray-700">{project.description}</p>
             {project.tags && project.tags.length > 0 && (
-              <div className="flex gap-1.5 mt-2 flex-wrap">
+              <div className="flex gap-2 mt-2">
                 {project.tags.map((tag: string, i: number) => (
-                  <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                    {tag}
+                  <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded">
+                    #{tag}
                   </span>
                 ))}
               </div>
