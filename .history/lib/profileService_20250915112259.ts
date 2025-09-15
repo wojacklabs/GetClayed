@@ -228,8 +228,7 @@ export async function uploadUserProfile(
       chunkResult.transactionIds,
       profile.walletAddress,
       '',
-      rootTxId,
-      'user-profile'
+      rootTxId
     );
     
     wasChunked = true;
