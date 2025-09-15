@@ -251,7 +251,7 @@ export default function HomePage() {
               <Link
                 key={project.id}
                 href={`/project/${project.id}`}
-                className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-colors cursor-pointer group"
+                className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors cursor-pointer group"
               >
                 {/* Thumbnail */}
                 <div className="aspect-square bg-gray-700 relative overflow-hidden">

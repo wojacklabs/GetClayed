@@ -191,105 +191,112 @@ export default function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filter Bar */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSortBy('recent')}
-              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                sortBy === 'recent' 
-                  ? 'bg-gray-800 text-white' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Recent
-            </button>
-            <button
-              onClick={() => setSortBy('popular')}
-              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                sortBy === 'popular' 
-                  ? 'bg-gray-800 text-white' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Popular
-            </button>
-            <button
-              onClick={() => setSortBy('trending')}
-              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                sortBy === 'trending' 
-                  ? 'bg-gray-800 text-white' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Trending
-            </button>
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-2xl font-bold text-gray-900">From the Community</h3>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1">
+              <button
+                onClick={() => setSortBy('recent')}
+                className={`px-4 py-2 rounded-md transition-colors ${
+                  sortBy === 'recent' 
+                    ? 'bg-gray-900 text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Clock size={16} className="inline mr-2" />
+                Recent
+              </button>
+              <button
+                onClick={() => setSortBy('popular')}
+                className={`px-4 py-2 rounded-md transition-colors ${
+                  sortBy === 'popular' 
+                    ? 'bg-gray-900 text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Heart size={16} className="inline mr-2" />
+                Popular
+              </button>
+              <button
+                onClick={() => setSortBy('trending')}
+                className={`px-4 py-2 rounded-md transition-colors ${
+                  sortBy === 'trending' 
+                    ? 'bg-gray-900 text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <TrendingUp size={16} className="inline mr-2" />
+                Trending
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Projects Grid */}
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className="bg-gray-800 rounded-lg overflow-hidden animate-pulse">
-                <div className="aspect-square bg-gray-700" />
-                <div className="p-3">
-                  <div className="h-4 bg-gray-700 rounded mb-2" />
-                  <div className="h-3 bg-gray-700 rounded w-2/3" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden animate-pulse">
+                <div className="aspect-video bg-gray-200" />
+                <div className="p-4">
+                  <div className="h-6 bg-gray-200 rounded mb-2" />
+                  <div className="h-4 bg-gray-200 rounded w-2/3" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-400">No projects found</p>
+            <p className="text-gray-500 text-lg">No projects found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProjects.map((project) => (
               <Link
                 key={project.id}
                 href={`/project/${project.id}`}
-                className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-colors cursor-pointer group"
+                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
               >
                 {/* Thumbnail */}
-                <div className="aspect-square bg-gray-700 relative overflow-hidden">
+                <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 relative">
                   {project.thumbnail ? (
                     <img 
                       src={project.thumbnail} 
                       alt={project.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-2xl font-bold text-gray-600">3D</div>
+                      <div className="text-4xl font-bold text-gray-300">3D</div>
                     </div>
                   )}
-                  
-                  {/* Hover overlay with stats */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <div className="flex items-center gap-3 text-xs text-white">
-                        <span className="flex items-center gap-1">
-                          <Heart size={12} />
-                          {project.likes}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Eye size={12} />
-                          {project.views}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-3">
-                  <h4 className="text-sm font-medium text-white mb-1 truncate">{project.name}</h4>
-                  <p className="text-xs text-gray-400 truncate">
-                    {formatAddress(project.author)}
+                <div className="p-4">
+                  <h4 className="font-semibold text-gray-900 mb-1 truncate">{project.name}</h4>
+                  <p className="text-sm text-gray-500 mb-3">
+                    by {formatAddress(project.author)} • {formatTimeAgo(project.timestamp)}
                   </p>
+                  
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Heart size={14} className={userLikes.includes(project.id) ? 'fill-red-500 text-red-500' : ''} />
+                      {project.likes}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Eye size={14} />
+                      {project.views}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Star size={14} className={userFavorites.includes(project.id) ? 'fill-yellow-500 text-yellow-500' : ''} />
+                      {project.favorites}
+                    </span>
+                  </div>
                 </div>
               </Link>
             ))}
