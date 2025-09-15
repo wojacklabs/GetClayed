@@ -364,7 +364,7 @@ export async function downloadUserProfile(walletAddress: string): Promise<UserPr
       return null;
     }
     
-    const mutableUrl = `https://uploader.irys.xyz/mutable/${rootTxId}`;
+    const mutableUrl = `https://gateway.irys.xyz/mutable/${rootTxId}`;
     const response = await fetch(mutableUrl, { redirect: 'follow' });
     
     if (!response.ok) {
