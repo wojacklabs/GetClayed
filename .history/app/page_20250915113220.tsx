@@ -33,8 +33,8 @@ export default function HomePage() {
   useEffect(() => {
     // Check for connected wallet
     const checkWallet = () => {
-      if (typeof window !== 'undefined' && (window as any).solana) {
-        (window as any).solana.connect({ onlyIfTrusted: true })
+      if (typeof window !== 'undefined' && window.solana) {
+        window.solana.connect({ onlyIfTrusted: true })
           .then((resp: any) => {
             setWalletAddress(resp.publicKey.toString())
           })
@@ -76,8 +76,7 @@ export default function HomePage() {
           let thumbnail: string | undefined
           if (project.tags['Thumbnail-ID']) {
             try {
-              const result = await downloadProjectThumbnail(project.tags['Thumbnail-ID'])
-              if (result) thumbnail = result
+              thumbnail = await downloadProjectThumbnail(project.tags['Thumbnail-ID'])
             } catch (error) {
               console.error('Failed to load thumbnail:', error)
             }
@@ -175,7 +174,7 @@ export default function HomePage() {
                 <Plus size={20} />
                 <span>New Project</span>
               </Link>
-              {/* <ConnectWallet /> */}
+              <ConnectWallet />
             </div>
           </div>
         </div>

@@ -76,8 +76,7 @@ export default function HomePage() {
           let thumbnail: string | undefined
           if (project.tags['Thumbnail-ID']) {
             try {
-              const result = await downloadProjectThumbnail(project.tags['Thumbnail-ID'])
-              if (result) thumbnail = result
+              thumbnail = await downloadProjectThumbnail(project.tags['Thumbnail-ID'])
             } catch (error) {
               console.error('Failed to load thumbnail:', error)
             }

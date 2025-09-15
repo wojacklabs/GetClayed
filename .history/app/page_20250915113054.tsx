@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter } from 'lucide-react'
-import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
-import { getProjectViewCount, getProjectLikeCount } from '@/lib/profileService'
-// import ConnectWallet from '@/components/ConnectWallet'
+import { queryAllProjects } from '@/lib/clayStorageService'
+import { getUserLikes, getUserFavorites } from '@/lib/profileService'
+import ConnectWallet from '@/components/ConnectWallet'
 import Link from 'next/link'
 
 interface Project {
@@ -33,8 +33,8 @@ export default function HomePage() {
   useEffect(() => {
     // Check for connected wallet
     const checkWallet = () => {
-      if (typeof window !== 'undefined' && (window as any).solana) {
-        (window as any).solana.connect({ onlyIfTrusted: true })
+      if (typeof window !== 'undefined' && window.solana) {
+        window.solana.connect({ onlyIfTrusted: true })
           .then((resp: any) => {
             setWalletAddress(resp.publicKey.toString())
           })
@@ -64,34 +64,12 @@ export default function HomePage() {
       const allProjects = await queryAllProjects()
       
       // Transform and enrich project data
-      const enrichedProjects = await Promise.all(
-        allProjects.map(async (project) => {
-          // Get actual stats
-          const [views, likes] = await Promise.all([
-            getProjectViewCount(project.id),
-            getProjectLikeCount(project.id)
-          ])
-          
-          // Get thumbnail if available
-          let thumbnail: string | undefined
-          if (project.tags['Thumbnail-ID']) {
-            try {
-              const result = await downloadProjectThumbnail(project.tags['Thumbnail-ID'])
-              if (result) thumbnail = result
-            } catch (error) {
-              console.error('Failed to load thumbnail:', error)
-            }
-          }
-          
-          return {
-            ...project,
-            thumbnail,
-            likes,
-            views,
-            favorites: 0 // TODO: Implement favorites count
-          }
-        })
-      )
+      const enrichedProjects = allProjects.map(project => ({
+        ...project,
+        likes: Math.floor(Math.random() * 100), // TODO: Get actual likes
+        views: Math.floor(Math.random() * 1000), // TODO: Get actual views
+        favorites: Math.floor(Math.random() * 50) // TODO: Get actual favorites
+      }))
       
       setProjects(enrichedProjects)
     } catch (error) {
@@ -105,9 +83,12 @@ export default function HomePage() {
     if (!walletAddress) return
     
     try {
-      // TODO: Implement user likes and favorites loading
-      setUserLikes([])
-      setUserFavorites([])
+      const [likes, favorites] = await Promise.all([
+        getUserLikes(walletAddress),
+        getUserFavorites(walletAddress)
+      ])
+      setUserLikes(likes)
+      setUserFavorites(favorites)
     } catch (error) {
       console.error('Failed to load user preferences:', error)
     }
@@ -175,7 +156,7 @@ export default function HomePage() {
                 <Plus size={20} />
                 <span>New Project</span>
               </Link>
-              {/* <ConnectWallet /> */}
+              <ConnectWallet />
             </div>
           </div>
         </div>
