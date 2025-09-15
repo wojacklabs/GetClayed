@@ -387,13 +387,6 @@ export async function downloadClayProject(
         console.error('[downloadClayProject] Failed to parse reassembled JSON:', parseError);
         console.error('[downloadClayProject] Reassembled string length:', reassembled.length);
         console.error('[downloadClayProject] First 200 chars:', reassembled.substring(0, 200));
-        
-        // Check if this is image data mistakenly uploaded as a project
-        if (reassembled.startsWith('iVBORw0KGgo') || reassembled.startsWith('data:image')) {
-          console.error('[downloadClayProject] This appears to be image data, not a clay project');
-          throw new Error('This transaction contains image data, not a clay project. The project may have been corrupted during upload.');
-        }
-        
         console.error('[downloadClayProject] Last 200 chars:', reassembled.substring(reassembled.length - 200));
         throw new Error('Failed to parse reassembled project data');
       }

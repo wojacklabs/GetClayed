@@ -104,15 +104,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         setViewCount(views + 1)
         setHasRecordedView(true)
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to load project:', error)
-      
-      // Check if this is a corrupted project (image data)
-      if (error.message?.includes('image data')) {
-        showPopup('This project appears to be corrupted. It contains image data instead of project data.', 'error')
-      } else {
-        showPopup('Failed to load project', 'error')
-      }
+      showPopup('Failed to load project', 'error')
     } finally {
       setLoading(false)
     }
