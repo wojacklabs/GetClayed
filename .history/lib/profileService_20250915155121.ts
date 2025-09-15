@@ -241,34 +241,18 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
         
         const chunkIds = data.chunks;
         const chunks: string[] = [];
-        console.log(`[ProfileService] Downloading ${chunkIds.length} chunks...`);
         
         // Download all chunks
         for (let i = 0; i < chunkIds.length; i++) {
-          const chunkUrls = [
-            `https://gateway.irys.xyz/${chunkIds[i]}`,
-            `https://uploader.irys.xyz/tx/${chunkIds[i]}/data`,
-            `https://arweave.net/${chunkIds[i]}`
-          ];
+          const chunkUrl = `https://gateway.irys.xyz/${chunkIds[i]}`;
+          const chunkResponse = await fetch(chunkUrl);
           
-          let chunkData = null;
-          for (const chunkUrl of chunkUrls) {
-            try {
-              const chunkResponse = await fetch(chunkUrl);
-              if (chunkResponse.ok) {
-                chunkData = await chunkResponse.json();
-                break;
-              }
-            } catch (error) {
-              console.log(`[ProfileService] Error downloading chunk from ${chunkUrl}:`, error);
-            }
-          }
-          
-          if (!chunkData) {
-            console.error(`[ProfileService] Failed to download chunk ${i + 1}`);
+          if (!chunkResponse.ok) {
+            console.error(`[ProfileService] Failed to download chunk ${i + 1}:`, chunkResponse.status);
             return null;
           }
           
+          const chunkData = await chunkResponse.json();
           chunks.push(chunkData.chunk);
         }
         

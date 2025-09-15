@@ -346,11 +346,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       setUploadProgress({ ...uploadProgress, isOpen: false })
       showPopup('Profile updated successfully!', 'success')
       
-      // Keep the temp image as the current profile image if it was just uploaded
-      if (tempProfileImage && avatarUrl !== profile.avatarUrl) {
-        setProfileImage(tempProfileImage)
-      }
-      
       // Update URL if display name changed
       if (updatedProfile.displayName && updatedProfile.displayName !== profile.displayName) {
         router.replace(`/user/${updatedProfile.displayName}`)

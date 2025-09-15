@@ -241,7 +241,6 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
         
         const chunkIds = data.chunks;
         const chunks: string[] = [];
-        console.log(`[ProfileService] Downloading ${chunkIds.length} chunks...`);
         
         // Download all chunks
         for (let i = 0; i < chunkIds.length; i++) {
