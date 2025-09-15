@@ -568,9 +568,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         </div>
         
         {/* Activity Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
+            <h3 className="text-xl font-bold flex items-center gap-2">
               <Activity size={20} />
               Activity
             </h3>
@@ -767,19 +767,19 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         </div>
         
         {/* Projects Grid */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-bold mb-4 text-gray-900">Projects</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-8">
+          <h3 className="text-xl font-bold mb-6">Projects</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => {
               const stats = projectStats.get(project.id)
               return (
                 <div
                   key={project.id}
-                  className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
+                  className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {/* Thumbnail */}
-                  <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+                  <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden">
                     {projectThumbnails.has(project.id) ? (
                       <img 
                         src={projectThumbnails.get(project.id)} 
@@ -787,23 +787,30 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="text-gray-300 flex items-center justify-center h-full">
-                        <div className="text-2xl font-bold">3D</div>
+                      <div className="text-gray-400">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+                          <path d="M12 2 L12 12 L20 8" strokeWidth="1.5" />
+                        </svg>
                       </div>
                     )}
                   </div>
                   
                   {/* Info */}
-                  <div className="p-3">
-                    <h4 className="text-sm font-medium text-gray-900 mb-1 truncate">{project.name}</h4>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <div className="p-4">
+                    <h4 className="font-semibold mb-2">{project.name}</h4>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-1">
-                        <Heart size={12} />
+                        <Heart size={14} />
                         {stats?.likes || 0}
                       </div>
                       <div className="flex items-center gap-1">
-                        <Eye size={12} />
-                        {stats?.views || 0}
+                        <Activity size={14} />
+                        {stats?.views || 0} views
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar size={14} />
+                        {new Date(project.timestamp).toLocaleDateString()}
                       </div>
                     </div>
                   </div>

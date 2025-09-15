@@ -787,8 +787,11 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="text-gray-300 flex items-center justify-center h-full">
-                        <div className="text-2xl font-bold">3D</div>
+                      <div className="text-gray-400">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+                          <path d="M12 2 L12 12 L20 8" strokeWidth="1.5" />
+                        </svg>
                       </div>
                     )}
                   </div>
