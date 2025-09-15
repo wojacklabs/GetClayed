@@ -176,7 +176,7 @@ export async function uploadProfileAvatar(
         { name: 'Total-Chunks', value: totalChunks.toString() },
         { name: 'Chunk-Set-ID', value: chunkSetId },
         { name: 'Wallet-Address', value: walletAddress.toLowerCase() },
-        { name: 'Content-Type', value: 'application/json' }
+        { name: 'Content-Type', value: 'application/x.irys-manifest+json' }
       ];
       
       const manifestReceipt = await fixedKeyUploader.upload(manifestBuffer, manifestTags);
@@ -198,35 +198,31 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
     
     console.log(`[ProfileService] Attempting to download avatar with ID: ${avatarId}`);
     
-    // Try multiple endpoints
-    const urls = [
-      `https://gateway.irys.xyz/${avatarId}`,
-      `https://uploader.irys.xyz/tx/${avatarId}/data`,
-      `https://arweave.net/${avatarId}`
-    ];
+    // First try to get as manifest
+    const url = `https://gateway.irys.xyz/${avatarId}`;
     
-    let response: Response | null = null;
-    let successUrl: string | null = null;
+    // Add retry logic for newly uploaded avatars
+    let response: Response;
+    let retries = 3;
     
-    for (const url of urls) {
-      try {
-        console.log(`[ProfileService] Trying URL: ${url}`);
-        response = await fetch(url);
-        
-        if (response.ok) {
-          successUrl = url;
-          console.log(`[ProfileService] Successfully fetched from: ${url}`);
-          break;
-        } else {
-          console.log(`[ProfileService] Failed with status ${response.status} from: ${url}`);
-        }
-      } catch (error) {
-        console.log(`[ProfileService] Error fetching from ${url}:`, error);
+    while (retries > 0) {
+      response = await fetch(url);
+      
+      if (response.ok) {
+        break;
+      }
+      
+      if (response.status === 404 && retries > 1) {
+        console.log(`[ProfileService] Avatar not found (404), retrying in 2 seconds... (${retries - 1} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        retries--;
+      } else {
+        console.error('[ProfileService] Failed to download avatar:', response.status);
+        return null;
       }
     }
     
-    if (!response || !response.ok) {
-      console.error('[ProfileService] Failed to download avatar from all endpoints');
+    if (!response!.ok) {
       return null;
     }
     
@@ -241,34 +237,18 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
         
         const chunkIds = data.chunks;
         const chunks: string[] = [];
-        console.log(`[ProfileService] Downloading ${chunkIds.length} chunks...`);
         
         // Download all chunks
         for (let i = 0; i < chunkIds.length; i++) {
-          const chunkUrls = [
-            `https://gateway.irys.xyz/${chunkIds[i]}`,
-            `https://uploader.irys.xyz/tx/${chunkIds[i]}/data`,
-            `https://arweave.net/${chunkIds[i]}`
-          ];
+          const chunkUrl = `https://gateway.irys.xyz/${chunkIds[i]}`;
+          const chunkResponse = await fetch(chunkUrl);
           
-          let chunkData = null;
-          for (const chunkUrl of chunkUrls) {
-            try {
-              const chunkResponse = await fetch(chunkUrl);
-              if (chunkResponse.ok) {
-                chunkData = await chunkResponse.json();
-                break;
-              }
-            } catch (error) {
-              console.log(`[ProfileService] Error downloading chunk from ${chunkUrl}:`, error);
-            }
-          }
-          
-          if (!chunkData) {
-            console.error(`[ProfileService] Failed to download chunk ${i + 1}`);
+          if (!chunkResponse.ok) {
+            console.error(`[ProfileService] Failed to download chunk ${i + 1}:`, chunkResponse.status);
             return null;
           }
           
+          const chunkData = await chunkResponse.json();
           chunks.push(chunkData.chunk);
         }
         
@@ -286,10 +266,8 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
       console.log('[ProfileService] Avatar is direct upload (non-chunked)');
     }
     
-    // Direct download (non-chunked) - use the successful response
-    console.log('[ProfileService] Avatar is direct upload (non-chunked)');
-    // Response was already consumed as text, need to re-fetch
-    const imageResponse = await fetch(successUrl!);
+    // Direct download (non-chunked) - re-fetch as arrayBuffer
+    const imageResponse = await fetch(url);
     const data = await imageResponse.arrayBuffer();
     const buffer = Buffer.from(data);
     return `data:image/jpeg;base64,${buffer.toString('base64')}`;

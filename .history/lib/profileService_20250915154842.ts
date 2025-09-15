@@ -176,7 +176,7 @@ export async function uploadProfileAvatar(
         { name: 'Total-Chunks', value: totalChunks.toString() },
         { name: 'Chunk-Set-ID', value: chunkSetId },
         { name: 'Wallet-Address', value: walletAddress.toLowerCase() },
-        { name: 'Content-Type', value: 'application/json' }
+        { name: 'Content-Type', value: 'application/x.irys-manifest+json' }
       ];
       
       const manifestReceipt = await fixedKeyUploader.upload(manifestBuffer, manifestTags);
@@ -225,13 +225,12 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
       }
     }
     
-    if (!response || !response.ok) {
-      console.error('[ProfileService] Failed to download avatar from all endpoints');
+    if (!response!.ok) {
       return null;
     }
     
     // Try to parse as JSON (could be manifest)
-    const text = await response.text();
+    const text = await response!.text();
     try {
       const data = JSON.parse(text);
       
@@ -241,34 +240,18 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
         
         const chunkIds = data.chunks;
         const chunks: string[] = [];
-        console.log(`[ProfileService] Downloading ${chunkIds.length} chunks...`);
         
         // Download all chunks
         for (let i = 0; i < chunkIds.length; i++) {
-          const chunkUrls = [
-            `https://gateway.irys.xyz/${chunkIds[i]}`,
-            `https://uploader.irys.xyz/tx/${chunkIds[i]}/data`,
-            `https://arweave.net/${chunkIds[i]}`
-          ];
+          const chunkUrl = `https://gateway.irys.xyz/${chunkIds[i]}`;
+          const chunkResponse = await fetch(chunkUrl);
           
-          let chunkData = null;
-          for (const chunkUrl of chunkUrls) {
-            try {
-              const chunkResponse = await fetch(chunkUrl);
-              if (chunkResponse.ok) {
-                chunkData = await chunkResponse.json();
-                break;
-              }
-            } catch (error) {
-              console.log(`[ProfileService] Error downloading chunk from ${chunkUrl}:`, error);
-            }
-          }
-          
-          if (!chunkData) {
-            console.error(`[ProfileService] Failed to download chunk ${i + 1}`);
+          if (!chunkResponse.ok) {
+            console.error(`[ProfileService] Failed to download chunk ${i + 1}:`, chunkResponse.status);
             return null;
           }
           
+          const chunkData = await chunkResponse.json();
           chunks.push(chunkData.chunk);
         }
         
@@ -286,10 +269,8 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
       console.log('[ProfileService] Avatar is direct upload (non-chunked)');
     }
     
-    // Direct download (non-chunked) - use the successful response
-    console.log('[ProfileService] Avatar is direct upload (non-chunked)');
-    // Response was already consumed as text, need to re-fetch
-    const imageResponse = await fetch(successUrl!);
+    // Direct download (non-chunked) - re-fetch as arrayBuffer
+    const imageResponse = await fetch(url);
     const data = await imageResponse.arrayBuffer();
     const buffer = Buffer.from(data);
     return `data:image/jpeg;base64,${buffer.toString('base64')}`;
