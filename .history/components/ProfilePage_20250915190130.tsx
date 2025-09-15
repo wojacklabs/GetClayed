@@ -222,9 +222,11 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
       setFollowStats(followStatsData)
       
       // Check if current user is following this profile
+      console.log('[ProfilePage] Follow check - currentUserAddress:', currentUserAddress, 'walletAddress:', walletAddress)
       if (currentUserAddress && currentUserAddress.toLowerCase() !== walletAddress.toLowerCase()) {
         const following = await isFollowing(currentUserAddress, walletAddress)
         setIsFollowingUser(following)
+        console.log('[ProfilePage] Is following:', following)
       }
       
     } catch (error) {
