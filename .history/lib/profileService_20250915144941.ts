@@ -195,7 +195,7 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
   try {
     if (!avatarId) return null;
     
-    // First try to get as manifest
+    // Check if it's a manifest
     const url = `https://gateway.irys.xyz/${avatarId}`;
     const response = await fetch(url);
     
@@ -204,51 +204,29 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
       return null;
     }
     
-    // Try to parse as JSON (could be manifest)
-    const text = await response.text();
-    try {
-      const data = JSON.parse(text);
+    // Check if it's a manifest (chunked upload)
+    const contentType = response.headers.get('content-type');
+    if (contentType?.includes('application/x.irys-manifest')) {
+      console.log('[ProfileService] Detected chunked avatar, downloading chunks...');
       
-      // Check if it's our custom avatar manifest
-      if (data.dataType === 'image-base64' && data.chunks) {
-        console.log('[ProfileService] Detected chunked avatar, downloading chunks...');
-        
-        const chunkIds = data.chunks;
-        const chunks: string[] = [];
-        
-        // Download all chunks
-        for (let i = 0; i < chunkIds.length; i++) {
-          const chunkUrl = `https://gateway.irys.xyz/${chunkIds[i]}`;
-          const chunkResponse = await fetch(chunkUrl);
-          
-          if (!chunkResponse.ok) {
-            console.error(`[ProfileService] Failed to download chunk ${i + 1}:`, chunkResponse.status);
-            return null;
-          }
-          
-          const chunkData = await chunkResponse.json();
-          chunks.push(chunkData.chunk);
-        }
-        
-        // Reconstruct base64 image
-        const fullBase64 = chunks.join('');
-        return `data:image/jpeg;base64,${fullBase64}`;
-      } else if (data.paths) {
-        // Old format compatibility - standard Irys manifest
-        const chunkIds = Object.values(data.paths).map((p: any) => p.id);
-        const base64Data = await downloadChunks(avatarId, chunkIds.length, chunkIds);
-        return `data:image/jpeg;base64,${base64Data}`;
+      // Parse manifest
+      const manifest = await response.json();
+      const chunkIds = manifest.paths ? Object.values(manifest.paths).map((p: any) => p.id) : [];
+      
+      if (chunkIds.length === 0) {
+        console.error('[ProfileService] No chunks found in manifest');
+        return null;
       }
-    } catch (e) {
-      // Not JSON, treat as direct image data
-      console.log('[ProfileService] Avatar is direct upload (non-chunked)');
+      
+      // Download chunks
+      const base64Data = await downloadChunks(avatarId, chunkIds.length, chunkIds);
+      return `data:image/jpeg;base64,${base64Data}`;
+    } else {
+      // Direct download (non-chunked)
+      const data = await response.arrayBuffer();
+      const buffer = Buffer.from(data);
+      return `data:image/jpeg;base64,${buffer.toString('base64')}`;
     }
-    
-    // Direct download (non-chunked) - re-fetch as arrayBuffer
-    const imageResponse = await fetch(url);
-    const data = await imageResponse.arrayBuffer();
-    const buffer = Buffer.from(data);
-    return `data:image/jpeg;base64,${buffer.toString('base64')}`;
   } catch (error) {
     console.error('[ProfileService] Error downloading avatar:', error);
     return null;
