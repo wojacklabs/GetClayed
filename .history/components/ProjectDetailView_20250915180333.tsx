@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { TrackballControls, Environment, Grid } from '@react-three/drei'
 import { Heart, Star, ArrowLeft, Eye, RotateCw, Maximize2 } from 'lucide-react'
-import Link from 'next/link'
 import * as THREE from 'three'
 import { downloadClayProject, restoreClayObjects } from '../lib/clayStorageService'
 import { likeProject, favoriteProject, unfavoriteProject, hasUserLikedProject, getUserFavorites, getProjectLikeCount, recordProjectView, getProjectViewCount, downloadUserProfile } from '../lib/profileService'
@@ -72,7 +71,6 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   const [showGrid, setShowGrid] = useState(false)
   const cameraRef = useRef<THREE.Camera | null>(null)
   const controlsRef = useRef<any>(null)
-  const [authorProfile, setAuthorProfile] = useState<{ displayName?: string } | null>(null)
   
   useEffect(() => {
     loadProject()
@@ -99,16 +97,6 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       // Get view count
       const views = await getProjectViewCount(projectId)
       setViewCount(views)
-      
-      // Load author profile
-      if (projectData.author) {
-        try {
-          const profile = await downloadUserProfile(projectData.author)
-          setAuthorProfile(profile)
-        } catch (error) {
-          console.error('Failed to load author profile:', error)
-        }
-      }
       
       // Record view if not already recorded
       if (!hasRecordedView) {
@@ -224,16 +212,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             </button>
             <div>
               <h1 className="text-lg font-medium text-gray-900">{project?.name || 'Untitled'}</h1>
-              {project?.author ? (
-                <Link 
-                  href={`/user/${project.author}`}
-                  className="text-xs text-gray-500 hover:text-gray-700 hover:underline transition-colors"
-                >
-                  by {authorProfile?.displayName || `${project.author.slice(0, 6)}...${project.author.slice(-4)}`}
-                </Link>
-              ) : (
-                <p className="text-xs text-gray-500">by Unknown</p>
-              )}
+              <p className="text-xs text-gray-500">
+                {project?.author ? `${project.author.slice(0, 6)}...${project.author.slice(-4)}` : 'Unknown'}
+              </p>
             </div>
           </div>
           

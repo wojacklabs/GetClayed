@@ -224,16 +224,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             </button>
             <div>
               <h1 className="text-lg font-medium text-gray-900">{project?.name || 'Untitled'}</h1>
-              {project?.author ? (
-                <Link 
-                  href={`/user/${project.author}`}
-                  className="text-xs text-gray-500 hover:text-gray-700 hover:underline transition-colors"
-                >
-                  by {authorProfile?.displayName || `${project.author.slice(0, 6)}...${project.author.slice(-4)}`}
-                </Link>
-              ) : (
-                <p className="text-xs text-gray-500">by Unknown</p>
-              )}
+              <p className="text-xs text-gray-500">
+                {project?.author ? `${project.author.slice(0, 6)}...${project.author.slice(-4)}` : 'Unknown'}
+              </p>
             </div>
           </div>
           
