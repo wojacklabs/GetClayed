@@ -370,17 +370,13 @@ export default function FolderStructure({
     const isExpanded = expandedFolders.has(node.id);
     const isSelected = selectedItem === node.id;
     const isDragOver = dragOverFolder === node.id;
-    const isUploading = uploadingFolders.has(node.id);
-    const isPending = pendingFolders.has(node.id);
 
     return (
       <div key={node.id}>
         <div
           className={`flex items-center gap-2 px-2 py-1 hover:bg-gray-100 cursor-pointer select-none ${
             isSelected ? 'bg-blue-100' : ''
-          } ${isDragOver ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
-            isUploading || isPending ? 'opacity-60' : ''
-          }`}
+          } ${isDragOver ? 'bg-blue-50 border-2 border-blue-300' : ''}`}
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={() => {
             if (node.type === 'folder') {
@@ -400,11 +396,7 @@ export default function FolderStructure({
           {node.type === 'folder' && (
             <>
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              {isUploading ? (
-                <Loader2 size={14} className="text-blue-500 flex-shrink-0 animate-spin" />
-              ) : (
-                <Folder size={14} className="text-blue-500 flex-shrink-0" />
-              )}
+              <Folder size={14} className="text-blue-500 flex-shrink-0" />
             </>
           )}
           {node.type === 'file' && (

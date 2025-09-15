@@ -171,7 +171,6 @@ export default function UserProfilePage() {
     return (
       <ProfilePage
         walletAddress={walletAddress}
-        currentUserAddress={currentUserAddress || undefined}
         onClose={() => router.push('/')}
         onProjectSelect={handleProjectSelect}
       />

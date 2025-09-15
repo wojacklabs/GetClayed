@@ -623,19 +623,9 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
                   <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
                   <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
                   <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
                 </>
               ) : (
                 <>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">{followStats.followers}</span>
-                    <span className="text-gray-500 ml-1">followers</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">{followStats.following}</span>
-                    <span className="text-gray-500 ml-1">following</span>
-                  </div>
                   <div className="text-sm">
                     <span className="font-medium text-gray-900">{projects.length}</span>
                     <span className="text-gray-500 ml-1">projects</span>

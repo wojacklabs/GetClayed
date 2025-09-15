@@ -248,108 +248,34 @@ export default function FolderStructure({
     setContextMenu({ x: e.clientX, y: e.clientY, item });
   };
 
-  const handleCreateFolder = async (parentId: string) => {
+  const handleCreateFolder = (parentId: string) => {
     const folderName = prompt('New folder name:');
-    if (folderName && walletAddress) {
+    if (folderName) {
       const path = parentId === 'root' ? folderName : `${parentId}/${folderName}`;
       
       // Save to local storage immediately
-      addLocalFolder(walletAddress, path);
-      
-      // Mark folder as uploading
-      setUploadingFolders(prev => new Set(prev).add(path));
+      if (walletAddress) {
+        addLocalFolder(walletAddress, path);
+      }
       
       onFolderCreate(path);
       
       // Force re-render to show new folder immediately
       setForceUpdate(prev => prev + 1);
-      
-      try {
-        // Get all folders and upload to blockchain
-        const allFolders = getLocalFolders(walletAddress);
-        await uploadFolderStructure(walletAddress, allFolders, (status) => {
-          if (status === 'verifying') {
-            // Move from uploading to pending
-            setUploadingFolders(prev => {
-              const next = new Set(prev);
-              next.delete(path);
-              return next;
-            });
-            setPendingFolders(prev => new Set(prev).add(path));
-          } else if (status === 'complete') {
-            // Remove from pending
-            setPendingFolders(prev => {
-              const next = new Set(prev);
-              next.delete(path);
-              return next;
-            });
-            showPopup('Folder created successfully', 'success');
-          } else if (status === 'error') {
-            setUploadingFolders(prev => {
-              const next = new Set(prev);
-              next.delete(path);
-              return next;
-            });
-            showPopup('Failed to save folder to cloud', 'error');
-          }
-        });
-      } catch (error) {
-        console.error('Failed to upload folder structure:', error);
-        setUploadingFolders(prev => {
-          const next = new Set(prev);
-          next.delete(path);
-          return next;
-        });
-      }
     }
     setContextMenu(null);
   };
 
-  const handleDelete = async (item: FolderNode) => {
+  const handleDelete = (item: FolderNode) => {
     if (confirm(`Delete ${item.name}?`)) {
-      if (item.type === 'folder' && walletAddress) {
+      if (item.type === 'folder') {
         // Remove from local storage
-        removeLocalFolder(walletAddress, item.id);
-        
-        // Mark folder as uploading
-        setUploadingFolders(prev => new Set(prev).add(item.id));
-        
+        if (walletAddress) {
+          removeLocalFolder(walletAddress, item.id);
+        }
         onFolderDelete(item.id);
         // Force re-render
         setForceUpdate(prev => prev + 1);
-        
-        try {
-          // Get all folders and upload to blockchain
-          const allFolders = getLocalFolders(walletAddress);
-          await uploadFolderStructure(walletAddress, allFolders, (status) => {
-            if (status === 'complete') {
-              setUploadingFolders(prev => {
-                const next = new Set(prev);
-                next.delete(item.id);
-                return next;
-              });
-              showPopup('Folder deleted successfully', 'success');
-            } else if (status === 'error') {
-              setUploadingFolders(prev => {
-                const next = new Set(prev);
-                next.delete(item.id);
-                return next;
-              });
-              // Re-add to local storage on error
-              addLocalFolder(walletAddress, item.id);
-              showPopup('Failed to delete folder from cloud', 'error');
-            }
-          });
-        } catch (error) {
-          console.error('Failed to upload folder structure:', error);
-          setUploadingFolders(prev => {
-            const next = new Set(prev);
-            next.delete(item.id);
-            return next;
-          });
-          // Re-add to local storage on error
-          addLocalFolder(walletAddress, item.id);
-        }
       } else if (item.type === 'file' && item.projectId) {
         onProjectDelete(item.projectId);
         // Clear cache to refresh
@@ -370,17 +296,13 @@ export default function FolderStructure({
     const isExpanded = expandedFolders.has(node.id);
     const isSelected = selectedItem === node.id;
     const isDragOver = dragOverFolder === node.id;
-    const isUploading = uploadingFolders.has(node.id);
-    const isPending = pendingFolders.has(node.id);
 
     return (
       <div key={node.id}>
         <div
           className={`flex items-center gap-2 px-2 py-1 hover:bg-gray-100 cursor-pointer select-none ${
             isSelected ? 'bg-blue-100' : ''
-          } ${isDragOver ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
-            isUploading || isPending ? 'opacity-60' : ''
-          }`}
+          } ${isDragOver ? 'bg-blue-50 border-2 border-blue-300' : ''}`}
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={() => {
             if (node.type === 'folder') {
@@ -400,11 +322,7 @@ export default function FolderStructure({
           {node.type === 'folder' && (
             <>
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              {isUploading ? (
-                <Loader2 size={14} className="text-blue-500 flex-shrink-0 animate-spin" />
-              ) : (
-                <Folder size={14} className="text-blue-500 flex-shrink-0" />
-              )}
+              <Folder size={14} className="text-blue-500 flex-shrink-0" />
             </>
           )}
           {node.type === 'file' && (

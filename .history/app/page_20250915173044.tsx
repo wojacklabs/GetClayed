@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User } from 'lucide-react'
 import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { getProjectViewCount, getProjectLikeCount, downloadUserProfile, downloadProfileAvatar, getUserFollowing } from '@/lib/profileService'
-import { syncProjectMutableReferences } from '@/lib/mutableSyncService'
 // import ConnectWallet from '@/components/ConnectWallet'
 import Link from 'next/link'
 
@@ -125,17 +124,13 @@ export default function HomePage() {
       
       setUserProfiles(profileMap)
       
-      // Load following users and sync mutable references if wallet is connected
+      // Load following users if wallet is connected
       if (walletAddress) {
         try {
-          // Sync project mutable references from blockchain
-          await syncProjectMutableReferences(walletAddress)
-          
-          // Load following users
           const following = await getUserFollowing(walletAddress)
           setFollowingUsers(following)
         } catch (error) {
-          console.error('Failed to load user data:', error)
+          console.error('Failed to load following users:', error)
         }
       }
     } catch (error) {
@@ -280,18 +275,6 @@ export default function HomePage() {
             >
               Trending
             </button>
-            {walletAddress && (
-              <button
-                onClick={() => setSortBy('following')}
-                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                  sortBy === 'following' 
-                    ? 'bg-gray-800 text-white' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Following
-              </button>
-            )}
           </div>
         </div>
 
@@ -310,13 +293,7 @@ export default function HomePage() {
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500">
-              {sortBy === 'following' && followingUsers.length === 0 
-                ? 'You are not following anyone yet' 
-                : sortBy === 'following'
-                ? 'No projects from users you follow'
-                : 'No projects found'}
-            </p>
+            <p className="text-gray-500">No projects found</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
