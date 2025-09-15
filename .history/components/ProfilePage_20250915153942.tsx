@@ -160,7 +160,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       
       // Load avatar if exists
       if (userProfile.avatarUrl) {
-        console.log(`[ProfilePage] Loading avatar with ID: ${userProfile.avatarUrl}`)
         const avatarImage = await downloadProfileAvatar(userProfile.avatarUrl)
         if (avatarImage) {
           setProfileImage(avatarImage)
@@ -286,7 +285,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         )
         
         if (avatarId) {
-          console.log(`[ProfilePage] Avatar uploaded with ID: ${avatarId}`)
           avatarUrl = avatarId
           setProfileImage(tempProfileImage)
           setTempProfileImage(null)

@@ -308,7 +308,7 @@ export default function HomePage() {
                 <div className="p-3">
                   <h4 className="text-sm font-medium text-gray-900 mb-1 truncate">{project.name}</h4>
                   <p className="text-xs text-gray-500 truncate">
-                    {userProfiles.get(project.author) || formatAddress(project.author)}
+                    {formatAddress(project.author)}
                   </p>
                 </div>
               </Link>
