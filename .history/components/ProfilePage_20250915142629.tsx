@@ -820,16 +820,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
           </div>
         </div>
       </div>
-      
-      {/* Upload Progress Popup */}
-      <ChunkUploadProgress
-        isOpen={uploadProgress.isOpen}
-        currentChunk={uploadProgress.currentChunk}
-        totalChunks={uploadProgress.totalChunks}
-        percentage={uploadProgress.percentage}
-        projectName={uploadProgress.type === 'avatar' ? 'Profile Avatar' : 'Profile Data'}
-        isDownload={false}
-      />
     </div>
   )
 }

@@ -468,21 +468,16 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                   <div className="flex gap-2">
                     <button
                       onClick={handleSaveProfile}
-                      disabled={isSaving}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                      {isSaving && (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      )}
-                      {isSaving ? 'Saving...' : 'Save'}
+                      Save
                     </button>
                     <button
                       onClick={() => {
                         setIsEditing(false)
                         setTempProfileImage(null) // Reset temporary image
                       }}
-                      disabled={isSaving}
-                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                     >
                       Cancel
                     </button>
@@ -820,16 +815,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
           </div>
         </div>
       </div>
-      
-      {/* Upload Progress Popup */}
-      <ChunkUploadProgress
-        isOpen={uploadProgress.isOpen}
-        currentChunk={uploadProgress.currentChunk}
-        totalChunks={uploadProgress.totalChunks}
-        percentage={uploadProgress.percentage}
-        projectName={uploadProgress.type === 'avatar' ? 'Profile Avatar' : 'Profile Data'}
-        isDownload={false}
-      />
     </div>
   )
 }

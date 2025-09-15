@@ -48,14 +48,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [tempProfileImage, setTempProfileImage] = useState<string | null>(null) // Temporary image before save
-  const [isSaving, setIsSaving] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState({
-    isOpen: false,
-    currentChunk: 0,
-    totalChunks: 0,
-    percentage: 0,
-    type: 'profile' as 'profile' | 'avatar'
-  })
   
   // Generate activity data from projects and interactions
   const generateActivityData = (userProjects: any[], userLikes?: any[], userFavorites?: any[]) => {
@@ -254,44 +246,20 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
   }
   
   const handleSaveProfile = async () => {
-    if (!profile || isSaving) return
-    
-    setIsSaving(true)
+    if (!profile) return
     
     try {
       // Upload profile image if there's a new one
       let avatarUrl = profile.avatarUrl
       if (tempProfileImage) {
-        setUploadProgress({
-          isOpen: true,
-          currentChunk: 0,
-          totalChunks: 0,
-          percentage: 0,
-          type: 'avatar'
-        })
-        
-        const avatarId = await uploadProfileAvatar(
-          tempProfileImage, 
-          walletAddress,
-          (progress) => {
-            setUploadProgress({
-              isOpen: true,
-              currentChunk: progress.currentChunk,
-              totalChunks: progress.totalChunks,
-              percentage: progress.percentage,
-              type: 'avatar'
-            })
-          }
-        )
-        
+        showPopup('Uploading profile image...', 'info')
+        const avatarId = await uploadProfileAvatar(tempProfileImage, walletAddress)
         if (avatarId) {
           avatarUrl = avatarId
           setProfileImage(tempProfileImage)
           setTempProfileImage(null)
         } else {
           showPopup('Failed to upload image', 'error')
-          setUploadProgress({ ...uploadProgress, isOpen: false })
-          setIsSaving(false)
           return
         }
       }
@@ -308,29 +276,8 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         }
       }
       
-      // Set upload progress for profile data
-      setUploadProgress({
-        isOpen: true,
-        currentChunk: 0,
-        totalChunks: 0,
-        percentage: 0,
-        type: 'profile'
-      })
-      
       const rootTxId = localStorage.getItem(`profile_mutable_${walletAddress}`) || undefined
-      const result = await uploadUserProfile(
-        updatedProfile, 
-        rootTxId,
-        (progress) => {
-          setUploadProgress({
-            isOpen: true,
-            currentChunk: progress.currentChunk,
-            totalChunks: progress.totalChunks,
-            percentage: progress.percentage,
-            type: 'profile'
-          })
-        }
-      )
+      const result = await uploadUserProfile(updatedProfile, rootTxId)
       
       if (!rootTxId) {
         localStorage.setItem(`profile_mutable_${walletAddress}`, result.rootTxId)
@@ -338,7 +285,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       
       setProfile(updatedProfile)
       setIsEditing(false)
-      setUploadProgress({ ...uploadProgress, isOpen: false })
       showPopup('Profile updated successfully!', 'success')
       
       // Update URL if display name changed
@@ -348,9 +294,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
     } catch (error) {
       console.error('Failed to update profile:', error)
       showPopup('Failed to update profile', 'error')
-      setUploadProgress({ ...uploadProgress, isOpen: false })
-    } finally {
-      setIsSaving(false)
     }
   }
   
@@ -468,21 +411,16 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
                   <div className="flex gap-2">
                     <button
                       onClick={handleSaveProfile}
-                      disabled={isSaving}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                      {isSaving && (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      )}
-                      {isSaving ? 'Saving...' : 'Save'}
+                      Save
                     </button>
                     <button
                       onClick={() => {
                         setIsEditing(false)
                         setTempProfileImage(null) // Reset temporary image
                       }}
-                      disabled={isSaving}
-                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                     >
                       Cancel
                     </button>
@@ -820,16 +758,6 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
           </div>
         </div>
       </div>
-      
-      {/* Upload Progress Popup */}
-      <ChunkUploadProgress
-        isOpen={uploadProgress.isOpen}
-        currentChunk={uploadProgress.currentChunk}
-        totalChunks={uploadProgress.totalChunks}
-        percentage={uploadProgress.percentage}
-        projectName={uploadProgress.type === 'avatar' ? 'Profile Avatar' : 'Profile Data'}
-        isDownload={false}
-      />
     </div>
   )
 }
