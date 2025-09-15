@@ -784,9 +784,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         </div>
         
         {/* Projects Grid */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <h3 className="text-sm font-medium mb-3 text-gray-900">Projects</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-bold mb-4 text-gray-900">Projects</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {projects.map((project) => {
               const stats = projectStats.get(project.id)
               return (
