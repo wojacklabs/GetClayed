@@ -218,8 +218,8 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
       setProjectThumbnails(thumbnails)
       
       // Load follow stats
-      const followStatsData = await getUserFollowStats(walletAddress)
-      setFollowStats(followStatsData)
+      const stats = await getUserFollowStats(walletAddress)
+      setFollowStats(stats)
       
       // Check if current user is following this profile
       if (currentUserAddress && currentUserAddress !== walletAddress) {
@@ -390,30 +390,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
     return 'bg-green-600'
   }
   
-  const handleFollow = async () => {
-    if (!currentUserAddress || isProcessingFollow) return
-    
-    setIsProcessingFollow(true)
-    try {
-      if (isFollowingUser) {
-        await unfollowUser(currentUserAddress, walletAddress)
-        setIsFollowingUser(false)
-        setFollowStats(prev => ({ ...prev, followers: prev.followers - 1 }))
-        showPopup('Unfollowed successfully', 'success')
-      } else {
-        await followUser(currentUserAddress, walletAddress)
-        setIsFollowingUser(true)
-        setFollowStats(prev => ({ ...prev, followers: prev.followers + 1 }))
-        showPopup('Followed successfully', 'success')
-      }
-    } catch (error) {
-      console.error('Failed to follow/unfollow:', error)
-      showPopup('Failed to update follow status', 'error')
-    } finally {
-      setIsProcessingFollow(false)
-    }
-  }
-  
   return (
     <div className="fixed inset-0 bg-gray-100 z-[9998] overflow-auto">
       {/* Minimal Header - Same as Project Detail */}
@@ -464,33 +440,12 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              {currentUserAddress && currentUserAddress !== walletAddress && (
-                <button
-                  onClick={handleFollow}
-                  disabled={isProcessingFollow}
-                  className={`px-3 py-1.5 rounded-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isFollowingUser
-                      ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                      : 'bg-gray-800 hover:bg-gray-700 text-white'
-                  }`}
-                >
-                  {isProcessingFollow ? (
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    isFollowingUser ? 'Following' : 'Follow'
-                  )}
-                </button>
-              )}
-              {currentUserAddress === walletAddress && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors text-sm"
-                >
-                  Edit Profile
-                </button>
-              )}
-            </div>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors text-sm"
+            >
+              Edit Profile
+            </button>
           )}
         </div>
       </div>
@@ -623,19 +578,9 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
                   <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
                   <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
                   <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
                 </>
               ) : (
                 <>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">{followStats.followers}</span>
-                    <span className="text-gray-500 ml-1">followers</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-900">{followStats.following}</span>
-                    <span className="text-gray-500 ml-1">following</span>
-                  </div>
                   <div className="text-sm">
                     <span className="font-medium text-gray-900">{projects.length}</span>
                     <span className="text-gray-500 ml-1">projects</span>

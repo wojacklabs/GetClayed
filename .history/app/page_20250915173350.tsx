@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User } from 'lucide-react'
 import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { getProjectViewCount, getProjectLikeCount, downloadUserProfile, downloadProfileAvatar, getUserFollowing } from '@/lib/profileService'
-import { syncProjectMutableReferences } from '@/lib/mutableSyncService'
 // import ConnectWallet from '@/components/ConnectWallet'
 import Link from 'next/link'
 
@@ -125,17 +124,13 @@ export default function HomePage() {
       
       setUserProfiles(profileMap)
       
-      // Load following users and sync mutable references if wallet is connected
+      // Load following users if wallet is connected
       if (walletAddress) {
         try {
-          // Sync project mutable references from blockchain
-          await syncProjectMutableReferences(walletAddress)
-          
-          // Load following users
           const following = await getUserFollowing(walletAddress)
           setFollowingUsers(following)
         } catch (error) {
-          console.error('Failed to load user data:', error)
+          console.error('Failed to load following users:', error)
         }
       }
     } catch (error) {

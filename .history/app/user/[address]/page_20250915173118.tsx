@@ -87,22 +87,6 @@ export default function UserProfilePage() {
   const [currentUserAddress, setCurrentUserAddress] = useState<string | null>(null)
   
   useEffect(() => {
-    // Check for connected wallet
-    const checkWallet = () => {
-      if (typeof window !== 'undefined' && (window as any).solana) {
-        (window as any).solana.connect({ onlyIfTrusted: true })
-          .then((resp: any) => {
-            setCurrentUserAddress(resp.publicKey.toString())
-          })
-          .catch(() => {
-            // User hasn't connected wallet
-          })
-      }
-    }
-    checkWallet()
-  }, [])
-  
-  useEffect(() => {
     const loadUser = async () => {
       setLoading(true)
       setUserNotFound(false)
@@ -171,7 +155,6 @@ export default function UserProfilePage() {
     return (
       <ProfilePage
         walletAddress={walletAddress}
-        currentUserAddress={currentUserAddress || undefined}
         onClose={() => router.push('/')}
         onProjectSelect={handleProjectSelect}
       />
