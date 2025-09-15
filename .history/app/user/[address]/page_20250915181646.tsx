@@ -88,41 +88,23 @@ export default function UserProfilePage() {
   
   useEffect(() => {
     // Check for connected wallet
-    const checkWallet = async () => {
+    const checkWallet = () => {
       if (typeof window !== 'undefined' && (window as any).solana) {
         console.log('[UserProfilePage] Checking wallet connection...')
-        
-        // First check if already connected
-        if ((window as any).solana.isPhantom && (window as any).solana.isConnected) {
-          try {
-            const publicKey = (window as any).solana.publicKey
-            if (publicKey) {
-              const address = publicKey.toString()
-              console.log('[UserProfilePage] Wallet already connected:', address)
-              setCurrentUserAddress(address)
-              return
-            }
-          } catch (error) {
-            console.log('[UserProfilePage] Error accessing publicKey:', error)
-          }
-        }
-        
-        // Try to connect with onlyIfTrusted
-        try {
-          const resp = await (window as any).solana.connect({ onlyIfTrusted: true })
-          const address = resp.publicKey.toString()
-          console.log('[UserProfilePage] Wallet connected:', address)
-          setCurrentUserAddress(address)
-        } catch (error) {
-          console.log('[UserProfilePage] Wallet not connected:', error)
-        }
+        ;(window as any).solana.connect({ onlyIfTrusted: true })
+          .then((resp: any) => {
+            const address = resp.publicKey.toString()
+            console.log('[UserProfilePage] Wallet connected:', address)
+            setCurrentUserAddress(address)
+          })
+          .catch((error: any) => {
+            console.log('[UserProfilePage] Wallet not connected:', error)
+          })
       } else {
         console.log('[UserProfilePage] Solana object not found')
       }
     }
-    
-    // Add a small delay to ensure wallet extension is loaded
-    setTimeout(checkWallet, 100)
+    checkWallet()
   }, [])
   
   useEffect(() => {
@@ -192,11 +174,6 @@ export default function UserProfilePage() {
   
   // Show profile page
   if (walletAddress) {
-    console.log('[UserProfilePage] Rendering ProfilePage with:', {
-      walletAddress,
-      currentUserAddress,
-      currentUserAddressType: typeof currentUserAddress
-    })
     return (
       <ProfilePage
         walletAddress={walletAddress}
