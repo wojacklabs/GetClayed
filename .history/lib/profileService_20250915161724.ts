@@ -61,7 +61,7 @@ function saveProfileMutableReference(walletAddress: string, rootTxId: string): v
 /**
  * Get profile mutable reference
  */
-export function getProfileMutableReference(walletAddress: string): string | null {
+function getProfileMutableReference(walletAddress: string): string | null {
   try {
     const refs = JSON.parse(localStorage.getItem(PROFILE_MUTABLE_KEY) || '{}');
     return refs[walletAddress.toLowerCase()]?.rootTxId || null;

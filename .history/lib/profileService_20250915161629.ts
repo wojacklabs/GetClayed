@@ -61,7 +61,7 @@ function saveProfileMutableReference(walletAddress: string, rootTxId: string): v
 /**
  * Get profile mutable reference
  */
-export function getProfileMutableReference(walletAddress: string): string | null {
+function getProfileMutableReference(walletAddress: string): string | null {
   try {
     const refs = JSON.parse(localStorage.getItem(PROFILE_MUTABLE_KEY) || '{}');
     return refs[walletAddress.toLowerCase()]?.rootTxId || null;
@@ -368,70 +368,26 @@ export async function uploadUserProfile(
  */
 export async function downloadUserProfile(walletAddress: string): Promise<UserProfile | null> {
   try {
-    // Get mutable reference (root transaction ID)
+    // Get mutable reference
     const rootTxId = getProfileMutableReference(walletAddress);
     if (!rootTxId) {
       console.log('[ProfileService] No profile found for wallet:', walletAddress);
       return null;
     }
     
-    // Query for the latest update with this root transaction ID
-    const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
-    const query = `
-      query {
-        transactions(
-          tags: [
-            { name: "App-Name", values: ["GetClayed"] },
-            { name: "Data-Type", values: ["user-profile"] },
-            { name: "Wallet-Address", values: ["${walletAddress.toLowerCase()}"] },
-            { name: "Root-TX", values: ["${rootTxId}"] }
-          ],
-          first: 1,
-          order: DESC
-        ) {
-          edges {
-            node {
-              id
-              tags {
-                name
-                value
-              }
-            }
-          }
-        }
-      }
-    `;
+    // Download directly using transaction ID
+    const url = `https://uploader.irys.xyz/tx/${rootTxId}/data`;
+    console.log(`[ProfileService] Attempting to download profile from: ${url}`);
     
-    // Find the latest transaction
-    const response = await fetch(IRYS_GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
-    });
+    const response = await fetch(url);
     
-    const result = await response.json();
-    let latestTxId = rootTxId; // Default to root if no updates found
-    
-    if (result.data?.transactions?.edges?.length > 0) {
-      latestTxId = result.data.transactions.edges[0].node.id;
-      console.log(`[ProfileService] Found latest profile update: ${latestTxId}`);
-    } else {
-      console.log(`[ProfileService] No updates found, using root: ${rootTxId}`);
-    }
-    
-    // Download the latest profile data
-    const url = `https://uploader.irys.xyz/tx/${latestTxId}/data`;
-    console.log(`[ProfileService] Downloading profile from: ${url}`);
-    
-    const dataResponse = await fetch(url);
-    
-    if (!dataResponse.ok) {
-      console.error(`[ProfileService] Failed to download profile: ${dataResponse.status}`);
+    if (!response.ok) {
+      console.error(`[ProfileService] Failed to download profile: ${response.status}`);
       return null;
     }
     
     // Try to parse as JSON first
-    const text = await dataResponse.text();
+    const text = await response.text();
     try {
       const data = JSON.parse(text);
       

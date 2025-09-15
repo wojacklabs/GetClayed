@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Heart, Star, Edit2, Globe, Twitter, Github, Calendar, Eye } from 'lucide-react'
-import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, getProjectLikeCount, getProjectViewCount, uploadProfileAvatar, downloadProfileAvatar, getProfileMutableReference } from '../lib/profileService'
+import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, getProjectLikeCount, getProjectViewCount, uploadProfileAvatar, downloadProfileAvatar } from '../lib/profileService'
 import { queryUserProjects, downloadProjectThumbnail } from '../lib/clayStorageService'
 import { usePopup } from './PopupNotification'
 import { ChunkUploadProgress } from './ChunkUploadProgress'
@@ -323,7 +323,8 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
       })
       
       // Get existing root transaction ID from profile service
-      const rootTxId = getProfileMutableReference(walletAddress) || undefined
+      const existingProfile = await downloadUserProfile(walletAddress)
+      const rootTxId = existingProfile ? localStorage.getItem(`profile_mutable_refs`)?.includes(walletAddress) ? JSON.parse(localStorage.getItem(`profile_mutable_refs`) || '{}')[walletAddress.toLowerCase()]?.rootTxId : undefined : undefined
       
       const result = await uploadUserProfile(
         updatedProfile, 
