@@ -135,7 +135,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
   
   useEffect(() => {
     loadProfileData()
-  }, [walletAddress, currentUserAddress])
+  }, [walletAddress])
   
   const loadProfileData = async () => {
     setLoading(true)
@@ -467,7 +467,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {console.log('[ProfilePage] Render follow button check - currentUserAddress:', currentUserAddress, 'walletAddress:', walletAddress, 'condition:', currentUserAddress && currentUserAddress !== walletAddress)}
               {currentUserAddress && currentUserAddress !== walletAddress && (
                 <button
                   onClick={handleFollow}

@@ -135,7 +135,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
   
   useEffect(() => {
     loadProfileData()
-  }, [walletAddress, currentUserAddress])
+  }, [walletAddress])
   
   const loadProfileData = async () => {
     setLoading(true)
