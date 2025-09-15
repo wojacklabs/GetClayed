@@ -145,7 +145,7 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
   try {
     if (!avatarId) return null;
     
-    // Check if it's a manifest
+    // Direct download
     const url = `https://gateway.irys.xyz/${avatarId}`;
     const response = await fetch(url);
     
@@ -154,29 +154,9 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
       return null;
     }
     
-    // Check if it's a manifest (chunked upload)
-    const contentType = response.headers.get('content-type');
-    if (contentType?.includes('application/x.irys-manifest')) {
-      console.log('[ProfileService] Detected chunked avatar, downloading chunks...');
-      
-      // Parse manifest
-      const manifest = await response.json();
-      const chunkIds = manifest.paths ? Object.values(manifest.paths).map((p: any) => p.id) : [];
-      
-      if (chunkIds.length === 0) {
-        console.error('[ProfileService] No chunks found in manifest');
-        return null;
-      }
-      
-      // Download chunks
-      const base64Data = await downloadChunks(avatarId, chunkIds.length, chunkIds);
-      return `data:image/jpeg;base64,${base64Data}`;
-    } else {
-      // Direct download (non-chunked)
-      const data = await response.arrayBuffer();
-      const buffer = Buffer.from(data);
-      return `data:image/jpeg;base64,${buffer.toString('base64')}`;
-    }
+    const data = await response.arrayBuffer();
+    const buffer = Buffer.from(data);
+    return `data:image/jpeg;base64,${buffer.toString('base64')}`;
   } catch (error) {
     console.error('[ProfileService] Error downloading avatar:', error);
     return null;
