@@ -7,6 +7,7 @@ import { downloadUserProfile, findUserByDisplayName } from '../../../lib/profile
 
 declare global {
   interface Window {
+    solana?: any
     ethereum?: any
   }
 }
@@ -93,27 +94,58 @@ export default function UserProfilePage() {
   const [currentUserAddress, setCurrentUserAddress] = useState<string | null>(null)
   
   useEffect(() => {
-    // Check for connected wallet (EVM-based)
+    // Check for connected wallet
     const checkWallet = async () => {
-      if (typeof window !== 'undefined' && window.ethereum) {
-        console.log('[UserProfilePage] Checking EVM wallet connection...')
+      if (typeof window !== 'undefined') {
+        console.log('[UserProfilePage] Checking wallet connection...')
         
-        try {
-          // Request accounts with eth_accounts (doesn't prompt user)
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+        // Check for Phantom wallet specifically
+        const isPhantomInstalled = window.solana && window.solana.isPhantom
+        
+        if (isPhantomInstalled) {
+          console.log('[UserProfilePage] Phantom wallet detected')
           
-          if (accounts && accounts.length > 0) {
-            const address = accounts[0]
-            console.log('[UserProfilePage] EVM wallet connected:', address)
-            setCurrentUserAddress(address)
-          } else {
-            console.log('[UserProfilePage] No connected EVM accounts found')
+          // First check if already connected
+          if (window.solana.isConnected) {
+            try {
+              const publicKey = window.solana.publicKey
+              if (publicKey) {
+                const address = publicKey.toString()
+                console.log('[UserProfilePage] Phantom wallet already connected:', address)
+                setCurrentUserAddress(address)
+                return
+              }
+            } catch (error) {
+              console.log('[UserProfilePage] Error accessing publicKey:', error)
+            }
           }
-        } catch (error) {
-          console.log('[UserProfilePage] Error checking EVM wallet:', error)
+          
+          // Try to connect with onlyIfTrusted
+          try {
+            const resp = await window.solana.connect({ onlyIfTrusted: true })
+            const address = resp.publicKey.toString()
+            console.log('[UserProfilePage] Phantom wallet connected:', address)
+            setCurrentUserAddress(address)
+          } catch (error) {
+            console.log('[UserProfilePage] Phantom wallet not connected:', error)
+          }
+        } else if (window.ethereum) {
+          console.log('[UserProfilePage] Ethereum wallet detected')
+          // Ethereum wallet detected
+          try {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+            if (accounts.length > 0) {
+              console.log('[UserProfilePage] Ethereum wallet connected:', accounts[0])
+              setCurrentUserAddress(accounts[0])
+            } else {
+              console.log('[UserProfilePage] No Ethereum accounts found')
+            }
+          } catch (error) {
+            console.log('[UserProfilePage] Ethereum wallet error:', error)
+          }
+        } else {
+          console.log('[UserProfilePage] No wallet detected')
         }
-      } else {
-        console.log('[UserProfilePage] No ethereum object found')
       }
     }
     
@@ -129,8 +161,9 @@ export default function UserProfilePage() {
       const addressOrName = params.address as string
       
       try {
-        // Check if it's a wallet address (EVM addresses start with 0x and are 42 characters)
-        if (addressOrName.startsWith('0x') && addressOrName.length === 42) {
+        // Check if it's a wallet address (Solana addresses are base58 encoded and typically 32-44 characters)
+        // For simplicity, assume any string that doesn't contain spaces and is long enough is an address
+        if (addressOrName.length >= 32 && addressOrName.length <= 44 && !addressOrName.includes(' ')) {
           // Verify the user exists by trying to load their profile
           const profile = await downloadUserProfile(addressOrName)
           if (profile || true) { // Allow access even if no profile exists yet

@@ -34,25 +34,19 @@ export default function HomePage() {
   const [followingUsers, setFollowingUsers] = useState<string[]>([])
 
   useEffect(() => {
-    // Check for connected wallet (EVM-based)
-    const checkWallet = async () => {
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        try {
-          const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' })
-          if (accounts && accounts.length > 0) {
-            setWalletAddress(accounts[0])
-            console.log('[HomePage] EVM wallet connected:', accounts[0])
-          } else {
-            console.log('[HomePage] No connected EVM accounts')
-          }
-        } catch (error) {
-          console.log('[HomePage] Error checking EVM wallet:', error)
-        }
+    // Check for connected wallet
+    const checkWallet = () => {
+      if (typeof window !== 'undefined' && (window as any).solana) {
+        (window as any).solana.connect({ onlyIfTrusted: true })
+          .then((resp: any) => {
+            setWalletAddress(resp.publicKey.toString())
+          })
+          .catch(() => {
+            console.log('Wallet not connected')
+          })
       }
     }
-    
-    // Add a small delay to ensure wallet extension is loaded
-    setTimeout(checkWallet, 100)
+    checkWallet()
   }, [])
 
   useEffect(() => {
