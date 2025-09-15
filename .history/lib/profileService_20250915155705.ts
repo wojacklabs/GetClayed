@@ -235,11 +235,8 @@ export async function downloadProfileAvatar(avatarId: string): Promise<string | 
               return null;
             }
             const chunkData = await chunkResponse.json();
-            chunks.push(chunkData.chunk);
-          } catch (error) {
-            console.error(`[ProfileService] Error downloading chunk ${i + 1}:`, error);
-            return null;
-          }
+          
+          chunks.push(chunkData.chunk);
         }
         
         // Reconstruct base64 image
@@ -364,7 +361,7 @@ export async function downloadUserProfile(walletAddress: string): Promise<UserPr
       return null;
     }
     
-    const mutableUrl = `https://uploader.irys.xyz/mutable/${rootTxId}`;
+    const mutableUrl = `https://gateway.irys.xyz/mutable/${rootTxId}`;
     const response = await fetch(mutableUrl, { redirect: 'follow' });
     
     if (!response.ok) {

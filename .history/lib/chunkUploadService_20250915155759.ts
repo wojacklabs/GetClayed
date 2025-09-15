@@ -224,7 +224,7 @@ export async function downloadChunks(
         const chunkIndex = parseInt(chunkIndexTag.value);
         
         // Download chunk data
-        const chunkResponse = await fetch(`https://uploader.irys.xyz/tx/${txId}/data`);
+        const chunkResponse = await fetch(`https://gateway.irys.xyz/${txId}`);
         const chunkData = await chunkResponse.json();
         
         chunks[chunkIndex] = chunkData.chunk;
