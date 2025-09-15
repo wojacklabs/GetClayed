@@ -7,7 +7,7 @@ import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, 
 import { queryUserProjects, downloadProjectThumbnail } from '../lib/clayStorageService'
 import { usePopup } from './PopupNotification'
 import { ChunkUploadProgress } from './ChunkUploadProgress'
-import { ConnectWallet } from './ConnectWallet'
+import ConnectWallet from './ConnectWallet'
 
 interface ProfilePageProps {
   walletAddress: string

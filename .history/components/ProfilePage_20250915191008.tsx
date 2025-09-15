@@ -7,7 +7,7 @@ import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, 
 import { queryUserProjects, downloadProjectThumbnail } from '../lib/clayStorageService'
 import { usePopup } from './PopupNotification'
 import { ChunkUploadProgress } from './ChunkUploadProgress'
-import { ConnectWallet } from './ConnectWallet'
+import ConnectWallet from './ConnectWallet'
 
 interface ProfilePageProps {
   walletAddress: string
@@ -61,7 +61,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
   const [isFollowingUser, setIsFollowingUser] = useState(false)
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 })
   const [isProcessingFollow, setIsProcessingFollow] = useState(false)
-  const [currentUserAddress, setCurrentUserAddress] = useState<string | undefined>(initialCurrentUserAddress)
   
   // Generate activity data from projects and interactions
   const generateActivityData = (userProjects: any[], userLikes?: any[], userFavorites?: any[]) => {
@@ -467,39 +466,30 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {!currentUserAddress ? (
-                <ConnectWallet 
-                  onConnect={(address) => setCurrentUserAddress(address)}
-                  onDisconnect={() => setCurrentUserAddress(undefined)}
-                />
-              ) : (
-                <>
-                  {currentUserAddress.toLowerCase() !== walletAddress.toLowerCase() && (
-                    <button
-                      onClick={handleFollow}
-                      disabled={isProcessingFollow}
-                      className={`px-3 py-1.5 rounded-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                        isFollowingUser
-                          ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                          : 'bg-gray-800 hover:bg-gray-700 text-white'
-                      }`}
-                    >
-                      {isProcessingFollow ? (
-                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                      ) : (
-                        isFollowingUser ? 'Following' : 'Follow'
-                      )}
-                    </button>
+              {currentUserAddress && currentUserAddress.toLowerCase() !== walletAddress.toLowerCase() && (
+                <button
+                  onClick={handleFollow}
+                  disabled={isProcessingFollow}
+                  className={`px-3 py-1.5 rounded-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isFollowingUser
+                      ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                      : 'bg-gray-800 hover:bg-gray-700 text-white'
+                  }`}
+                >
+                  {isProcessingFollow ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    isFollowingUser ? 'Following' : 'Follow'
                   )}
-                  {currentUserAddress.toLowerCase() === walletAddress.toLowerCase() && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors text-sm"
-                    >
-                      Edit Profile
-                    </button>
-                  )}
-                </>
+                </button>
+              )}
+              {currentUserAddress && currentUserAddress.toLowerCase() === walletAddress.toLowerCase() && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors text-sm"
+                >
+                  Edit Profile
+                </button>
               )}
             </div>
           )}

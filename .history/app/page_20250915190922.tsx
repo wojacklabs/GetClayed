@@ -6,7 +6,7 @@ import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User, Wallet
 import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { getProjectViewCount, getProjectLikeCount, downloadUserProfile, downloadProfileAvatar, getUserFollowing } from '@/lib/profileService'
 import { syncProjectMutableReferences } from '@/lib/mutableSyncService'
-import { ConnectWallet } from '@/components/ConnectWallet'
+import ConnectWallet from '@/components/ConnectWallet'
 import Link from 'next/link'
 
 interface Project {
@@ -219,24 +219,13 @@ export default function HomePage() {
                 />
                 <Search className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               </div>
-              
-              {walletAddress ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
-                  <Link
-                    href="/project/new"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-                  >
-                    <Plus size={16} />
-                    <span>New</span>
-                  </Link>
-                </div>
-              ) : (
-                <ConnectWallet 
-                  onConnect={(address) => setWalletAddress(address)}
-                  onDisconnect={() => setWalletAddress(null)}
-                />
-              )}
+              <Link
+                href="/project/new"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+              >
+                <Plus size={16} />
+                <span>New</span>
+              </Link>
             </div>
           </div>
         </div>
