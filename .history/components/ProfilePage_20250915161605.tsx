@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Heart, Star, Edit2, Globe, Twitter, Github, Calendar, Eye } from 'lucide-react'
-import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, getProjectLikeCount, getProjectViewCount, uploadProfileAvatar, downloadProfileAvatar, getProfileMutableReference } from '../lib/profileService'
+import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, getProjectLikeCount, getProjectViewCount, uploadProfileAvatar, downloadProfileAvatar } from '../lib/profileService'
 import { queryUserProjects, downloadProjectThumbnail } from '../lib/clayStorageService'
 import { usePopup } from './PopupNotification'
 import { ChunkUploadProgress } from './ChunkUploadProgress'
@@ -322,9 +322,7 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         type: 'profile'
       })
       
-      // Get existing root transaction ID from profile service
-      const rootTxId = getProfileMutableReference(walletAddress) || undefined
-      
+      const rootTxId = localStorage.getItem(`profile_mutable_${walletAddress}`) || undefined
       const result = await uploadUserProfile(
         updatedProfile, 
         rootTxId,
@@ -339,7 +337,9 @@ export default function ProfilePage({ walletAddress, onClose, onProjectSelect }:
         }
       )
       
-      // Root TX ID is now managed by profileService
+      if (!rootTxId) {
+        localStorage.setItem(`profile_mutable_${walletAddress}`, result.rootTxId)
+      }
       
       setProfile(updatedProfile)
       setIsEditing(false)
