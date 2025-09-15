@@ -338,12 +338,12 @@ export default function HomePage() {
                 Following
               </button>
             )}
-            </div>
           </div>
+        </div>
 
-          {/* Projects Grid */}
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {/* Projects Grid */}
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {[...Array(10)].map((_, i) => (
               <div key={i} className="bg-white rounded-lg overflow-hidden animate-pulse shadow-sm">
                 <div className="aspect-square bg-gray-200" />
@@ -385,21 +385,27 @@ export default function HomePage() {
                         <div className="text-2xl font-bold text-gray-300">3D</div>
                       </div>
                     )}
+                    
+                    {/* Hover overlay with stats */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <div className="flex items-center gap-3 text-xs text-white">
+                          <span className="flex items-center gap-1">
+                            <Heart size={12} />
+                            {project.likes}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Eye size={12} />
+                            {project.views}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Content */}
                   <div className="p-3">
-                    <h4 className="text-sm font-medium text-gray-900 truncate mb-1">{project.name}</h4>
-                    <div className="flex items-center justify-end gap-3 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Heart size={12} />
-                        {project.likes}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Eye size={12} />
-                        {project.views}
-                      </span>
-                    </div>
+                    <h4 className="text-sm font-medium text-gray-900 truncate">{project.name}</h4>
                   </div>
                 </Link>
                 
@@ -426,8 +432,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          )}
-        </div>
+        )}
       </main>
     </div>
   )
