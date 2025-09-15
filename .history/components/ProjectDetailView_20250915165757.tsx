@@ -191,69 +191,69 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-gray-100 z-[9998] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
+      <div className="fixed inset-0 bg-gray-50 z-[9998] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
   }
   
   return (
-    <div className="fixed inset-0 bg-gray-100 z-[9998]">
-      {/* Minimal Header */}
-      <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 z-10">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <div className="fixed inset-0 bg-gray-50 z-[9998]">
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 bg-white shadow-sm z-10">
+        <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
               onClick={onBack}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-              title="Back"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Back to Profile"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={24} />
             </button>
             <div>
-              <h1 className="text-lg font-medium text-gray-900">{project?.name || 'Untitled'}</h1>
-              <p className="text-xs text-gray-500">
-                {project?.author ? `${project.author.slice(0, 6)}...${project.author.slice(-4)}` : 'Unknown'}
+              <h1 className="text-2xl font-bold">{project?.name || 'Untitled'}</h1>
+              <p className="text-sm text-gray-600">
+                by {project?.author ? `${project.author.slice(0, 6)}...${project.author.slice(-4)}` : 'Unknown'}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             {/* Stats */}
-            <div className="flex items-center gap-3 text-xs text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-1">
-                <Eye size={14} />
-                <span>{viewCount}</span>
+                <Eye size={16} />
+                {viewCount} views
               </div>
               <div className="flex items-center gap-1">
-                <Heart size={14} className={isLiked ? 'fill-red-500 text-red-500' : ''} />
-                <span>{likeCount}</span>
+                <Heart size={16} className={isLiked ? 'fill-red-500 text-red-500' : ''} />
+                {likeCount} likes
               </div>
             </div>
             
             {/* Actions */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <button
                 onClick={handleLike}
-                className={`p-2 rounded-md transition-all ${
+                className={`p-3 rounded-lg transition-all ${
                   isLiked 
-                    ? 'bg-gray-800 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                    : 'bg-white hover:bg-gray-50 text-gray-700'
                 }`}
                 title={isLiked ? 'Already liked' : 'Like project'}
               >
-                <Heart size={16} className={isLiked ? 'fill-current' : ''} />
+                <Heart size={20} className={isLiked ? 'fill-current' : ''} />
               </button>
               <button
                 onClick={handleFavorite}
-                className={`p-2 rounded-md transition-all ${
+                className={`p-3 rounded-lg transition-all ${
                   isFavorited 
-                    ? 'bg-gray-800 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200' 
+                    : 'bg-white hover:bg-gray-50 text-gray-700'
                 }`}
                 title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
               >
-                <Star size={16} className={isFavorited ? 'fill-current' : ''} />
+                <Star size={20} className={isFavorited ? 'fill-current' : ''} />
               </button>
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       </div>
       
       {/* 3D Canvas */}
-      <div className="absolute inset-0 pt-14">
+      <div className="absolute inset-0 pt-20">
         <Canvas
           camera={{
             position: [10, 10, 10],
@@ -269,7 +269,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             near: 0.1,
             far: 1000
           }}
-          style={{ background: project?.backgroundColor || '#f8f8f8' }}
+          style={{ background: project?.backgroundColor || '#f0f0f0' }}
         >
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, 5]} intensity={0.4} />
@@ -318,38 +318,40 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         </Canvas>
       </div>
       
-      {/* Bottom UI Controls - Minimal style */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white rounded-md border border-gray-200 p-1 z-10">
+      {/* Bottom UI Controls */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-white rounded-lg shadow-lg p-4 z-10">
         <button
           onClick={() => setShowGrid(!showGrid)}
-          className={`px-3 py-1.5 rounded transition-all text-sm ${
+          className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
             showGrid
-              ? 'bg-gray-800 text-white'
-              : 'hover:bg-gray-100 text-gray-700'
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
           }`}
-          title={showGrid ? 'Hide grid' : 'Show grid per clay'}
+          title={showGrid ? 'Hide grids' : 'Show grids'}
         >
-          <span>Grid</span>
+          <Maximize2 size={20} />
+          <span className="text-sm">{showGrid ? 'Hide Grid' : 'Show Grid'}</span>
         </button>
         <button
           onClick={handleResetCamera}
-          className="px-3 py-1.5 hover:bg-gray-100 text-gray-700 rounded transition-all text-sm"
-          title="Reset camera"
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all flex items-center gap-2"
+          title="Reset camera angle"
         >
-          <span>Reset</span>
+          <RotateCw size={20} />
+          <span className="text-sm">Reset Camera</span>
         </button>
       </div>
       
-      {/* Description - Minimal style */}
+      {/* Description */}
       {project?.description && (
-        <div className="absolute bottom-16 left-4 right-4 max-w-2xl mx-auto">
-          <div className="bg-white/90 backdrop-blur-sm rounded-md border border-gray-200 p-3">
-            <p className="text-sm text-gray-700">{project.description}</p>
+        <div className="absolute bottom-0 left-0 right-0 bg-white shadow-lg p-4">
+          <div className="max-w-6xl mx-auto">
+            <p className="text-gray-700">{project.description}</p>
             {project.tags && project.tags.length > 0 && (
-              <div className="flex gap-1.5 mt-2 flex-wrap">
+              <div className="flex gap-2 mt-2">
                 {project.tags.map((tag: string, i: number) => (
-                  <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                    {tag}
+                  <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded">
+                    #{tag}
                   </span>
                 ))}
               </div>
