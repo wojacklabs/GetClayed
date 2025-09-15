@@ -34,25 +34,36 @@ export default function HomePage() {
   const [followingUsers, setFollowingUsers] = useState<string[]>([])
 
   useEffect(() => {
-    // Check for connected wallet (EVM-based)
+    // Check for connected wallet
     const checkWallet = async () => {
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        try {
-          const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' })
-          if (accounts && accounts.length > 0) {
-            setWalletAddress(accounts[0])
-            console.log('[HomePage] EVM wallet connected:', accounts[0])
-          } else {
-            console.log('[HomePage] No connected EVM accounts')
+      if (typeof window !== 'undefined') {
+        // Check for Phantom wallet specifically
+        const isPhantomInstalled = window.solana && window.solana.isPhantom
+        
+        if (isPhantomInstalled) {
+          try {
+            const resp = await window.solana.connect({ onlyIfTrusted: true })
+            const address = resp.publicKey.toString()
+            console.log('[HomePage] Phantom wallet connected:', address)
+            setWalletAddress(address)
+          } catch (error) {
+            console.log('[HomePage] Phantom wallet not connected')
           }
-        } catch (error) {
-          console.log('[HomePage] Error checking EVM wallet:', error)
+        } else if (window.ethereum) {
+          // Ethereum wallet detected
+          try {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+            if (accounts.length > 0) {
+              console.log('[HomePage] Ethereum wallet connected:', accounts[0])
+              setWalletAddress(accounts[0])
+            }
+          } catch (error) {
+            console.log('[HomePage] Ethereum wallet error:', error)
+          }
         }
       }
     }
-    
-    // Add a small delay to ensure wallet extension is loaded
-    setTimeout(checkWallet, 100)
+    checkWallet()
   }, [])
 
   useEffect(() => {

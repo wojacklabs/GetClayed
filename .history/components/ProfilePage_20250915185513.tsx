@@ -467,8 +467,8 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {console.log('[ProfilePage] Render follow button check - currentUserAddress:', currentUserAddress, 'walletAddress:', walletAddress, 'condition:', currentUserAddress && currentUserAddress.toLowerCase() !== walletAddress.toLowerCase())}
-              {currentUserAddress && currentUserAddress.toLowerCase() !== walletAddress.toLowerCase() && (
+              {console.log('[ProfilePage] Render follow button check - currentUserAddress:', currentUserAddress, 'walletAddress:', walletAddress, 'condition:', currentUserAddress && currentUserAddress !== walletAddress)}
+              {currentUserAddress && currentUserAddress !== walletAddress && (
                 <button
                   onClick={handleFollow}
                   disabled={isProcessingFollow}
@@ -485,7 +485,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
                   )}
                 </button>
               )}
-              {currentUserAddress && currentUserAddress.toLowerCase() === walletAddress.toLowerCase() && (
+              {currentUserAddress === walletAddress && (
                 <button
                   onClick={() => setIsEditing(true)}
                   className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors text-sm"

@@ -485,7 +485,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress, onClose
                   )}
                 </button>
               )}
-              {currentUserAddress && currentUserAddress.toLowerCase() === walletAddress.toLowerCase() && (
+              {currentUserAddress === walletAddress && (
                 <button
                   onClick={() => setIsEditing(true)}
                   className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors text-sm"
