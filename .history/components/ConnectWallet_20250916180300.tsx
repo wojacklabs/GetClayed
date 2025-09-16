@@ -227,4 +227,4 @@ export const ConnectWallet = forwardRef<ConnectWalletRef, ConnectWalletProps>(({
       )}
     </>
   )
-})
+}
