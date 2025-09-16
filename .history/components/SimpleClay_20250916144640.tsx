@@ -239,7 +239,7 @@ function Clay({
         scale={clay.scale || 1}
         userData={{ clayId: clay.id }}
         onPointerMove={(e) => {
-          if ((tool === 'push' || tool === 'pull' || tool === 'deform') && onBrushHover) {
+          if ((tool === 'push' || tool === 'pull') && onBrushHover) {
             onBrushHover(e.point)
           }
         }}
@@ -310,7 +310,7 @@ function Scene({ tool, brushSize }: { tool: string; brushSize: number }) {
       />
       
       {/* Brush guide */}
-      {(tool === 'push' || tool === 'pull' || tool === 'deform') && hoveredPoint && (
+      {(tool === 'push' || tool === 'pull') && hoveredPoint && (
         <BrushGuide position={hoveredPoint} size={brushSize} />
       )}
       
@@ -383,7 +383,7 @@ export default function SimpleClay() {
           ) : (
             <>
               <MousePointer size={14} />
-              <span>Click and drag on clay • Drag up to pull, down to push</span>
+              <span>Click and drag on clay to {tool}</span>
             </>
           )}
         </div>
