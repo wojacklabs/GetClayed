@@ -1210,7 +1210,7 @@ function AddClayHelper({
       // Show small preview at cursor
       return (
         <mesh position={dragEnd}>
-          <sphereGeometry args={[getConstantScreenSize(dragEnd, 12), 16, 16]} />
+          <sphereGeometry args={[0.1, 16, 16]} />
           <meshPhongMaterial color="#888888" opacity={0.3} transparent />
         </mesh>
       )
@@ -1281,7 +1281,7 @@ function AddClayHelper({
         {/* Show current point preview */}
         {currentPoint && (
           <mesh position={currentPoint}>
-            <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
+            <sphereGeometry args={[0.08, 16, 16]} />
             <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
           </mesh>
         )}
@@ -1296,7 +1296,7 @@ function AddClayHelper({
         {/* Show existing click points */}
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
-            <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
+            <sphereGeometry args={[0.05, 16, 16]} />
             <meshBasicMaterial color={index === 0 ? "#ff0000" : "#00ff00"} />
           </mesh>
         ))}
@@ -1325,7 +1325,7 @@ function AddClayHelper({
         {/* Show current point preview */}
         {currentPoint && (
           <mesh position={currentPoint}>
-            <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
+            <sphereGeometry args={[0.08, 16, 16]} />
             <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
           </mesh>
         )}
@@ -1340,7 +1340,7 @@ function AddClayHelper({
         {/* Show existing click points */}
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
-            <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
+            <sphereGeometry args={[0.05, 16, 16]} />
             <meshBasicMaterial color={index === 0 ? "#ff0000" : "#00ff00"} />
           </mesh>
         ))}
@@ -1420,7 +1420,7 @@ function AddClayHelper({
         {/* Show current point preview */}
         {currentPoint && (
           <mesh position={currentPoint}>
-            <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
+            <sphereGeometry args={[0.08, 16, 16]} />
             <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
           </mesh>
         )}
