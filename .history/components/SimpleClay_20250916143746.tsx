@@ -67,7 +67,10 @@ function Clay({
     }
     
     const handleWheel = (e: WheelEvent) => {
-      // Not used for push/pull tools
+      if (dragState.current.active && tool === 'move') {
+        e.preventDefault()
+        dragState.current.currentDepth += e.deltaY * 0.001
+      }
     }
     
     const handleMouseDown = (e: MouseEvent) => {
