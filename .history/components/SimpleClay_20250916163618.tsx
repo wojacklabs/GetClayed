@@ -411,7 +411,6 @@ export default function SimpleClay() {
               </button>
             </div>
           </div>
-          </div>
         </div>
       </div>
       
@@ -422,7 +421,7 @@ export default function SimpleClay() {
           shadows
         >
           <Suspense fallback={null}>
-            <Scene tool={tool} brushSize={brushSize} clayRef={clayRef} />
+            <Scene tool={tool} brushSize={brushSize} />
           </Suspense>
         </Canvas>
         

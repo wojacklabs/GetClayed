@@ -343,22 +343,6 @@ function Scene({ tool, brushSize, clayRef }: { tool: string; brushSize: number; 
 export default function SimpleClay() {
   const [tool, setTool] = useState<'rotate' | 'deform'>('rotate')
   const brushSize = 0.8
-  const router = useRouter()
-  const clayRef = useRef<any>(null)
-  
-  const handleContinueCreating = () => {
-    if (clayRef.current) {
-      // Store the clay data in sessionStorage for the project creation page
-      const clayData = {
-        geometry: clayRef.current.geometry.toJSON(),
-        position: clayRef.current.position,
-        scale: clayRef.current.scale,
-        shape: clayRef.current.shape
-      }
-      sessionStorage.setItem('continueClayData', JSON.stringify(clayData))
-      router.push('/project/new')
-    }
-  }
   
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
@@ -366,19 +350,8 @@ export default function SimpleClay() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Clay</h2>
           
-          <div className="flex items-center gap-3">
-            {/* Continue creating button */}
-            <button
-              onClick={handleContinueCreating}
-              className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1.5"
-              title="Continue creating in project editor"
-            >
-              <span>Continue Creating</span>
-              <ArrowRight size={14} />
-            </button>
-            
-            {/* Tool toggle */}
-            <div className="relative bg-gray-100 rounded-lg p-0.5">
+          {/* Tool toggle */}
+          <div className="relative bg-gray-100 rounded-lg p-0.5">
             <div 
               className={`absolute inset-y-0.5 transition-transform duration-200 ease-out ${
                 tool === 'rotate' ? 'translate-x-0.5' : 'translate-x-[calc(100%-0.125rem)]'
@@ -411,7 +384,6 @@ export default function SimpleClay() {
               </button>
             </div>
           </div>
-          </div>
         </div>
       </div>
       
@@ -422,7 +394,7 @@ export default function SimpleClay() {
           shadows
         >
           <Suspense fallback={null}>
-            <Scene tool={tool} brushSize={brushSize} clayRef={clayRef} />
+            <Scene tool={tool} brushSize={brushSize} />
           </Suspense>
         </Canvas>
         

@@ -17,39 +17,36 @@ const SimpleClay = dynamic(() => import('@/components/SimpleClay'), { ssr: false
 // Animated Clay Logo Component
 function AnimatedClayLogo() {
   const meshRef = useRef<THREE.Mesh>(null)
-  const originalPositions = useRef<Float32Array | null>(null)
+  const [time, setTime] = useState(0)
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!meshRef.current) return
     
+    // Rotate slowly
+    meshRef.current.rotation.y += delta * 0.5
+    
+    // Update time for wave animation
+    setTime(prev => prev + delta)
+    
+    // Apply wave deformation to vertices
     const geometry = meshRef.current.geometry as THREE.BufferGeometry
     const positionAttribute = geometry.getAttribute('position')
-    
-    // Store original positions on first frame
-    if (!originalPositions.current) {
-      originalPositions.current = new Float32Array(positionAttribute.array)
-    }
-    
-    // Rotate slowly
-    meshRef.current.rotation.y += 0.01
-    
-    // Apply organic deformation
-    const time = state.clock.elapsedTime
     const vertex = new THREE.Vector3()
-    const originalVertex = new THREE.Vector3()
     
     for (let i = 0; i < positionAttribute.count; i++) {
-      originalVertex.fromArray(originalPositions.current, i * 3)
+      vertex.fromBufferAttribute(positionAttribute, i)
       
-      // Multiple wave frequencies for organic motion
-      const wave1 = Math.sin(originalVertex.x * 3 + time * 1.5) * 0.02
-      const wave2 = Math.sin(originalVertex.y * 4 + time * 1.8) * 0.015
-      const wave3 = Math.sin(originalVertex.z * 2 + time * 1.2) * 0.025
+      // Calculate distance from center
+      const distance = vertex.length()
       
-      // Combine waves for organic movement
-      vertex.x = originalVertex.x + wave2 + wave3
-      vertex.y = originalVertex.y + wave1 + wave3
-      vertex.z = originalVertex.z + wave1 + wave2
+      // Apply wave effect
+      const waveAmplitude = 0.05
+      const waveFrequency = 2
+      const wave = Math.sin(distance * waveFrequency + state.clock.elapsedTime * 2) * waveAmplitude
+      
+      // Scale vertex position with wave
+      const scale = 1 + wave
+      vertex.multiplyScalar(scale)
       
       positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z)
     }
@@ -60,7 +57,7 @@ function AnimatedClayLogo() {
 
   return (
     <mesh ref={meshRef}>
-      <sphereGeometry args={[0.5, 16, 16]} />
+      <sphereGeometry args={[0.5, 32, 32]} />
       <meshStandardMaterial 
         color="#B8C5D6"
         roughness={0.4}
