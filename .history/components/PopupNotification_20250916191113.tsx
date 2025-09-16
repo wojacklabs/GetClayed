@@ -124,16 +124,8 @@ export function PopupNotification({
   )
 }
 
-// Context for popup state
-interface PopupContextType {
-  showPopup: (message: string, type?: PopupType, options?: Partial<PopupConfig>) => void
-  hidePopup: () => void
-}
-
-const PopupContext = createContext<PopupContextType | undefined>(undefined)
-
-// Provider component
-export function PopupNotificationProvider({ children }: { children: ReactNode }) {
+// Hook for managing popup state
+export function usePopup() {
   const [popupConfig, setPopupConfig] = useState<PopupConfig>({
     isOpen: false,
     message: '',
@@ -157,49 +149,10 @@ export function PopupNotificationProvider({ children }: { children: ReactNode })
     setPopupConfig(prev => ({ ...prev, isOpen: false }))
   }
 
-  return (
-    <PopupContext.Provider value={{ showPopup, hidePopup }}>
-      {children}
-      <PopupNotification {...popupConfig} />
-    </PopupContext.Provider>
-  )
-}
-
-// Hook for using popup
-export function usePopup() {
-  const context = useContext(PopupContext)
-  if (!context) {
-    // Fallback for components not wrapped in provider
-    const [popupConfig, setPopupConfig] = useState<PopupConfig>({
-      isOpen: false,
-      message: '',
-      type: 'info'
-    })
-
-    const showPopup = (message: string, type: PopupType = 'info', options?: Partial<PopupConfig>) => {
-      setPopupConfig({
-        isOpen: true,
-        message,
-        type,
-        ...options,
-        onClose: () => {
-          setPopupConfig(prev => ({ ...prev, isOpen: false }))
-          options?.onClose?.()
-        }
-      })
-    }
-
-    const hidePopup = () => {
-      setPopupConfig(prev => ({ ...prev, isOpen: false }))
-    }
-
-    return {
-      popupConfig,
-      showPopup,
-      hidePopup,
-      PopupComponent: () => <PopupNotification {...popupConfig} />
-    }
+  return {
+    popupConfig,
+    showPopup,
+    hidePopup,
+    PopupComponent: () => <PopupNotification {...popupConfig} />
   }
-  
-  return context
 }
