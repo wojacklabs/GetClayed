@@ -301,12 +301,10 @@ export default function HomePage() {
                         </Link>
                         
                         <button
-                          onClick={async () => {
-                            setShowProfileDropdown(false)
-                            // The actual disconnect will be handled by ConnectWallet component
-                            // We just need to update our local state
+                          onClick={() => {
                             setWalletAddress(null)
                             setCurrentUserProfile(null)
+                            setShowProfileDropdown(false)
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors border-t border-gray-100"
                         >

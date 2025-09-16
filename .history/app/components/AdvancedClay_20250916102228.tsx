@@ -2448,7 +2448,9 @@ export default function AdvancedClay() {
             <h1 className="text-xl font-bold text-gray-900">Create Project</h1>
           </div>
           <div className="flex items-center gap-2">
-            {/* Project name can be displayed here if needed */}
+            {projectName && (
+              <span className="text-sm text-gray-500">{projectName}</span>
+            )}
           </div>
         </div>
       </header>

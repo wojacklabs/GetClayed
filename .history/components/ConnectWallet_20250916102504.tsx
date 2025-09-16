@@ -125,8 +125,6 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({ onConnect, onDisco
     // Try multiple disconnect methods for better compatibility
     const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
     
-    let disconnectSuccessful = false
-    
     if (provider) {
       try {
         // Method 1: Try wallet_revokePermissions (EIP-2255)
@@ -136,7 +134,6 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({ onConnect, onDisco
               method: "wallet_revokePermissions",
               params: [{ eth_accounts: {} }]
             })
-            disconnectSuccessful = true
           } catch (error) {
             // Not all wallets support this, continue with other methods
             console.log('wallet_revokePermissions not supported')
@@ -144,10 +141,9 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({ onConnect, onDisco
         }
         
         // Method 2: Try disconnect if available
-        if (!disconnectSuccessful && provider.disconnect && typeof provider.disconnect === 'function') {
+        if (provider.disconnect && typeof provider.disconnect === 'function') {
           try {
             await provider.disconnect()
-            disconnectSuccessful = true
           } catch (error) {
             console.log('disconnect method failed')
           }
@@ -186,14 +182,6 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({ onConnect, onDisco
           localStorage.removeItem(key)
         }
       })
-    }
-    
-    // Show info popup if wallet disconnect wasn't fully successful
-    if (!disconnectSuccessful && provider) {
-      showPopup(
-        'Disconnected from app. To fully disconnect, please also disconnect this site in your wallet settings.',
-        'info'
-      )
     }
   }
 

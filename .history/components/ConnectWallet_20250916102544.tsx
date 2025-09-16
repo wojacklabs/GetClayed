@@ -144,10 +144,9 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({ onConnect, onDisco
         }
         
         // Method 2: Try disconnect if available
-        if (!disconnectSuccessful && provider.disconnect && typeof provider.disconnect === 'function') {
+        if (provider.disconnect && typeof provider.disconnect === 'function') {
           try {
             await provider.disconnect()
-            disconnectSuccessful = true
           } catch (error) {
             console.log('disconnect method failed')
           }
