@@ -2048,11 +2048,12 @@ export default function AdvancedClay() {
       if (capturedThumbnail && capturedThumbnail !== '') {
         try {
           console.log('Uploading thumbnail...');
-          const result = await uploadProjectThumbnail(
+          thumbnailId = await uploadProjectThumbnail(
             capturedThumbnail,
-            projectId
+            projectId,
+            projectName,
+            walletAddress
           );
-          thumbnailId = result || undefined;
           console.log('Thumbnail uploaded:', thumbnailId);
         } catch (error) {
           console.error('Failed to upload thumbnail:', error);

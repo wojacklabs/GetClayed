@@ -2028,40 +2028,8 @@ export default function AdvancedClay() {
       )
       serialized.id = projectId; // Ensure project has the correct ID
       
-      // Capture thumbnail
-      let thumbnailId: string | undefined = undefined;
-      
-      // Request thumbnail capture
-      setCaptureRequested(true);
-      
-      // Wait for thumbnail capture
-      await new Promise(resolve => {
-        const checkInterval = setInterval(() => {
-          if (capturedThumbnail !== null) {
-            clearInterval(checkInterval);
-            resolve(true);
-          }
-        }, 100);
-      });
-      
-      // Upload thumbnail if captured successfully
-      if (capturedThumbnail && capturedThumbnail !== '') {
-        try {
-          console.log('Uploading thumbnail...');
-          const result = await uploadProjectThumbnail(
-            capturedThumbnail,
-            projectId
-          );
-          thumbnailId = result || undefined;
-          console.log('Thumbnail uploaded:', thumbnailId);
-        } catch (error) {
-          console.error('Failed to upload thumbnail:', error);
-          // Continue without thumbnail
-        }
-      }
-      
-      // Reset captured thumbnail
-      setCapturedThumbnail(null);
+      // TODO: Thumbnail capture will be implemented later
+      let thumbnailId: string | undefined;
       
       // Check project size
       const jsonString = JSON.stringify(serialized);
@@ -2593,15 +2561,6 @@ export default function AdvancedClay() {
           )}
           
           <Environment preset="studio" />
-          
-          {/* Thumbnail capture component */}
-          <ThumbnailCapture 
-            captureRequested={captureRequested}
-            onCapture={(dataUrl) => {
-              setCapturedThumbnail(dataUrl)
-              setCaptureRequested(false)
-            }}
-          />
         </Suspense>
       </Canvas>
       
