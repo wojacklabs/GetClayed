@@ -60,7 +60,7 @@ function AnimatedClayLogo() {
 
   return (
     <mesh ref={meshRef}>
-      <sphereGeometry args={[0.65, 16, 16]} />
+      <sphereGeometry args={[0.5, 16, 16]} />
       <meshStandardMaterial 
         color="#B8C5D6"
         roughness={0.4}
