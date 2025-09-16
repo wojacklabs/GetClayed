@@ -17,6 +17,7 @@ import {
   Eraser,
   RotateCw,
   Circle,
+  Triangle,
   Square,
   Minus,
   Spline,
@@ -1838,6 +1839,22 @@ export default function AdvancedClay() {
         }
         break
       
+      case 'triangle':
+        if (controlPoints && controlPoints.length === 2) {
+          // Use the size passed from AddClayHelper which uses getScreenConsistentSize
+          const aspect = Math.abs(controlPoints[1].x - controlPoints[0].x) / Math.abs(controlPoints[1].y - controlPoints[0].y)
+          geometry = createDetailedGeometry('triangle', size)
+          // Scale to match aspect ratio
+          if (aspect > 1) {
+            geometry.scale(1, 1 / aspect, 1)
+          } else {
+            geometry.scale(aspect, 1, 1)
+          }
+        } else {
+          geometry = createDetailedGeometry('triangle', size)
+        }
+        break
+      
       case 'circle':
         // Create a detailed circle
         if (controlPoints && controlPoints.length === 2) {
@@ -2864,6 +2881,17 @@ export default function AdvancedClay() {
                       title="Rectangle"
                     >
                       <Square size={16} />
+                    </button>
+                    <button
+                      onClick={() => setSelectedShape('triangle')}
+                      className={`p-2 rounded-lg transition-all ${
+                        selectedShape === 'triangle'
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-white hover:bg-gray-50 text-gray-700'
+                      }`}
+                      title="Triangle"
+                    >
+                      <Triangle size={16} />
                     </button>
                     <button
                       onClick={() => setSelectedShape('circle')}

@@ -19,6 +19,27 @@ export function createDetailedGeometry(shape: string, size: number, thickness: n
       geometry = new THREE.PlaneGeometry(size, size, rectSegments, rectSegments);
       break;
       
+    case 'triangle':
+      // Create a circle and deform it into triangle shape
+      geometry = new THREE.CircleGeometry(size, 32);
+      // Apply triangle deformation
+      const positions = geometry.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const y = positions.getY(i);
+        const angle = Math.atan2(y, x);
+        const radius = Math.sqrt(x * x + y * y);
+        
+        // Triangle shape function
+        const triangleRadius = size / (1.5 + 0.5 * Math.cos(3 * angle));
+        const scale = Math.min(1, triangleRadius / size);
+        
+        positions.setX(i, x * scale);
+        positions.setY(i, y * scale);
+      }
+      geometry.attributes.position.needsUpdate = true;
+      break;
+      
     case 'circle':
       // Already has good vertex density
       geometry = new THREE.CircleGeometry(size, 64);

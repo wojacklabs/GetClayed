@@ -17,6 +17,7 @@ import {
   Eraser,
   RotateCw,
   Circle,
+  Triangle,
   Square,
   Minus,
   Spline,
@@ -58,7 +59,7 @@ interface ClayObject {
   geometry: THREE.BufferGeometry
   position: THREE.Vector3
   color: string
-  shape?: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'
+  shape?: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
   rotation?: THREE.Euler
   scale?: THREE.Vector3
   controlPoints?: THREE.Vector3[] // For line and curve shapes
@@ -823,7 +824,7 @@ function AddClayHelper({
   onHoverPoint
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
-  shape: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'
+  shape: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
   onHoverPoint?: (point: THREE.Vector3 | null) => void
 }) {
   const { camera, raycaster, gl } = useThree()
@@ -997,7 +998,7 @@ function AddClayHelper({
           setIsDraggingCurve(true)
           setCurveControlPoint(point)
         }
-      } else if (shape === 'rectangle' || shape === 'circle') {
+      } else if (shape === 'rectangle' || shape === 'triangle' || shape === 'circle') {
         // 2D shapes use 2 click points
         if (clickPoints.length === 0) {
           setClickPoints([point])
@@ -1044,7 +1045,6 @@ function AddClayHelper({
             const customData = new THREE.Vector3(width, height, depth)
             const size = Math.max(width, height, depth) // This is ignored when using custom dimensions
             onAdd(center, size, 1, new THREE.Euler(), [customData])
-          }
           setClickPoints([])
           setShapeHeight(2) // Reset height
         }
@@ -1277,8 +1277,8 @@ function AddClayHelper({
     )
   }
   
-  // Render for 2D shapes (rectangle, circle)
-  else if (shape === 'rectangle' || shape === 'circle') {
+  // Render for 2D shapes (rectangle, triangle, circle)
+  else if (shape === 'rectangle' || shape === 'triangle' || shape === 'circle') {
     return (
       <>
         {/* Show existing click points */}
@@ -1298,6 +1298,21 @@ function AddClayHelper({
                   Math.abs(currentPoint.x - clickPoints[0].x) || 0.1,
                   Math.abs(currentPoint.y - clickPoints[0].y) || 0.1
                 ]} />
+                <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
+              </mesh>
+            )}
+            {shape === 'triangle' && (
+              <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
+                <shapeGeometry args={[(() => {
+                  const width = Math.abs(currentPoint.x - clickPoints[0].x) || 0.1
+                  const height = Math.abs(currentPoint.y - clickPoints[0].y) || 0.1
+                  const shape = new THREE.Shape()
+                  shape.moveTo(0, -height/2)
+                  shape.lineTo(-width/2, height/2)
+                  shape.lineTo(width/2, height/2)
+                  shape.closePath()
+                  return shape
+                })()]} />
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
               </mesh>
             )}
@@ -1321,7 +1336,7 @@ function AddClayHelper({
     )
   }
   
-  // Render for cube (click method)
+  // Render for tetrahedron and cube (click method)
   else {
     return (
       <>
@@ -1671,7 +1686,7 @@ export default function AdvancedClay() {
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
-  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'>('sphere')
+  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
   const [backgroundColor, setBackgroundColor] = useState('#f0f0f0')
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
@@ -1835,6 +1850,22 @@ export default function AdvancedClay() {
           geometry = new THREE.PlaneGeometry(width, height, rectSegments, rectSegments)
         } else {
           geometry = createDetailedGeometry('rectangle', size)
+        }
+        break
+      
+      case 'triangle':
+        if (controlPoints && controlPoints.length === 2) {
+          // Use the size passed from AddClayHelper which uses getScreenConsistentSize
+          const aspect = Math.abs(controlPoints[1].x - controlPoints[0].x) / Math.abs(controlPoints[1].y - controlPoints[0].y)
+          geometry = createDetailedGeometry('triangle', size)
+          // Scale to match aspect ratio
+          if (aspect > 1) {
+            geometry.scale(1, 1 / aspect, 1)
+          } else {
+            geometry.scale(aspect, 1, 1)
+          }
+        } else {
+          geometry = createDetailedGeometry('triangle', size)
         }
         break
       
@@ -2812,6 +2843,17 @@ export default function AdvancedClay() {
                       <Circle size={16} />
                     </button>
                     <button
+                      onClick={() => setSelectedShape('tetrahedron')}
+                      className={`p-2 rounded-lg transition-all ${
+                        selectedShape === 'tetrahedron'
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-white hover:bg-gray-50 text-gray-700'
+                      }`}
+                      title="Tetrahedron"
+                    >
+                      <Triangle size={16} />
+                    </button>
+                    <button
                       onClick={() => setSelectedShape('cube')}
                       className={`p-2 rounded-lg transition-all ${
                         selectedShape === 'cube'
@@ -2864,6 +2906,17 @@ export default function AdvancedClay() {
                       title="Rectangle"
                     >
                       <Square size={16} />
+                    </button>
+                    <button
+                      onClick={() => setSelectedShape('triangle')}
+                      className={`p-2 rounded-lg transition-all ${
+                        selectedShape === 'triangle'
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-white hover:bg-gray-50 text-gray-700'
+                      }`}
+                      title="Triangle"
+                    >
+                      <Triangle size={16} />
                     </button>
                     <button
                       onClick={() => setSelectedShape('circle')}

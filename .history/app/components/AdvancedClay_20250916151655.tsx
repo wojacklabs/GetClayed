@@ -17,6 +17,7 @@ import {
   Eraser,
   RotateCw,
   Circle,
+  Triangle,
   Square,
   Minus,
   Spline,
