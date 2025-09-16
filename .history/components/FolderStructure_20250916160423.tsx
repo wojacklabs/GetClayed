@@ -289,16 +289,7 @@ export default function FolderStructure({
   };
 
   const handleCreateFolder = async (parentId: string) => {
-    setFolderModalParentId(parentId);
-    setFolderModalName('');
-    setShowFolderModal(true);
-    setContextMenu(null);
-  };
-
-  const handleCreateFolderConfirm = async () => {
-    const folderName = folderModalName.trim();
-    const parentId = folderModalParentId;
-    
+    const folderName = prompt('New folder name:');
     if (folderName && walletAddress) {
       const path = parentId === 'root' ? folderName : `${parentId}/${folderName}`;
       
@@ -350,25 +341,12 @@ export default function FolderStructure({
           return next;
         });
       }
-      
-      // Close modal
-      setShowFolderModal(false);
-      setFolderModalName('');
     }
-  };
-
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteItem, setDeleteItem] = useState<FolderNode | null>(null);
-
-  const handleDelete = async (item: FolderNode) => {
-    setDeleteItem(item);
-    setShowDeleteModal(true);
     setContextMenu(null);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (deleteItem && walletAddress) {
-      const item = deleteItem;
+  const handleDelete = async (item: FolderNode) => {
+    if (confirm(`Delete ${item.name}?`)) {
       if (item.type === 'folder' && walletAddress) {
         // Remove from local storage
         removeLocalFolder(walletAddress, item.id);
@@ -418,12 +396,8 @@ export default function FolderStructure({
         queryCache.delete(`projects-${walletAddress}`);
         fetchProjects();
       }
-      
-      // Close modal
-      setShowDeleteModal(false);
-      setDeleteItem(null);
-      showPopup(`${item.name} deleted successfully`, 'success');
     }
+    setContextMenu(null);
   };
 
   const handleRename = (item: FolderNode) => {
@@ -750,79 +724,6 @@ export default function FolderStructure({
               Delete
             </button>
           )}
-        </div>
-      )}
-      
-      {/* Create Folder Modal */}
-      {showFolderModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">New Folder</h3>
-            <input
-              type="text"
-              value={folderModalName}
-              onChange={(e) => setFolderModalName(e.target.value)}
-              placeholder="Enter folder name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && folderModalName.trim()) {
-                  handleCreateFolderConfirm();
-                } else if (e.key === 'Escape') {
-                  setShowFolderModal(false);
-                  setFolderModalName('');
-                }
-              }}
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => {
-                  setShowFolderModal(false);
-                  setFolderModalName('');
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateFolderConfirm}
-                disabled={!folderModalName.trim()}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && deleteItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete "{deleteItem.name}"?
-              {deleteItem.type === 'folder' && ' This will also delete all items inside this folder.'}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteItem(null);
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
