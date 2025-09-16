@@ -14,62 +14,6 @@ import * as THREE from 'three'
 
 const SimpleClay = dynamic(() => import('@/components/SimpleClay'), { ssr: false })
 
-// Animated Clay Logo Component
-function AnimatedClayLogo() {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const originalPositions = useRef<Float32Array | null>(null)
-
-  useFrame((state) => {
-    if (!meshRef.current) return
-    
-    const geometry = meshRef.current.geometry as THREE.BufferGeometry
-    const positionAttribute = geometry.getAttribute('position')
-    
-    // Store original positions on first frame
-    if (!originalPositions.current) {
-      originalPositions.current = new Float32Array(positionAttribute.array)
-    }
-    
-    // Rotate slowly
-    meshRef.current.rotation.y += 0.01
-    
-    // Apply organic deformation
-    const time = state.clock.elapsedTime
-    const vertex = new THREE.Vector3()
-    const originalVertex = new THREE.Vector3()
-    
-    for (let i = 0; i < positionAttribute.count; i++) {
-      originalVertex.fromArray(originalPositions.current, i * 3)
-      
-      // Multiple wave frequencies for organic motion
-      const wave1 = Math.sin(originalVertex.x * 3 + time * 1.5) * 0.02
-      const wave2 = Math.sin(originalVertex.y * 4 + time * 1.8) * 0.015
-      const wave3 = Math.sin(originalVertex.z * 2 + time * 1.2) * 0.025
-      
-      // Combine waves for organic movement
-      vertex.x = originalVertex.x + wave2 + wave3
-      vertex.y = originalVertex.y + wave1 + wave3
-      vertex.z = originalVertex.z + wave1 + wave2
-      
-      positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z)
-    }
-    
-    positionAttribute.needsUpdate = true
-    geometry.computeVertexNormals()
-  })
-
-  return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[0.5, 16, 16]} />
-      <meshStandardMaterial 
-        color="#B8C5D6"
-        roughness={0.4}
-        metalness={0.1}
-      />
-    </mesh>
-  )
-}
-
 interface Project {
   id: string
   name: string
@@ -297,19 +241,7 @@ export default function HomePage() {
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10">
-                <Canvas
-                  camera={{ position: [0, 0, 2], fov: 50 }}
-                  style={{ background: 'transparent' }}
-                >
-                  <Suspense fallback={null}>
-                    <ambientLight intensity={0.5} />
-                    <directionalLight position={[5, 5, 5]} intensity={0.5} />
-                    <AnimatedClayLogo />
-                  </Suspense>
-                </Canvas>
-              </div>
+            <div className="flex items-center">
               <h1 className="text-xl font-bold text-gray-900">GetClayed</h1>
             </div>
             
