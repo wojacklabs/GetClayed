@@ -315,6 +315,7 @@ export async function downloadChunks(
  * Create a manifest for chunked upload
  */
 export async function uploadChunkManifest(
+  irysUploader: any,
   projectId: string,
   projectName: string,
   chunkSetId: string,

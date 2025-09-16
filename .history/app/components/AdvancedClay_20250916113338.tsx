@@ -32,6 +32,7 @@ import {
 import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
+import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject, uploadProjectThumbnail, downloadProjectThumbnail } from '../../lib/clayStorageService'
 import { captureSceneThumbnail, compressImageDataUrl } from '../../lib/thumbnailService'
 import { getUploadPrice, payForUpload } from '../../lib/contractService'
@@ -1734,6 +1735,7 @@ export default function AdvancedClay() {
   } | null>(null)
   const [projects, setProjects] = useState<Array<{ id: string; tags: Record<string, string> }>>([])
   const [currentFolder, setCurrentFolder] = useState('')
+  const [irysUploader, setIrysUploader] = useState<any>(null)
   const [chunkUploadProgress, setChunkUploadProgress] = useState<ChunkProgressType & { isOpen: boolean; projectName: string }>({
     currentChunk: 0,
     totalChunks: 0,
@@ -1799,6 +1801,23 @@ export default function AdvancedClay() {
     addToHistory([initialClay])
   }, [])
 
+  // Initialize Irys when wallet is connected
+  useEffect(() => {
+    async function initIrys() {
+      if (walletAddress) {
+        try {
+          const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+          if (provider) {
+            const uploader = await createIrysUploader(provider)
+            setIrysUploader(uploader)
+          }
+        } catch (error) {
+          console.error('Failed to initialize Irys:', error)
+        }
+      }
+    }
+    initIrys()
+  }, [walletAddress])
   
   const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
@@ -1978,6 +1997,24 @@ export default function AdvancedClay() {
       return
     }
     
+    // Ensure Irys uploader is initialized
+    let uploader = irysUploader
+    if (!uploader) {
+      try {
+        console.log('Irys uploader not ready, initializing...')
+        const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+        if (!provider) {
+          showPopup('No wallet provider found', 'error')
+          return
+        }
+        uploader = await createIrysUploader(provider)
+        setIrysUploader(uploader)
+      } catch (error) {
+        console.error('Failed to initialize Irys uploader:', error)
+        showPopup('Failed to initialize Irys uploader. Please try again.', 'error')
+        return
+      }
+    }
 
     try {
       console.log('Saving project:', projectName, 'saveAs:', saveAs)
@@ -2091,6 +2128,7 @@ export default function AdvancedClay() {
       let uploadResult;
       try {
         uploadResult = await uploadClayProject(
+          uploader,
           serialized,
           currentFolder,
           rootTxId,
@@ -2239,7 +2277,7 @@ export default function AdvancedClay() {
 
   const handleProjectDelete = async (projectId: string) => {
     try {
-      if (!walletAddress) {
+      if (!irysUploader || !walletAddress) {
         showPopup('Please connect your wallet first', 'warning')
         return
       }
@@ -2611,9 +2649,23 @@ export default function AdvancedClay() {
             <ConnectWallet 
               onConnect={async (address) => {
                 setWalletAddress(address)
+                
+                // Initialize Irys uploader immediately after wallet connection
+                try {
+                  console.log('Initializing Irys uploader...')
+                  const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+                  if (provider) {
+                    const uploader = await createIrysUploader(provider)
+                    setIrysUploader(uploader)
+                    console.log('Irys uploader initialized successfully')
+                  }
+                } catch (error) {
+                  console.error('Failed to initialize Irys uploader:', error)
+                }
               }}
               onDisconnect={() => {
                 setWalletAddress(null)
+                setIrysUploader(null)
               }}
             />
           </div>

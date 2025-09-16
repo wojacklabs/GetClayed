@@ -32,6 +32,7 @@ import {
 import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
+import { createIrysUploader, uploadToIrys } from '../../lib/irys'
 import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject, uploadProjectThumbnail, downloadProjectThumbnail } from '../../lib/clayStorageService'
 import { captureSceneThumbnail, compressImageDataUrl } from '../../lib/thumbnailService'
 import { getUploadPrice, payForUpload } from '../../lib/contractService'
@@ -1734,6 +1735,7 @@ export default function AdvancedClay() {
   } | null>(null)
   const [projects, setProjects] = useState<Array<{ id: string; tags: Record<string, string> }>>([])
   const [currentFolder, setCurrentFolder] = useState('')
+  const [irysUploader, setIrysUploader] = useState<any>(null)
   const [chunkUploadProgress, setChunkUploadProgress] = useState<ChunkProgressType & { isOpen: boolean; projectName: string }>({
     currentChunk: 0,
     totalChunks: 0,
@@ -1799,6 +1801,23 @@ export default function AdvancedClay() {
     addToHistory([initialClay])
   }, [])
 
+  // Initialize Irys when wallet is connected
+  useEffect(() => {
+    async function initIrys() {
+      if (walletAddress) {
+        try {
+          const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+          if (provider) {
+            const uploader = await createIrysUploader(provider)
+            setIrysUploader(uploader)
+          }
+        } catch (error) {
+          console.error('Failed to initialize Irys:', error)
+        }
+      }
+    }
+    initIrys()
+  }, [walletAddress])
   
   const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
@@ -1978,6 +1997,24 @@ export default function AdvancedClay() {
       return
     }
     
+    // Ensure Irys uploader is initialized
+    let uploader = irysUploader
+    if (!uploader) {
+      try {
+        console.log('Irys uploader not ready, initializing...')
+        const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+        if (!provider) {
+          showPopup('No wallet provider found', 'error')
+          return
+        }
+        uploader = await createIrysUploader(provider)
+        setIrysUploader(uploader)
+      } catch (error) {
+        console.error('Failed to initialize Irys uploader:', error)
+        showPopup('Failed to initialize Irys uploader. Please try again.', 'error')
+        return
+      }
+    }
 
     try {
       console.log('Saving project:', projectName, 'saveAs:', saveAs)
@@ -2027,63 +2064,58 @@ export default function AdvancedClay() {
         );
       }
 
-      // Step 2: Pay service fee via smart contract first (only for new projects)
-      const isNewProject = !rootTxId;
-      if (isNewProject) {
-        try {
-          // Get wallet provider (like IrysDune)
-          let provider = null;
-          if (typeof (window as any).ethereum !== 'undefined') {
-            provider = (window as any).ethereum;
-          } else if (typeof (window as any).okxwallet !== 'undefined') {
-            provider = (window as any).okxwallet;
-          } else if (typeof (window as any).web3 !== 'undefined' && (window as any).web3.currentProvider) {
-            provider = (window as any).web3.currentProvider;
-          }
-          
-          if (!provider) {
-            showPopup('No wallet provider found. Please install MetaMask, OKX Wallet, or another Ethereum wallet.', 'error');
-            return;
-          }
-          
-          console.log('[AdvancedClay] Found wallet provider:', provider);
-          
-          // Request wallet connection if needed
-          try {
-            const accounts = await provider.request({ method: 'eth_accounts' });
-            if (!accounts || accounts.length === 0) {
-              console.log('[AdvancedClay] No connected accounts, requesting connection...');
-              await provider.request({ method: 'eth_requestAccounts' });
-            }
-          } catch (connectError) {
-            console.error('[AdvancedClay] Wallet connection error:', connectError);
-            showPopup('Failed to connect wallet. Please try again.', 'error');
-            return;
-          }
-          
-          console.log('Paying service fee via smart contract...')
-          const paymentTx = await payForUpload(provider)
-          console.log('Service fee payment transaction:', paymentTx)
-          
-          showPopup(`Service fee paid successfully! TX: ${paymentTx}`, 'success')
-        } catch (error: any) {
-          console.error('Service fee payment failed:', error)
-          if (error?.message?.includes('User rejected')) {
-            showPopup('Transaction cancelled by user', 'info')
-            return
-          } else if (error?.message?.includes('Not connected to Irys testnet')) {
-            showPopup('Please switch to Irys testnet network in your wallet.', 'warning')
-            return
-          } else if (error?.message?.includes('Insufficient funds')) {
-            showPopup(error.message, 'error')
-            return
-          } else {
-            showPopup('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.', 'error')
-            return
-          }
+      // Step 2: Pay service fee via smart contract first (like IrysDune)
+      try {
+        // Get wallet provider (like IrysDune)
+        let provider = null;
+        if (typeof (window as any).ethereum !== 'undefined') {
+          provider = (window as any).ethereum;
+        } else if (typeof (window as any).okxwallet !== 'undefined') {
+          provider = (window as any).okxwallet;
+        } else if (typeof (window as any).web3 !== 'undefined' && (window as any).web3.currentProvider) {
+          provider = (window as any).web3.currentProvider;
         }
-      } else {
-        console.log('Updating existing project - no service fee required');
+        
+        if (!provider) {
+          showPopup('No wallet provider found. Please install MetaMask, OKX Wallet, or another Ethereum wallet.', 'error');
+          return;
+        }
+        
+        console.log('[AdvancedClay] Found wallet provider:', provider);
+        
+        // Request wallet connection if needed
+        try {
+          const accounts = await provider.request({ method: 'eth_accounts' });
+          if (!accounts || accounts.length === 0) {
+            console.log('[AdvancedClay] No connected accounts, requesting connection...');
+            await provider.request({ method: 'eth_requestAccounts' });
+          }
+        } catch (connectError) {
+          console.error('[AdvancedClay] Wallet connection error:', connectError);
+          showPopup('Failed to connect wallet. Please try again.', 'error');
+          return;
+        }
+        
+        console.log('Paying service fee via smart contract...')
+        const paymentTx = await payForUpload(provider)
+        console.log('Service fee payment transaction:', paymentTx)
+        
+        showPopup(`Service fee paid successfully! TX: ${paymentTx}`, 'success')
+      } catch (error: any) {
+        console.error('Service fee payment failed:', error)
+        if (error?.message?.includes('User rejected')) {
+          showPopup('Transaction cancelled by user', 'info')
+          return
+        } else if (error?.message?.includes('Not connected to Irys testnet')) {
+          showPopup('Please switch to Irys testnet network in your wallet.', 'warning')
+          return
+        } else if (error?.message?.includes('Insufficient funds')) {
+          showPopup(error.message, 'error')
+          return
+        } else {
+          showPopup('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.', 'error')
+          return
+        }
       }
 
       // Step 3: Upload to Irys (no payment needed for free tier)
@@ -2091,6 +2123,7 @@ export default function AdvancedClay() {
       let uploadResult;
       try {
         uploadResult = await uploadClayProject(
+          uploader,
           serialized,
           currentFolder,
           rootTxId,
@@ -2239,7 +2272,7 @@ export default function AdvancedClay() {
 
   const handleProjectDelete = async (projectId: string) => {
     try {
-      if (!walletAddress) {
+      if (!irysUploader || !walletAddress) {
         showPopup('Please connect your wallet first', 'warning')
         return
       }
@@ -2247,7 +2280,7 @@ export default function AdvancedClay() {
       console.log('Deleting project:', projectId)
       
       // Upload deletion marker
-      const deletionId = await deleteClayProject(projectId, walletAddress)
+      const deletionId = await deleteClayProject(irysUploader, projectId, walletAddress)
       console.log('Deletion marker created:', deletionId)
       
       // Clear cache to refresh list
@@ -2257,29 +2290,6 @@ export default function AdvancedClay() {
     } catch (error) {
       console.error('Failed to delete project:', error)
       showPopup('Failed to delete project. Please try again.', 'error')
-    }
-  }
-
-  const handleProjectRename = async (projectId: string, newName: string) => {
-    try {
-      if (!walletAddress) {
-        showPopup('Please connect your wallet first', 'warning')
-        return
-      }
-      
-      console.log('Renaming project:', projectId, 'to', newName)
-      
-      // If this is the current project, update its name and save
-      if (currentProjectInfo && currentProjectInfo.projectId === projectId) {
-        await handleSaveProject(newName, false);
-        showPopup('Project renamed successfully!', 'success');
-      } else {
-        // For other projects, we need to load, rename, and save
-        showPopup('Please open the project to rename it', 'info');
-      }
-    } catch (error) {
-      console.error('Failed to rename project:', error)
-      showPopup('Failed to rename project. Please try again.', 'error')
     }
   }
 
@@ -2611,9 +2621,23 @@ export default function AdvancedClay() {
             <ConnectWallet 
               onConnect={async (address) => {
                 setWalletAddress(address)
+                
+                // Initialize Irys uploader immediately after wallet connection
+                try {
+                  console.log('Initializing Irys uploader...')
+                  const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+                  if (provider) {
+                    const uploader = await createIrysUploader(provider)
+                    setIrysUploader(uploader)
+                    console.log('Irys uploader initialized successfully')
+                  }
+                } catch (error) {
+                  console.error('Failed to initialize Irys uploader:', error)
+                }
               }}
               onDisconnect={() => {
                 setWalletAddress(null)
+                setIrysUploader(null)
               }}
             />
           </div>

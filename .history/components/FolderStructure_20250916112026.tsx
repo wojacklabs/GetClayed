@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderPlus, FileText, MoreVertical, Trash2, Edit2, RefreshCw, Loader2 } from 'lucide-react';
 import { getUserFolderStructure } from '../lib/clayStorageService';
 import { queryCache } from '../lib/queryCache';
@@ -219,11 +219,7 @@ export default function FolderStructure({
 
   // Navigate into a folder
   const navigateToFolder = (folderId: string) => {
-    if (currentPath === 'root') {
-      setCurrentPath(folderId);
-    } else {
-      setCurrentPath(`${currentPath}/${folderId}`);
-    }
+    setCurrentPath(folderId);
   };
 
   // Navigate to parent folder
@@ -488,29 +484,11 @@ export default function FolderStructure({
   };
 
   const renderFolderGrid = () => {
-    const currentNode = getCurrentFolderNode();
-    const folders = currentNode.children?.filter(item => item.type === 'folder') || [];
-    const files = currentNode.children?.filter(item => item.type === 'file') || [];
+    const folders = folderTree.children?.filter(item => item.type === 'folder') || [];
+    const files = folderTree.children?.filter(item => item.type === 'file') || [];
     
     return (
       <div className="flex gap-3 min-w-max">
-        {/* Parent folder navigation (if not in root) */}
-        {currentPath !== 'root' && (
-          <div
-            className="flex flex-col items-center cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            onClick={navigateToParent}
-          >
-            <div className="mb-1">
-              <svg width="36" height="29" viewBox="0 0 80 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 8C0 3.58172 3.58172 0 8 0H26.7639C28.5215 0 30.2135 0.632141 31.5279 1.78885L35.7082 5.57771C37.0226 6.73442 38.7146 7.36656 40.4721 7.36656H72C76.4183 7.36656 80 10.9483 80 15.3666V56C80 60.4183 76.4183 64 72 64H8C3.58172 64 0 60.4183 0 56V8Z" fill="#9CA3AF"/>
-                <path d="M0 20C0 15.5817 3.58172 12 8 12H72C76.4183 12 80 15.5817 80 20V56C80 60.4183 76.4183 64 72 64H8C3.58172 64 0 60.4183 0 56V20Z" fill="#D1D5DB"/>
-                <text x="40" y="40" textAnchor="middle" fontSize="20" fill="#4B5563">...</text>
-              </svg>
-            </div>
-            <span className="text-xs text-gray-700 text-center w-16 truncate">...</span>
-          </div>
-        )}
-        
         {/* Folders */}
         {folders.map(folder => (
           <div
@@ -520,7 +498,7 @@ export default function FolderStructure({
             } ${dragOverFolder === folder.id ? 'bg-blue-50 ring-2 ring-blue-300' : ''}`}
             onClick={() => {
               setSelectedItem(folder.id);
-              navigateToFolder(folder.id);
+              toggleFolder(folder.id);
             }}
             onDragOver={(e) => handleDragOver(e, folder)}
             onDragLeave={handleDragLeave}
@@ -644,7 +622,7 @@ export default function FolderStructure({
             <RefreshCw size={14} />
           </button>
           <button
-            onClick={() => handleCreateFolder(currentPath)}
+            onClick={() => handleCreateFolder('root')}
             className="p-1 hover:bg-gray-100 rounded"
             title="New Folder"
           >
@@ -652,46 +630,6 @@ export default function FolderStructure({
           </button>
         </div>
       </div>
-      
-      {/* Breadcrumb Navigation */}
-      {currentPath !== 'root' && (
-        <div className="px-3 py-1 border-b border-gray-100">
-          <div className="flex items-center gap-1 text-xs text-gray-600">
-            <button
-              onClick={() => setCurrentPath('root')}
-              className="hover:text-blue-600 cursor-pointer"
-            >
-              My Projects
-            </button>
-            {currentPath.split('/').map((part, index, arr) => {
-              const path = arr.slice(0, index + 1).join('/');
-              // Find the folder node by traversing the tree
-              let node = folderTree;
-              let folderName = part;
-              for (let i = 0; i <= index; i++) {
-                const found = node.children?.find(c => c.id === arr[i]);
-                if (found && found.type === 'folder') {
-                  node = found;
-                  if (i === index) {
-                    folderName = found.name;
-                  }
-                }
-              }
-              return (
-                <React.Fragment key={path}>
-                  <span className="text-gray-400">/</span>
-                  <button
-                    onClick={() => setCurrentPath(path)}
-                    className="hover:text-blue-600 cursor-pointer"
-                  >
-                    {folderName}
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
-      )}
       
       <div className="flex items-start justify-center py-4 px-2 overflow-x-auto">
         {renderFolderGrid()}

@@ -338,7 +338,7 @@ export default function HomePage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4 text-gray-900">Authors</h2>
           {loading ? (
-            <div className="flex gap-6 overflow-x-auto pb-4 px-2 -mx-2">
+            <div className="flex gap-4 overflow-x-auto">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="flex-shrink-0">
                   <div className="w-20 h-20 bg-gray-200 rounded-full animate-pulse mb-2" />

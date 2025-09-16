@@ -169,6 +169,9 @@ export async function uploadProjectThumbnail(
   projectId: string
 ): Promise<string | null> {
   try {
+    const uploader = await createIrysUploader();
+    if (!uploader) return null;
+    
     // Convert data URL to buffer
     const base64Data = thumbnailDataUrl.split(',')[1];
     const buffer = Buffer.from(base64Data, 'base64');
@@ -181,7 +184,7 @@ export async function uploadProjectThumbnail(
       { name: 'Project-ID', value: projectId }
     ];
     
-    const receipt = await fixedKeyUploader.upload(buffer, tags);
+    const receipt = await uploader.upload(buffer, { tags });
     return receipt.id;
   } catch (error) {
     console.error('[ClayStorage] Error uploading thumbnail:', error);

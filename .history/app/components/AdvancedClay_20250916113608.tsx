@@ -2611,9 +2611,23 @@ export default function AdvancedClay() {
             <ConnectWallet 
               onConnect={async (address) => {
                 setWalletAddress(address)
+                
+                // Initialize Irys uploader immediately after wallet connection
+                try {
+                  console.log('Initializing Irys uploader...')
+                  const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
+                  if (provider) {
+                    const uploader = await createIrysUploader(provider)
+                    setIrysUploader(uploader)
+                    console.log('Irys uploader initialized successfully')
+                  }
+                } catch (error) {
+                  console.error('Failed to initialize Irys uploader:', error)
+                }
               }}
               onDisconnect={() => {
                 setWalletAddress(null)
+                setIrysUploader(null)
               }}
             />
           </div>

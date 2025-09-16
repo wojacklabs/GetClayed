@@ -644,7 +644,7 @@ export default function FolderStructure({
             <RefreshCw size={14} />
           </button>
           <button
-            onClick={() => handleCreateFolder(currentPath)}
+            onClick={() => handleCreateFolder('root')}
             className="p-1 hover:bg-gray-100 rounded"
             title="New Folder"
           >
