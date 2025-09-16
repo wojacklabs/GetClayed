@@ -77,69 +77,61 @@ function Scene({ scale }: { scale: number }) {
 
 export default function SimpleClay() {
   const [scale, setScale] = useState(1)
-  const minScale = 0.3
-  const maxScale = 3
+  const minScale = 0.5
+  const maxScale = 2
   
   const handleScaleChange = (delta: number) => {
     setScale(prev => Math.max(minScale, Math.min(maxScale, prev + delta)))
   }
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
-      <div className="p-6 pb-0">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Clay</h2>
-          
-          {/* Controls in header */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 mr-2">Push / Pull:</span>
-            <button
-              onClick={() => handleScaleChange(-0.2)}
-              disabled={scale <= minScale}
-              className={`p-1.5 rounded transition-all ${
-                scale <= minScale 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
-              title="Push (Shrink)"
-            >
-              <ZoomOut size={16} />
-            </button>
-            
-            <span className="text-xs text-gray-600 min-w-[50px] text-center font-mono">
-              {(scale * 100).toFixed(0)}%
-            </span>
-            
-            <button
-              onClick={() => handleScaleChange(0.2)}
-              disabled={scale >= maxScale}
-              className={`p-1.5 rounded transition-all ${
-                scale >= maxScale 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
-              title="Pull (Grow)"
-            >
-              <ZoomIn size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+      <h2 className="text-lg font-semibold mb-4 text-gray-900">Clay</h2>
       
-      {/* Full width canvas */}
-      <div className="w-full h-80 bg-gradient-to-b from-gray-50 to-gray-100 relative">
-        <Canvas 
-          camera={{ position: [4, 3, 5], fov: 50 }}
-          shadows
-        >
-          <Scene scale={scale} />
-        </Canvas>
-        
-        {/* Instruction overlay */}
-        <div className="absolute bottom-4 left-4 flex items-center gap-2 text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-3 py-2 rounded-lg">
-          <Move3d size={14} />
-          <span>Click and drag to rotate</span>
+      <div className="flex flex-col items-center">
+        {/* 3D Canvas */}
+        <div className="w-64 h-64 mb-4 rounded-lg overflow-hidden bg-gray-50 border border-gray-200">
+          <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+            <Scene scale={scale} />
+          </Canvas>
         </div>
+        
+        {/* Controls */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => handleScaleChange(-0.1)}
+            disabled={scale <= minScale}
+            className={`p-2 rounded-lg transition-all ${
+              scale <= minScale 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+            title="Shrink"
+          >
+            <Minus size={20} />
+          </button>
+          
+          <div className="text-sm text-gray-600 min-w-[80px] text-center">
+            Size: {(scale * 100).toFixed(0)}%
+          </div>
+          
+          <button
+            onClick={() => handleScaleChange(0.1)}
+            disabled={scale >= maxScale}
+            className={`p-2 rounded-lg transition-all ${
+              scale >= maxScale 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+            title="Grow"
+          >
+            <Plus size={20} />
+          </button>
+        </div>
+        
+        <p className="text-xs text-gray-500 mt-4 text-center">
+          Click and drag to rotate • Use buttons to resize
+        </p>
       </div>
     </div>
   )
