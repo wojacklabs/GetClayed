@@ -1210,7 +1210,7 @@ function AddClayHelper({
       // Show small preview at cursor
       return (
         <mesh position={dragEnd}>
-          <sphereGeometry args={[getConstantScreenSize(dragEnd, 12), 16, 16]} />
+          <sphereGeometry args={[0.1, 16, 16]} />
           <meshPhongMaterial color="#888888" opacity={0.3} transparent />
         </mesh>
       )
