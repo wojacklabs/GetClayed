@@ -428,15 +428,6 @@ export default function SimpleClay() {
             </>
           )}
         </div>
-        
-        {/* Continue creating button */}
-        <button
-          onClick={handleContinueCreating}
-          className="absolute bottom-4 right-4 p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg transition-all hover:scale-110 group"
-          title="Continue creating in project editor"
-        >
-          <ArrowRight size={20} className="transition-transform group-hover:translate-x-0.5" />
-        </button>
       </div>
     </div>
   )
