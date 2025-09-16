@@ -2467,8 +2467,8 @@ export default function AdvancedClay() {
       )}
       
       {/* Main content area with Canvas */}
-      <div className="flex-1 relative overflow-hidden">
-        <Canvas 
+      <div className="flex-1 relative overflow-hidden flex flex-col">
+      <Canvas 
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
