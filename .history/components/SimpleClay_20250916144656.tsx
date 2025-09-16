@@ -383,7 +383,7 @@ export default function SimpleClay() {
           ) : (
             <>
               <MousePointer size={14} />
-              <span>Click and drag on clay • Drag up to pull, down to push</span>
+              <span>Click and drag on clay to {tool}</span>
             </>
           )}
         </div>

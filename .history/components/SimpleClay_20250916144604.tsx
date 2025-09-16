@@ -73,7 +73,7 @@ function Clay({
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return
       
-      if (tool !== 'push' && tool !== 'pull' && tool !== 'deform') return
+      if (tool !== 'push' && tool !== 'pull') return
       if (!meshRef.current) return
       
       updateMousePosition(e)
@@ -198,16 +198,9 @@ function Clay({
     
     // Update vertices based on their distance from hit point
     for (const v of dragState.current.vertices) {
-      if (tool === 'push' || tool === 'pull' || tool === 'deform') {
-        // For deform mode, use mouse movement direction to determine push/pull
-        let direction = 1
-        if (tool === 'pull') {
-          direction = -1
-        } else if (tool === 'deform') {
-          // Determine direction based on mouse movement
-          const mouseDelta = dragState.current.mousePos.clone().sub(dragState.current.initialMousePos)
-          direction = mouseDelta.y > 0 ? -1 : 1 // Moving up = pull, down = push
-        }
+      if (tool === 'push' || tool === 'pull') {
+        // For pull, reverse the movement direction
+        const direction = tool === 'pull' ? -1 : 1
         const movement = movementDelta.clone().multiplyScalar(v.weight * direction)
         const newPos = v.startPos.clone().add(movement)
         positions.setXYZ(v.index, newPos.x, newPos.y, newPos.z)
@@ -239,7 +232,7 @@ function Clay({
         scale={clay.scale || 1}
         userData={{ clayId: clay.id }}
         onPointerMove={(e) => {
-          if ((tool === 'push' || tool === 'pull' || tool === 'deform') && onBrushHover) {
+          if ((tool === 'push' || tool === 'pull') && onBrushHover) {
             onBrushHover(e.point)
           }
         }}
@@ -310,7 +303,7 @@ function Scene({ tool, brushSize }: { tool: string; brushSize: number }) {
       />
       
       {/* Brush guide */}
-      {(tool === 'push' || tool === 'pull' || tool === 'deform') && hoveredPoint && (
+      {(tool === 'push' || tool === 'pull') && hoveredPoint && (
         <BrushGuide position={hoveredPoint} size={brushSize} />
       )}
       
@@ -325,7 +318,7 @@ function Scene({ tool, brushSize }: { tool: string; brushSize: number }) {
 }
 
 export default function SimpleClay() {
-  const [tool, setTool] = useState<'rotate' | 'deform'>('rotate')
+  const [tool, setTool] = useState<'rotate' | 'push' | 'pull'>('rotate')
   const brushSize = 0.8
   
   return (
@@ -338,25 +331,36 @@ export default function SimpleClay() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTool('rotate')}
-              className={`p-3 rounded-lg transition-all ${
+              className={`p-2 rounded transition-all ${
                 tool === 'rotate' 
-                  ? 'bg-gray-800 text-white shadow-md' 
-                  : 'bg-white hover:bg-gray-50 text-gray-700'
+                  ? 'bg-gray-800 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               }`}
               title="Rotate View"
             >
-              <SwitchCamera size={20} />
+              <RotateCw size={16} />
             </button>
             <button
-              onClick={() => setTool('deform')}
-              className={`p-3 rounded-lg transition-all ${
-                tool === 'deform' 
-                  ? 'bg-gray-800 text-white shadow-md' 
-                  : 'bg-white hover:bg-gray-50 text-gray-700'
+              onClick={() => setTool('push')}
+              className={`p-2 rounded transition-all ${
+                tool === 'push' 
+                  ? 'bg-gray-800 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               }`}
-              title="Push & Pull"
+              title="Push Clay"
             >
-              <SplinePointer size={20} />
+              <Circle size={16} />
+            </button>
+            <button
+              onClick={() => setTool('pull')}
+              className={`p-2 rounded transition-all ${
+                tool === 'pull' 
+                  ? 'bg-gray-800 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+              }`}
+              title="Pull Clay"
+            >
+              <Circle size={16} className="scale-125" />
             </button>
           </div>
         </div>
@@ -383,7 +387,7 @@ export default function SimpleClay() {
           ) : (
             <>
               <MousePointer size={14} />
-              <span>Click and drag on clay • Drag up to pull, down to push</span>
+              <span>Click and drag on clay to {tool}</span>
             </>
           )}
         </div>

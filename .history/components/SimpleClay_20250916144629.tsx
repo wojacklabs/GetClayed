@@ -198,16 +198,9 @@ function Clay({
     
     // Update vertices based on their distance from hit point
     for (const v of dragState.current.vertices) {
-      if (tool === 'push' || tool === 'pull' || tool === 'deform') {
-        // For deform mode, use mouse movement direction to determine push/pull
-        let direction = 1
-        if (tool === 'pull') {
-          direction = -1
-        } else if (tool === 'deform') {
-          // Determine direction based on mouse movement
-          const mouseDelta = dragState.current.mousePos.clone().sub(dragState.current.initialMousePos)
-          direction = mouseDelta.y > 0 ? -1 : 1 // Moving up = pull, down = push
-        }
+      if (tool === 'push' || tool === 'pull') {
+        // For pull, reverse the movement direction
+        const direction = tool === 'pull' ? -1 : 1
         const movement = movementDelta.clone().multiplyScalar(v.weight * direction)
         const newPos = v.startPos.clone().add(movement)
         positions.setXYZ(v.index, newPos.x, newPos.y, newPos.z)
@@ -239,7 +232,7 @@ function Clay({
         scale={clay.scale || 1}
         userData={{ clayId: clay.id }}
         onPointerMove={(e) => {
-          if ((tool === 'push' || tool === 'pull' || tool === 'deform') && onBrushHover) {
+          if ((tool === 'push' || tool === 'pull') && onBrushHover) {
             onBrushHover(e.point)
           }
         }}
@@ -310,7 +303,7 @@ function Scene({ tool, brushSize }: { tool: string; brushSize: number }) {
       />
       
       {/* Brush guide */}
-      {(tool === 'push' || tool === 'pull' || tool === 'deform') && hoveredPoint && (
+      {(tool === 'push' || tool === 'pull') && hoveredPoint && (
         <BrushGuide position={hoveredPoint} size={brushSize} />
       )}
       
@@ -383,7 +376,7 @@ export default function SimpleClay() {
           ) : (
             <>
               <MousePointer size={14} />
-              <span>Click and drag on clay • Drag up to pull, down to push</span>
+              <span>Click and drag on clay to {tool}</span>
             </>
           )}
         </div>
