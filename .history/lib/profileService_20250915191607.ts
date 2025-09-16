@@ -1054,7 +1054,9 @@ export async function unfollowUser(followerAddress: string, followingAddress: st
       { name: 'Timestamp', value: unfollow.timestamp.toString() }
     ];
 
-    await fixedKeyUploader.upload(Buffer.from(jsonString), tags);
+    const { createIrysUploader } = await import('./irys');
+    const irysUploader = await createIrysUploader();
+    await uploadToIrys(irysUploader, Buffer.from(jsonString), tags);
     console.log(`[ProfileService] User ${followerAddress} unfollowed ${followingAddress}`);
   } catch (error) {
     console.error('[ProfileService] Error unfollowing user:', error);

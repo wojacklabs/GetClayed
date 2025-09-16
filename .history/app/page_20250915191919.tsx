@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User, Wallet, ChevronDown, LogOut } from 'lucide-react'
 import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
@@ -34,7 +34,6 @@ export default function HomePage() {
   const [followingUsers, setFollowingUsers] = useState<string[]>([])
   const [currentUserProfile, setCurrentUserProfile] = useState<{ displayName?: string; avatarUrl?: string } | null>(null)
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Remove automatic wallet check - rely on ConnectWallet component instead
 
@@ -47,21 +46,7 @@ export default function HomePage() {
 
   useEffect(() => {
     filterAndSortProjects()
-  }, [projects, searchQuery, sortBy, followingUsers])
-
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowProfileDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
+  }, [projects, searchQuery, sortBy])
 
   const loadProjects = async () => {
     try {
@@ -262,7 +247,7 @@ export default function HomePage() {
                   </Link>
                   
                   {/* Profile Button with Dropdown */}
-                  <div className="relative" ref={dropdownRef}>
+                  <div className="relative">
                     <button
                       onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                       className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-md transition-colors"

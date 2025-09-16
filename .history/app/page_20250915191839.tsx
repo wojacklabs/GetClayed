@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User, Wallet, ChevronDown, LogOut } from 'lucide-react'
 import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
@@ -34,7 +34,6 @@ export default function HomePage() {
   const [followingUsers, setFollowingUsers] = useState<string[]>([])
   const [currentUserProfile, setCurrentUserProfile] = useState<{ displayName?: string; avatarUrl?: string } | null>(null)
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Remove automatic wallet check - rely on ConnectWallet component instead
 
@@ -47,21 +46,7 @@ export default function HomePage() {
 
   useEffect(() => {
     filterAndSortProjects()
-  }, [projects, searchQuery, sortBy, followingUsers])
-
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowProfileDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
+  }, [projects, searchQuery, sortBy])
 
   const loadProjects = async () => {
     try {
@@ -155,20 +140,6 @@ export default function HomePage() {
       // TODO: Implement user likes and favorites loading
       setUserLikes([])
       setUserFavorites([])
-      
-      // Load current user's profile
-      const profile = await downloadUserProfile(walletAddress)
-      if (profile) {
-        let avatarDataUrl: string | undefined
-        if (profile.avatarUrl) {
-          const avatar = await downloadProfileAvatar(profile.avatarUrl)
-          if (avatar) avatarDataUrl = avatar
-        }
-        setCurrentUserProfile({
-          displayName: profile.displayName,
-          avatarUrl: avatarDataUrl
-        })
-      }
     } catch (error) {
       console.error('Failed to load user preferences:', error)
     }
@@ -253,6 +224,7 @@ export default function HomePage() {
               
               {walletAddress ? (
                 <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
                   <Link
                     href="/project/new"
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
@@ -260,60 +232,6 @@ export default function HomePage() {
                     <Plus size={16} />
                     <span>New</span>
                   </Link>
-                  
-                  {/* Profile Button with Dropdown */}
-                  <div className="relative" ref={dropdownRef}>
-                    <button
-                      onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                      className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-                    >
-                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                        {currentUserProfile?.avatarUrl ? (
-                          <img 
-                            src={currentUserProfile.avatarUrl} 
-                            alt="Profile" 
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <User size={16} className="text-gray-400" />
-                        )}
-                      </div>
-                      <ChevronDown size={16} className="text-gray-600" />
-                    </button>
-                    
-                    {/* Dropdown Menu */}
-                    {showProfileDropdown && (
-                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
-                        <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">
-                            {currentUserProfile?.displayName || walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4)}
-                          </p>
-                          <p className="text-xs text-gray-500">{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</p>
-                        </div>
-                        
-                        <Link
-                          href={`/user/${walletAddress}`}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <User size={14} className="inline-block mr-2" />
-                          My Profile
-                        </Link>
-                        
-                        <button
-                          onClick={() => {
-                            setWalletAddress(null)
-                            setCurrentUserProfile(null)
-                            setShowProfileDropdown(false)
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors border-t border-gray-100"
-                        >
-                          <LogOut size={14} className="inline-block mr-2" />
-                          Disconnect
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               ) : (
                 <ConnectWallet 

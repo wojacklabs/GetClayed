@@ -262,7 +262,7 @@ export default function HomePage() {
                   </Link>
                   
                   {/* Profile Button with Dropdown */}
-                  <div className="relative" ref={dropdownRef}>
+                  <div className="relative">
                     <button
                       onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                       className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-md transition-colors"
