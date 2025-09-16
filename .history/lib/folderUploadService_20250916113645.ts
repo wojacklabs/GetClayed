@@ -86,8 +86,9 @@ export async function uploadFolderStructure(
       tags.push({ name: 'Root-TX', value: rootTxId });
     }
     
-    // Upload to Irys using fixed key uploader
-    await fixedKeyUploader.upload(Buffer.from(jsonString), tags);
+    // Upload to Irys
+    const irysUploader = await createIrysUploader();
+    await uploadToIrys(irysUploader, Buffer.from(jsonString), tags);
     
     // Wait for transaction to be queryable
     if (onProgress) onProgress('verifying');

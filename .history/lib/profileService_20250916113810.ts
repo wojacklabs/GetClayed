@@ -322,6 +322,7 @@ export async function uploadUserProfile(
     
     // Upload manifest
     transactionId = await uploadChunkManifest(
+      fixedKeyUploader,
       profile.id,
       'user-profile',
       chunkResult.chunkMetadata[0].chunkSetId,

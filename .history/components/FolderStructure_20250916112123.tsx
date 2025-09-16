@@ -219,11 +219,7 @@ export default function FolderStructure({
 
   // Navigate into a folder
   const navigateToFolder = (folderId: string) => {
-    if (currentPath === 'root') {
-      setCurrentPath(folderId);
-    } else {
-      setCurrentPath(`${currentPath}/${folderId}`);
-    }
+    setCurrentPath(folderId);
   };
 
   // Navigate to parent folder
@@ -644,7 +640,7 @@ export default function FolderStructure({
             <RefreshCw size={14} />
           </button>
           <button
-            onClick={() => handleCreateFolder(currentPath)}
+            onClick={() => handleCreateFolder('root')}
             className="p-1 hover:bg-gray-100 rounded"
             title="New Folder"
           >
@@ -665,18 +661,7 @@ export default function FolderStructure({
             </button>
             {currentPath.split('/').map((part, index, arr) => {
               const path = arr.slice(0, index + 1).join('/');
-              // Find the folder node by traversing the tree
-              let node = folderTree;
-              let folderName = part;
-              for (let i = 0; i <= index; i++) {
-                const found = node.children?.find(c => c.id === arr[i]);
-                if (found && found.type === 'folder') {
-                  node = found;
-                  if (i === index) {
-                    folderName = found.name;
-                  }
-                }
-              }
+              const folderName = getCurrentFolderNode().children?.find(c => c.id === part)?.name || part;
               return (
                 <React.Fragment key={path}>
                   <span className="text-gray-400">/</span>
