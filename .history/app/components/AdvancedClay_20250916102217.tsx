@@ -2434,24 +2434,6 @@ export default function AdvancedClay() {
   
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 z-50 flex-shrink-0">
-        <div className="px-4 flex items-center justify-between h-14">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push('/')}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-              title="Back to Home"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <h1 className="text-xl font-bold text-gray-900">Create Project</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Project name can be displayed here if needed */}
-          </div>
-        </div>
-      </header>
       {/* Chunk upload progress dialog */}
       <ChunkUploadProgress 
         isOpen={chunkUploadProgress.isOpen}
