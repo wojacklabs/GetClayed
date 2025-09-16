@@ -20,10 +20,6 @@ export const ConnectWallet = forwardRef<ConnectWalletRef, ConnectWalletProps>(({
   const [isConnecting, setIsConnecting] = useState(false)
   const { showPopup } = usePopup()
 
-  useImperativeHandle(ref, () => ({
-    disconnectWallet
-  }))
-
   useEffect(() => {
     checkConnection()
     setupWalletListeners()
@@ -227,4 +223,4 @@ export const ConnectWallet = forwardRef<ConnectWalletRef, ConnectWalletProps>(({
       )}
     </>
   )
-})
+}

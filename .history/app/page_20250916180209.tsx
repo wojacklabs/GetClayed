@@ -420,13 +420,10 @@ export default function HomePage() {
                 </div>
               ) : (
                 <ConnectWallet 
-                  ref={connectWalletRef}
                   onConnect={(address) => setWalletAddress(address)}
                   onDisconnect={() => {
                     setWalletAddress(null)
                     setCurrentUserProfile(null)
-                    setUserLikes([])
-                    setUserFavorites([])
                   }}
                 />
               )}
