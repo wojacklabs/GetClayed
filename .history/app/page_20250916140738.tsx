@@ -337,9 +337,6 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Clay Demo Section */}
-        <SimpleClay />
-        
         {/* Featured Authors Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4 text-gray-900">Authors</h2>
