@@ -16,7 +16,6 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
   const [loading, setLoading] = useState(false);
   const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
   const [mounted, setMounted] = useState(false);
-  const { showPopup } = usePopup();
 
   useEffect(() => {
     setMounted(true);
@@ -24,7 +23,7 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
 
   const handleClick = async () => {
     if (!isConnected) {
-      showPopup('Please connect your wallet first', 'error');
+      alert('Please connect your wallet first');
       return;
     }
     

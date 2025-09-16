@@ -49,6 +49,7 @@ import { createDetailedGeometry } from '../../lib/geometryUtils'
 import { ChunkUploadProgress } from '../../components/ChunkUploadProgress'
 import { ChunkUploadProgress as ChunkProgressType } from '../../lib/chunkUploadService'
 import { usePopup } from '../../components/PopupNotification'
+import { usePopup } from '../../components/PopupNotification'
 import ProfilePage from '../../components/ProfilePage'
 import ProjectDetailView from '../../components/ProjectDetailView'
 import { downloadUserProfile } from '../../lib/profileService'
@@ -1678,9 +1679,6 @@ export default function AdvancedClay() {
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
   const [cameraRelativeCoords, setCameraRelativeCoords] = useState({ x: 0, y: 0, z: 0 })
   const [cameraResetTrigger, setCameraResetTrigger] = useState(0)
-  const [showExportModal, setShowExportModal] = useState(false)
-  const [exportProjectName, setExportProjectName] = useState('')
-  const [showNewFileModal, setShowNewFileModal] = useState(false)
   
   // Track current project
   const [currentProjectInfo, setCurrentProjectInfo] = useState<{
@@ -2231,12 +2229,8 @@ export default function AdvancedClay() {
   }
 
   const handleExportGLB = async () => {
-    setExportProjectName(currentProjectInfo?.name || 'clay-project')
-    setShowExportModal(true)
-  }
-  
-  const handleExportConfirm = async () => {
-    const projectName = exportProjectName.trim()
+    // TODO: Replace with popup input dialog
+    const projectName = prompt('Enter project name for GLB export:')
     if (!projectName) return
 
     try {
@@ -2244,25 +2238,18 @@ export default function AdvancedClay() {
         author: walletAddress || 'Anonymous',
         description: 'Created with GetClayed'
       })
-      showPopup('GLB file exported successfully', 'success')
     } catch (error) {
       console.error('Failed to export GLB:', error)
       showPopup('Failed to export GLB file', 'error')
     }
-    
-    setShowExportModal(false)
-    setExportProjectName('')
   }
   
   const handleNewFile = () => {
     if (currentProjectInfo?.isDirty) {
-      setShowNewFileModal(true)
-      return
+      if (!confirm('You have unsaved changes. Create a new file anyway?')) {
+        return
+      }
     }
-    createNewFile()
-  }
-  
-  const createNewFile = () => {
     
     // Reset to initial state
     const geometry = new THREE.SphereGeometry(2, detail, detail)
@@ -2285,8 +2272,6 @@ export default function AdvancedClay() {
     setCurrentProject(null)
     setBackgroundColor('#f0f0f0')
     setCurrentFolder('')
-    setShowNewFileModal(false)
-    showPopup('New project created', 'success')
   }
   
   // Move selected clay with keyboard
@@ -2901,75 +2886,6 @@ export default function AdvancedClay() {
       </div>
       
       {/* Coordinate Display Overlay - moved inside Canvas container */}
-      
-      {/* Export GLB Modal */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Export as GLB</h3>
-            <input
-              type="text"
-              value={exportProjectName}
-              onChange={(e) => setExportProjectName(e.target.value)}
-              placeholder="Enter project name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && exportProjectName.trim()) {
-                  handleExportConfirm();
-                } else if (e.key === 'Escape') {
-                  setShowExportModal(false);
-                  setExportProjectName('');
-                }
-              }}
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => {
-                  setShowExportModal(false);
-                  setExportProjectName('');
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleExportConfirm}
-                disabled={!exportProjectName.trim()}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Export
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* New File Confirmation Modal */}
-      {showNewFileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Unsaved Changes</h3>
-            <p className="text-gray-600 mb-6">
-              You have unsaved changes. Create a new file anyway?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowNewFileModal(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createNewFile}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                Create New
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* Popup Notification */}
       <PopupComponent />
