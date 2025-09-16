@@ -2446,7 +2446,6 @@ export default function AdvancedClay() {
           onFolderDelete={handleFolderDelete}
           onProjectRename={handleProjectRename}
           currentFolder={currentFolder}
-          onFolderChange={(folderPath) => setCurrentFolder(folderPath)}
         />
       )}
       

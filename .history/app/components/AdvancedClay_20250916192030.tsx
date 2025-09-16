@@ -2122,10 +2122,20 @@ export default function AdvancedClay() {
       // Close progress dialog if it was open
       setChunkUploadProgress(prev => ({ ...prev, isOpen: false }))
       
-      showPopup(
-        `Project ${result.isUpdate ? 'updated' : 'saved'} successfully!`,
-        'success'
-      )
+      const viewUrl = `https://gateway.irys.xyz/mutable/${result.rootTxId}`;
+      if (result.wasChunked) {
+        showPopup(
+          `Large project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nUploaded in ${chunkUploadProgress.totalChunks} chunks.\nView at: ${viewUrl}`,
+          'success',
+          { autoClose: false }
+        )
+      } else {
+        showPopup(
+          `Project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nView at: ${viewUrl}`,
+          'success',
+          { autoClose: false }
+        )
+      }
       
       // Clear cache to refresh projects list
       queryCache.delete(`projects-${walletAddress}`)
@@ -2446,7 +2456,6 @@ export default function AdvancedClay() {
           onFolderDelete={handleFolderDelete}
           onProjectRename={handleProjectRename}
           currentFolder={currentFolder}
-          onFolderChange={(folderPath) => setCurrentFolder(folderPath)}
         />
       )}
       

@@ -527,8 +527,8 @@ export default function FolderStructure({
     const folders = currentNode.children?.filter(item => item.type === 'folder') || [];
     const files = currentNode.children?.filter(item => item.type === 'file') || [];
     
-    // Show empty folder state (for non-root folders)
-    if (currentPath !== 'root' && folders.length === 0 && files.length === 0) {
+    // If folder is empty, show empty state with parent folder navigation
+    if (folders.length === 0 && files.length === 0 && currentPath !== 'root') {
       return (
         <div className="w-full">
           <div className="flex gap-3 mb-4">
