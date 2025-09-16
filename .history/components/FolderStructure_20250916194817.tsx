@@ -261,10 +261,6 @@ export default function FolderStructure({
       console.log('Looking for:', part, 'Found:', found);
       if (found && found.type === 'folder') {
         currentNode = found;
-        // Ensure the folder has children array
-        if (!currentNode.children) {
-          currentNode.children = [];
-        }
       }
     }
     

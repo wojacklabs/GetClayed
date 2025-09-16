@@ -254,21 +254,13 @@ export default function FolderStructure({
     const pathParts = currentPath.split('/');
     let currentNode = folderTree;
     
-    console.log('getCurrentFolderNode - currentPath:', currentPath, 'pathParts:', pathParts);
-    
     for (const part of pathParts) {
       const found = currentNode.children?.find(child => child.id === part);
-      console.log('Looking for:', part, 'Found:', found);
       if (found && found.type === 'folder') {
         currentNode = found;
-        // Ensure the folder has children array
-        if (!currentNode.children) {
-          currentNode.children = [];
-        }
       }
     }
     
-    console.log('Final currentNode:', currentNode);
     return currentNode;
   };
 
