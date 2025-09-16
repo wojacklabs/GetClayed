@@ -2019,12 +2019,9 @@ export default function AdvancedClay() {
         );
       }
 
-      // Step 2: Pay service fee via smart contract first (only for new projects or save as)
-      // Skip payment for projects under 90KB as they are free
-      const isNewProject = !rootTxId || saveAs;
-      const requiresPayment = isNewProject && sizeInKB >= 90;
-      
-      if (requiresPayment) {
+      // Step 2: Pay service fee via smart contract first (only for new projects)
+      const isNewProject = !rootTxId;
+      if (isNewProject) {
         try {
           // Get wallet provider (like IrysDune)
           let provider = null;
@@ -3007,9 +3004,9 @@ export default function AdvancedClay() {
       {showNewFileModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
           <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
-            <h3 className="text-lg font-semibold mb-4">Create New Project?</h3>
+            <h3 className="text-lg font-semibold mb-4">Unsaved Changes</h3>
             <p className="text-gray-600 mb-6">
-              Creating a new project will reset all current work. Are you sure you want to continue?
+              You have unsaved changes. Create a new file anyway?
             </p>
             <div className="flex justify-end gap-3">
               <button

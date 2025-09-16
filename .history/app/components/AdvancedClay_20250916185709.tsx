@@ -2020,11 +2020,8 @@ export default function AdvancedClay() {
       }
 
       // Step 2: Pay service fee via smart contract first (only for new projects or save as)
-      // Skip payment for projects under 90KB as they are free
       const isNewProject = !rootTxId || saveAs;
-      const requiresPayment = isNewProject && sizeInKB >= 90;
-      
-      if (requiresPayment) {
+      if (isNewProject) {
         try {
           // Get wallet provider (like IrysDune)
           let provider = null;
