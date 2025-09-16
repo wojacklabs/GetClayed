@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState, useEffect, Suspense, useCallback } from 'react'
+import React, { useRef, useState, useEffect, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
@@ -21,7 +21,7 @@ function Clay({
   brushSize: number
   onDeformingChange: (isDeforming: boolean) => void
   onBrushHover?: (point: THREE.Vector3 | null) => void
-  onGeometryUpdate?: (mesh: THREE.Mesh) => void
+  onGeometryUpdate?: () => void
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const groupRef = useRef<THREE.Group>(null)
@@ -148,8 +148,8 @@ function Clay({
         dragState.current.originalGeometry = null
         
         // Notify geometry update
-        if (onGeometryUpdate && meshRef.current) {
-          onGeometryUpdate(meshRef.current)
+        if (onGeometryUpdate) {
+          onGeometryUpdate()
         }
       }
     }
@@ -308,13 +308,14 @@ function Scene({ tool, brushSize, clayRef }: { tool: string; brushSize: number; 
   })
   
   // Update clayRef with current mesh state
-  const updateClayRef = useCallback((mesh: THREE.Mesh) => {
-    clayRef.current = {
-      ...clay,
-      geometry: mesh.geometry.clone(),
-      position: mesh.position.clone(),
-      scale: mesh.scale.x,
-      shape: 'sphere'
+  const updateClayRef = useCallback(() => {
+    if (meshRef.current && clayRef.current) {
+      clayRef.current = {
+        ...clay,
+        geometry: meshRef.current.geometry.clone(),
+        position: meshRef.current.position.clone(),
+        scale: meshRef.current.scale.x
+      }
     }
   }, [clay, clayRef])
   
@@ -338,6 +339,7 @@ function Scene({ tool, brushSize, clayRef }: { tool: string; brushSize: number; 
         onDeformingChange={setIsDeforming}
         onBrushHover={setHoveredPoint}
         onGeometryUpdate={updateClayRef}
+        ref={meshRef}
       />
       
       {/* Brush guide */}

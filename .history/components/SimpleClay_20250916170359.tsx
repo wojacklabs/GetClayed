@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState, useEffect, Suspense, useCallback } from 'react'
+import React, { useRef, useState, useEffect, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
@@ -13,15 +13,13 @@ function Clay({
   tool, 
   brushSize, 
   onDeformingChange,
-  onBrushHover,
-  onGeometryUpdate
+  onBrushHover
 }: {
   clay: { id: string; geometry: THREE.BufferGeometry; position: THREE.Vector3; scale: number | THREE.Vector3; shape: string }
   tool: string
   brushSize: number
   onDeformingChange: (isDeforming: boolean) => void
   onBrushHover?: (point: THREE.Vector3 | null) => void
-  onGeometryUpdate?: (mesh: THREE.Mesh) => void
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const groupRef = useRef<THREE.Group>(null)
@@ -146,11 +144,6 @@ function Clay({
         onDeformingChange(false)
         
         dragState.current.originalGeometry = null
-        
-        // Notify geometry update
-        if (onGeometryUpdate && meshRef.current) {
-          onGeometryUpdate(meshRef.current)
-        }
       }
     }
     
@@ -292,7 +285,6 @@ function BrushGuide({ position, size }: { position: THREE.Vector3; size: number 
 function Scene({ tool, brushSize, clayRef }: { tool: string; brushSize: number; clayRef: React.MutableRefObject<any> }) {
   const [isDeforming, setIsDeforming] = useState(false)
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
-  const meshRef = useRef<THREE.Mesh>(null)
   
   // Create initial clay
   const [clay] = useState(() => {
@@ -307,15 +299,9 @@ function Scene({ tool, brushSize, clayRef }: { tool: string; brushSize: number; 
     }
   })
   
-  // Update clayRef with current mesh state
-  const updateClayRef = useCallback((mesh: THREE.Mesh) => {
-    clayRef.current = {
-      ...clay,
-      geometry: mesh.geometry.clone(),
-      position: mesh.position.clone(),
-      scale: mesh.scale.x,
-      shape: 'sphere'
-    }
+  // Store clay in ref for external access
+  useEffect(() => {
+    clayRef.current = clay
   }, [clay, clayRef])
   
   return (
@@ -331,13 +317,12 @@ function Scene({ tool, brushSize, clayRef }: { tool: string; brushSize: number; 
       />
       <directionalLight position={[-5, 5, -5]} intensity={0.3} />
       
-      <Clay 
+      <Clay
         clay={clay}
         tool={tool}
         brushSize={brushSize}
         onDeformingChange={setIsDeforming}
         onBrushHover={setHoveredPoint}
-        onGeometryUpdate={updateClayRef}
       />
       
       {/* Brush guide */}
