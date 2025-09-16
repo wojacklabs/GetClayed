@@ -17,6 +17,7 @@ import {
   Eraser,
   RotateCw,
   Circle,
+  Triangle,
   Square,
   Minus,
   Spline,
@@ -1301,6 +1302,21 @@ function AddClayHelper({
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
               </mesh>
             )}
+            {shape === 'triangle' && (
+              <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
+                <shapeGeometry args={[(() => {
+                  const width = Math.abs(currentPoint.x - clickPoints[0].x) || 0.1
+                  const height = Math.abs(currentPoint.y - clickPoints[0].y) || 0.1
+                  const shape = new THREE.Shape()
+                  shape.moveTo(0, -height/2)
+                  shape.lineTo(-width/2, height/2)
+                  shape.lineTo(width/2, height/2)
+                  shape.closePath()
+                  return shape
+                })()]} />
+                <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
+              </mesh>
+            )}
             {shape === 'circle' && (
               <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
                 <circleGeometry args={[Math.max(0.5, Math.min(10, getScreenConsistentSize(clickPoints[0], currentPoint))), 32]} />
@@ -1835,6 +1851,22 @@ export default function AdvancedClay() {
           geometry = new THREE.PlaneGeometry(width, height, rectSegments, rectSegments)
         } else {
           geometry = createDetailedGeometry('rectangle', size)
+        }
+        break
+      
+      case 'triangle':
+        if (controlPoints && controlPoints.length === 2) {
+          // Use the size passed from AddClayHelper which uses getScreenConsistentSize
+          const aspect = Math.abs(controlPoints[1].x - controlPoints[0].x) / Math.abs(controlPoints[1].y - controlPoints[0].y)
+          geometry = createDetailedGeometry('triangle', size)
+          // Scale to match aspect ratio
+          if (aspect > 1) {
+            geometry.scale(1, 1 / aspect, 1)
+          } else {
+            geometry.scale(aspect, 1, 1)
+          }
+        } else {
+          geometry = createDetailedGeometry('triangle', size)
         }
         break
       
@@ -2864,6 +2896,17 @@ export default function AdvancedClay() {
                       title="Rectangle"
                     >
                       <Square size={16} />
+                    </button>
+                    <button
+                      onClick={() => setSelectedShape('triangle')}
+                      className={`p-2 rounded-lg transition-all ${
+                        selectedShape === 'triangle'
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-white hover:bg-gray-50 text-gray-700'
+                      }`}
+                      title="Triangle"
+                    >
+                      <Triangle size={16} />
                     </button>
                     <button
                       onClick={() => setSelectedShape('circle')}

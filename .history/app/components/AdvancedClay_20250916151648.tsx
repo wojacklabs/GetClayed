@@ -17,6 +17,7 @@ import {
   Eraser,
   RotateCw,
   Circle,
+  Triangle,
   Square,
   Minus,
   Spline,
@@ -2864,6 +2865,17 @@ export default function AdvancedClay() {
                       title="Rectangle"
                     >
                       <Square size={16} />
+                    </button>
+                    <button
+                      onClick={() => setSelectedShape('triangle')}
+                      className={`p-2 rounded-lg transition-all ${
+                        selectedShape === 'triangle'
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-white hover:bg-gray-50 text-gray-700'
+                      }`}
+                      title="Triangle"
+                    >
+                      <Triangle size={16} />
                     </button>
                     <button
                       onClick={() => setSelectedShape('circle')}
