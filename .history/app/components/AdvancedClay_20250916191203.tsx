@@ -3029,6 +3029,8 @@ export default function AdvancedClay() {
         </div>
       )}
       
+      {/* Popup Notification */}
+      <PopupComponent />
     </div>
   )
 }

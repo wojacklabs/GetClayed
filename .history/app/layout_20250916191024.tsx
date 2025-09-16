@@ -36,9 +36,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <PopupNotificationProvider>
-          {children}
-        </PopupNotificationProvider>
+        {children}
       </body>
     </html>
   );
