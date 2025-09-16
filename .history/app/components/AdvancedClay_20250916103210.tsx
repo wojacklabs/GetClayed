@@ -2569,17 +2569,8 @@ export default function AdvancedClay() {
       <div className="bg-white shadow-lg border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Home, Profile and Connect Wallet */}
+          {/* Left side - Profile and Connect Wallet */}
           <div className="flex items-center gap-2">
-            {/* Home Button */}
-            <button
-              onClick={() => router.push('/')}
-              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
-              title="Home"
-            >
-              <Home size={20} />
-            </button>
-            
             {/* Profile Button */}
             <div className="relative profile-menu-container">
               <button

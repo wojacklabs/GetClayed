@@ -2434,6 +2434,24 @@ export default function AdvancedClay() {
   
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200 z-50 flex-shrink-0">
+        <div className="px-4 flex items-center justify-between h-14">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+              title="Back to Home"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold text-gray-900">Create Project</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Project name can be displayed here if needed */}
+          </div>
+        </div>
+      </header>
       {/* Chunk upload progress dialog */}
       <ChunkUploadProgress 
         isOpen={chunkUploadProgress.isOpen}
@@ -2569,17 +2587,8 @@ export default function AdvancedClay() {
       <div className="bg-white shadow-lg border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Home, Profile and Connect Wallet */}
+          {/* Left side - Profile and Connect Wallet */}
           <div className="flex items-center gap-2">
-            {/* Home Button */}
-            <button
-              onClick={() => router.push('/')}
-              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
-              title="Home"
-            >
-              <Home size={20} />
-            </button>
-            
             {/* Profile Button */}
             <div className="relative profile-menu-container">
               <button
