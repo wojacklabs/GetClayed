@@ -50,7 +50,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
   const [selectedDateDetails, setSelectedDateDetails] = useState<any[]>([])
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
-  const [loadingProfileImage, setLoadingProfileImage] = useState(false)
   const [tempProfileImage, setTempProfileImage] = useState<string | null>(null) // Temporary image before save
   const [isSaving, setIsSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState({
@@ -172,15 +171,12 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
       // Load avatar asynchronously (don't wait)
       if (userProfile.avatarUrl && !tempProfileImage) {
         console.log(`[ProfilePage] Loading avatar with ID: ${userProfile.avatarUrl}`)
-        setLoadingProfileImage(true)
         downloadProfileAvatar(userProfile.avatarUrl).then(avatarImage => {
           if (avatarImage) {
             setProfileImage(avatarImage)
           }
         }).catch(error => {
           console.error('Failed to load avatar:', error)
-        }).finally(() => {
-          setLoadingProfileImage(false)
         })
       }
       
@@ -550,15 +546,13 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             <div className="flex-shrink-0">
               <div className="relative">
                 <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                  {tempProfileImage ? (
-                    <img src={tempProfileImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : profileImage ? (
-                    <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : loadingProfileImage ? (
-                    <div className="w-6 h-6 border-3 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                  ) : (
-                    <User size={32} className="text-gray-400" />
-                  )}
+            {tempProfileImage ? (
+              <img src={tempProfileImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : profileImage ? (
+              <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={32} className="text-gray-400" />
+            )}
                 </div>
                 {isEditing && (
                   <label className="absolute bottom-0 right-0 bg-gray-800 text-white p-1.5 rounded-full cursor-pointer hover:bg-gray-700 transition-colors">
@@ -966,5 +960,4 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
     </div>
   )
 }
-
 

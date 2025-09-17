@@ -50,7 +50,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
   const [selectedDateDetails, setSelectedDateDetails] = useState<any[]>([])
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
-  const [loadingProfileImage, setLoadingProfileImage] = useState(false)
   const [tempProfileImage, setTempProfileImage] = useState<string | null>(null) // Temporary image before save
   const [isSaving, setIsSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState({
@@ -172,15 +171,12 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
       // Load avatar asynchronously (don't wait)
       if (userProfile.avatarUrl && !tempProfileImage) {
         console.log(`[ProfilePage] Loading avatar with ID: ${userProfile.avatarUrl}`)
-        setLoadingProfileImage(true)
         downloadProfileAvatar(userProfile.avatarUrl).then(avatarImage => {
           if (avatarImage) {
             setProfileImage(avatarImage)
           }
         }).catch(error => {
           console.error('Failed to load avatar:', error)
-        }).finally(() => {
-          setLoadingProfileImage(false)
         })
       }
       
@@ -237,29 +233,20 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
       
       // Load thumbnails asynchronously (slowest operation)
       const thumbnails = new Map<string, string>()
-      const loadingSet = new Set<string>()
-      
       const loadThumbnails = async () => {
-        // Mark projects with thumbnails as loading
-        const projectsWithThumbnails = userProjects.filter(p => p.tags?.['Thumbnail-ID'])
-        projectsWithThumbnails.forEach(p => loadingSet.add(p.id))
-        setLoadingThumbnails(new Set(loadingSet))
-        
-        for (const project of projectsWithThumbnails) {
-          const thumbnailId = project.tags['Thumbnail-ID']
-          try {
-            const thumbnailUrl = await downloadProjectThumbnail(thumbnailId)
-            if (thumbnailUrl) {
-              thumbnails.set(project.id, thumbnailUrl)
-              // Update state incrementally
-              setProjectThumbnails(new Map(thumbnails))
+        for (const project of userProjects) {
+          const thumbnailId = project.tags?.['Thumbnail-ID']
+          if (thumbnailId) {
+            try {
+              const thumbnailUrl = await downloadProjectThumbnail(thumbnailId)
+              if (thumbnailUrl) {
+                thumbnails.set(project.id, thumbnailUrl)
+                // Update state incrementally
+                setProjectThumbnails(new Map(thumbnails))
+              }
+            } catch (error) {
+              console.error('Failed to load thumbnail for project:', project.id, error)
             }
-          } catch (error) {
-            console.error('Failed to load thumbnail for project:', project.id, error)
-          } finally {
-            // Remove from loading set
-            loadingSet.delete(project.id)
-            setLoadingThumbnails(new Set(loadingSet))
           }
         }
       }
@@ -550,15 +537,13 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             <div className="flex-shrink-0">
               <div className="relative">
                 <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                  {tempProfileImage ? (
-                    <img src={tempProfileImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : profileImage ? (
-                    <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : loadingProfileImage ? (
-                    <div className="w-6 h-6 border-3 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                  ) : (
-                    <User size={32} className="text-gray-400" />
-                  )}
+            {tempProfileImage ? (
+              <img src={tempProfileImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : profileImage ? (
+              <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={32} className="text-gray-400" />
+            )}
                 </div>
                 {isEditing && (
                   <label className="absolute bottom-0 right-0 bg-gray-800 text-white p-1.5 rounded-full cursor-pointer hover:bg-gray-700 transition-colors">
@@ -913,7 +898,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {/* Thumbnail */}
-                  <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden relative">
+                  <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
                     {projectThumbnails.has(project.id) ? (
                       <img 
                         src={projectThumbnails.get(project.id)} 
@@ -922,13 +907,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                       />
                     ) : (
                       <div className="text-gray-300 flex items-center justify-center h-full">
-                        {loadingThumbnails.has(project.id) ? (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                            <div className="w-8 h-8 border-3 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                          </div>
-                        ) : (
-                          <div className="text-2xl font-bold">3D</div>
-                        )}
+                        <div className="text-2xl font-bold">3D</div>
                       </div>
                     )}
                   </div>
@@ -966,5 +945,3 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
     </div>
   )
 }
-
-
