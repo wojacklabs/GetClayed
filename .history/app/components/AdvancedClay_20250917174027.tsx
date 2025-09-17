@@ -2172,7 +2172,7 @@ export default function AdvancedClay() {
         } catch (error: any) {
           console.error('Service fee payment failed:', error)
           if (error?.message?.includes('User rejected')) {
-            // User cancelled - just return without showing popup
+            showPopup('Transaction cancelled by user', 'info')
             return
           } else if (error?.message?.includes('Not connected to Irys testnet')) {
             throw new Error('Please switch to Irys testnet network in your wallet.')
@@ -2209,8 +2209,11 @@ export default function AdvancedClay() {
           rootTxId,
           (progress: ChunkProgressType) => {
             console.log('[Save] Upload progress:', progress)
-            const percent = Math.round(progress.percentage)
-            onProgress?.(`Uploading chunks... ${percent}%`)
+            setChunkUploadProgress({
+              ...progress,
+              isOpen: true,
+              projectName
+            })
           },
           thumbnailId
         )
@@ -2252,7 +2255,7 @@ export default function AdvancedClay() {
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
-        // Transaction cancelled by user
+        showPopup('Transaction cancelled by user', 'info')
       } else if (error?.message?.includes('Insufficient balance')) {
         throw new Error('Insufficient balance. Your project is over 100KB and requires IRYS tokens.')
       } else if (error?.message?.includes('over 100KB')) {

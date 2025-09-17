@@ -2106,7 +2106,6 @@ export default function AdvancedClay() {
       if (thumbnailDataUrl && thumbnailDataUrl !== '') {
         try {
           console.log('[Save] Step 5: Uploading thumbnail...');
-          onProgress?.('Uploading thumbnail...')
           const result = await uploadProjectThumbnail(
             thumbnailDataUrl,
             projectId
@@ -2145,7 +2144,7 @@ export default function AdvancedClay() {
           }
           
           if (!provider) {
-            throw new Error('No wallet provider found. Please install MetaMask, OKX Wallet, or another Ethereum wallet.');
+            showPopup('No wallet provider found. Please install MetaMask, OKX Wallet, or another Ethereum wallet.', 'error');
             return;
           }
           
@@ -2160,28 +2159,28 @@ export default function AdvancedClay() {
             }
           } catch (connectError) {
             console.error('[AdvancedClay] Wallet connection error:', connectError);
-            throw new Error('Failed to connect wallet. Please try again.');
+            showPopup('Failed to connect wallet. Please try again.', 'error');
             return;
           }
           
           console.log('Paying service fee via smart contract...')
-          onProgress?.('Processing payment (0.1 IRYS)...')
           const paymentTx = await payForUpload(provider)
           console.log('Service fee payment transaction:', paymentTx)
-          onProgress?.('Payment completed!')
+          
+          showPopup('Service fee paid successfully!', 'success')
         } catch (error: any) {
           console.error('Service fee payment failed:', error)
           if (error?.message?.includes('User rejected')) {
-            // User cancelled - just return without showing popup
+            showPopup('Transaction cancelled by user', 'info')
             return
           } else if (error?.message?.includes('Not connected to Irys testnet')) {
-            throw new Error('Please switch to Irys testnet network in your wallet.')
+            showPopup('Please switch to Irys testnet network in your wallet.', 'warning')
             return
           } else if (error?.message?.includes('Insufficient funds')) {
-            throw new Error('Insufficient funds. 0.1 IRYS required.')
+            showPopup('Insufficient funds. 0.1 IRYS required.', 'error')
             return
           } else {
-            throw new Error('Service fee payment failed. Please ensure you have 0.1 IRYS balance.')
+            showPopup('Service fee payment failed. Please ensure you have 0.1 IRYS balance.', 'error')
             return
           }
         }
@@ -2191,7 +2190,6 @@ export default function AdvancedClay() {
 
       // Step 3: Upload to Irys (no payment needed for free tier)
       console.log('[Save] Step 9: Starting Irys upload...')
-      onProgress?.('Uploading project to Irys...')
       console.log('[Save] Step 10: Upload parameters:', {
         projectId: serialized.id,
         currentFolder,
@@ -2209,15 +2207,18 @@ export default function AdvancedClay() {
           rootTxId,
           (progress: ChunkProgressType) => {
             console.log('[Save] Upload progress:', progress)
-            const percent = Math.round(progress.percentage)
-            onProgress?.(`Uploading chunks... ${percent}%`)
+            setChunkUploadProgress({
+              ...progress,
+              isOpen: true,
+              projectName
+            })
           },
           thumbnailId
         )
         console.log('[Save] Step 12: Upload completed, result:', uploadResult)
       } catch (uploadError: any) {
         console.error('[Save] Step 12 ERROR: Irys upload failed:', uploadError)
-        throw new Error('Failed to upload project to Irys. Please try again.')
+        showPopup('Failed to upload project to Irys. Please try again.', 'error')
         return
       }
 
@@ -2245,20 +2246,23 @@ export default function AdvancedClay() {
       // Close progress dialog if it was open
       setChunkUploadProgress(prev => ({ ...prev, isOpen: false }))
       
-      onProgress?.('Project saved successfully!')
+      showPopup(
+        result.isUpdate ? 'Project updated successfully!' : 'Project saved successfully!',
+        'success'
+      )
       
       // Clear cache to refresh projects list
       queryCache.delete(`projects-${walletAddress}`)
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
-        // Transaction cancelled by user
+        showPopup('Transaction cancelled by user', 'info')
       } else if (error?.message?.includes('Insufficient balance')) {
-        throw new Error('Insufficient balance. Your project is over 100KB and requires IRYS tokens.')
+        showPopup('Insufficient balance. Your project is over 100KB and requires IRYS tokens.', 'error')
       } else if (error?.message?.includes('over 100KB')) {
-        throw new Error('Project size exceeds 100KB free tier. Payment is required.')
+        showPopup('Project size exceeds 100KB free tier. Payment is required.', 'warning')
       } else {
-        throw new Error('Failed to save project. Please try again.')
+        showPopup('Failed to save project. Please try again.', 'error')
       }
     }
   }

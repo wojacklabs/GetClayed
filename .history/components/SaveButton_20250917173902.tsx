@@ -126,13 +126,12 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
                 placeholder={saveMode === 'saveAs' ? "New project name" : "Project name"}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 mb-4"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !loading) {
+                  if (e.key === 'Enter') {
                     e.preventDefault();
                     handleSave();
                   }
                 }}
                 autoFocus
-                disabled={loading}
               />
               
               {currentProjectName && (

@@ -2209,8 +2209,11 @@ export default function AdvancedClay() {
           rootTxId,
           (progress: ChunkProgressType) => {
             console.log('[Save] Upload progress:', progress)
-            const percent = Math.round(progress.percentage)
-            onProgress?.(`Uploading chunks... ${percent}%`)
+            setChunkUploadProgress({
+              ...progress,
+              isOpen: true,
+              projectName
+            })
           },
           thumbnailId
         )
