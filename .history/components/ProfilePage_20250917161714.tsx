@@ -806,7 +806,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                     monthPositions.push({ 
                       month: currentMonth, 
                       startWeek: monthStartWeek,
-                      endWeek: totalWeeks - 1
+                      endWeek: 51
                     })
                   }
                   
