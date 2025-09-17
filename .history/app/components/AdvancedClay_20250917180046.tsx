@@ -1997,7 +1997,7 @@ export default function AdvancedClay() {
     // Ensure clean userData for new geometries
     geometry.userData = { 
       deformed: false,
-      originalShape: selectedShape || 'sphere'
+      originalShape: shape || 'sphere'
     };
     
     const newClay: ClayObject = {

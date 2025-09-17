@@ -1072,14 +1072,7 @@ function AddClayHelper({
         } else if (clickPoints.length === 2) {
           // Third click - create shape with position and size based on all three points
           const [p1, p2] = clickPoints
-          
-          // Apply depth adjustment for third point
-          let p3 = point
-          if (shape === 'cube') {
-            const cameraDirection = new THREE.Vector3()
-            camera.getWorldDirection(cameraDirection)
-            p3 = point.clone().add(cameraDirection.multiplyScalar(-thirdPointDepth))
-          }
+          const p3 = point // Third click point
           
           // For cube: use the three points to define a box
           if (shape === 'cube') {
@@ -1101,7 +1094,6 @@ function AddClayHelper({
           }
           setClickPoints([])
           setShapeHeight(2) // Reset height
-          setThirdPointDepth(0) // Reset depth adjustment
         }
       }
     }
@@ -1213,11 +1205,9 @@ function AddClayHelper({
       if ((shape === 'line' || shape === 'curve') && (clickPoints.length > 0 || isDraggingCurve)) {
         const delta = e.deltaY * -0.0001
         setLineThickness(prev => Math.max(0.01, Math.min(0.5, prev + delta)))
-      } else if (shape === 'cube' && clickPoints.length === 2) {
-        // Adjust depth for third point in cube creation
-        const scrollSpeed = 0.01
-        const depthChange = e.deltaY * scrollSpeed
-        setThirdPointDepth(prev => prev + depthChange)
+      } else {
+        // Don't change depth with scroll - keep shapes at z=0
+        // Scroll can be used for other purposes in the future
       }
     }
     
@@ -1231,7 +1221,7 @@ function AddClayHelper({
       canvas.removeEventListener('mouseleave', handleMouseLeave)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth, thirdPointDepth, getScreenConsistentSize])
+  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth, getScreenConsistentSize])
   
   // Render for sphere (drag method)
   if (shape === 'sphere') {
@@ -1474,33 +1464,10 @@ function AddClayHelper({
         
         {/* Show current point preview */}
         {currentPoint && (
-          <>
-            <mesh position={currentPoint}>
-              <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
-              <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
-            </mesh>
-            {/* Show scroll hint for third point */}
-            {shape === 'cube' && clickPoints.length === 2 && (
-              <Billboard
-                follow={true}
-                lockX={false}
-                lockY={false}
-                lockZ={false}
-                position={currentPoint.clone().add(new THREE.Vector3(0, 0.5, 0))}
-              >
-                <Text
-                  fontSize={0.15}
-                  color="white"
-                  anchorX="center"
-                  anchorY="middle"
-                  outlineWidth={0.02}
-                  outlineColor="black"
-                >
-                  Scroll to adjust depth
-                </Text>
-              </Billboard>
-            )}
-          </>
+          <mesh position={currentPoint}>
+            <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
+            <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
+          </mesh>
         )}
       </>
     )
@@ -1997,7 +1964,7 @@ export default function AdvancedClay() {
     // Ensure clean userData for new geometries
     geometry.userData = { 
       deformed: false,
-      originalShape: selectedShape || 'sphere'
+      originalShape: shape || 'sphere'
     };
     
     const newClay: ClayObject = {

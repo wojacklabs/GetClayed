@@ -675,12 +675,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
         break;
     }
     
-    // Set userData for push/pull functionality
-    geometry.userData = {
-      deformed: false,
-      originalShape: clayData.shape || 'sphere'
-    };
-    
     // Restore deformed vertices if they exist
     if (clayData.vertices && clayData.vertices.length > 0) {
       console.log(`[restoreClayObjects] Restoring ${clayData.vertices.length} deformed vertices for clay ${clayData.id}`);
@@ -699,9 +693,8 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
       geometry.computeBoundingBox();
       geometry.computeBoundingSphere();
       
-      // Mark geometry as deformed and keep originalShape
+      // Mark geometry as deformed
       geometry.userData.deformed = true;
-      geometry.userData.originalShape = clayData.shape || 'sphere';
     }
     
     // Restore clay object
