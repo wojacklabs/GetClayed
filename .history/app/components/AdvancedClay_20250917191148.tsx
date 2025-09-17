@@ -1453,40 +1453,20 @@ function AddClayHelper({
         {clickPoints.length === 2 && currentPoint && (
           <>
             {shape === 'cube' ? (
-              (() => {
-                // Calculate preview dimensions similar to final box
-                const baseVector = clickPoints[1].clone().sub(clickPoints[0])
-                const baseLength = baseVector.length()
-                const baseNormal = baseVector.clone().normalize()
-                const worldUp = new THREE.Vector3(0, 1, 0)
-                
-                let perpVector: THREE.Vector3
-                if (Math.abs(baseNormal.dot(worldUp)) > 0.9) {
-                  const worldZ = new THREE.Vector3(0, 0, 1)
-                  perpVector = baseNormal.clone().cross(worldZ).normalize()
-                } else {
-                  perpVector = baseNormal.clone().cross(worldUp).normalize()
-                }
-                
-                const upVector = perpVector.clone().cross(baseNormal).normalize()
-                const heightVector = currentPoint.clone().sub(clickPoints[0])
-                const height = Math.abs(heightVector.dot(upVector)) || 0.1
-                
-                const width = baseLength || 0.1
-                const depth = baseLength * 0.8 || 0.1
-                
-                const baseCenter = clickPoints[0].clone().add(clickPoints[1]).multiplyScalar(0.5)
-                const center = baseCenter.clone().add(upVector.clone().multiplyScalar(height / 2))
-                
-                return (
-                  <Box
-                    args={[width, height, depth]}
-                    position={center}
-                  >
-                    <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
-                  </Box>
-                )
-              })()
+              <Box
+                args={[
+                  Math.abs(clickPoints[1].x - clickPoints[0].x) || 0.1,
+                  Math.abs(currentPoint.y - clickPoints[0].y) || 0.1,
+                  Math.abs(clickPoints[1].z - clickPoints[0].z) || 0.1
+                ]}
+                position={[
+                  (clickPoints[0].x + clickPoints[1].x) / 2,
+                  (clickPoints[0].y + currentPoint.y) / 2,
+                  (clickPoints[0].z + clickPoints[1].z) / 2
+                ]}
+              >
+                <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
+              </Box>
             ) : (
               <>
                 {/* Base triangle */}

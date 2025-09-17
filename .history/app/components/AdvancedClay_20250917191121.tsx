@@ -1077,54 +1077,25 @@ function AddClayHelper({
           // Apply depth adjustment for third point
           let p3 = point
           if (shape === 'cube') {
-            // Calculate the normal vector perpendicular to the base plane
-            const baseVector = p2.clone().sub(p1)
-            const worldUp = new THREE.Vector3(0, 1, 0)
-            
-            // If base vector is nearly vertical, use a different reference
-            let normal: THREE.Vector3
-            if (Math.abs(baseVector.normalize().dot(worldUp)) > 0.9) {
-              // Base is nearly vertical, use Z axis as reference
-              const worldZ = new THREE.Vector3(0, 0, 1)
-              normal = baseVector.clone().cross(worldZ).normalize()
-            } else {
-              // Normal case: cross with world up to get perpendicular direction
-              normal = baseVector.clone().cross(worldUp).normalize().cross(baseVector).normalize()
-            }
-            
-            // Apply scroll adjustment along the calculated normal
-            p3 = point.clone().add(normal.multiplyScalar(thirdPointDepthRef.current))
+            const cameraDirection = new THREE.Vector3()
+            camera.getWorldDirection(cameraDirection)
+            p3 = point.clone().add(cameraDirection.multiplyScalar(-thirdPointDepthRef.current))
           }
           
           // For cube: use the three points to define a box
           if (shape === 'cube') {
-            // Calculate the base dimensions
-            const baseVector = p2.clone().sub(p1)
-            const baseLength = baseVector.length()
+            // First two points define the base (width and depth)
+            const width = Math.abs(p2.x - p1.x) || 0.5
+            const depth = Math.abs(p2.z - p1.z) || 0.5
+            // Third point defines the height
+            const height = Math.abs(p3.y - p1.y) || 0.5
             
-            // Calculate height from p1 to p3 along the normal direction
-            const heightVector = p3.clone().sub(p1)
-            const baseNormal = baseVector.clone().normalize()
-            const worldUp = new THREE.Vector3(0, 1, 0)
-            
-            let perpVector: THREE.Vector3
-            if (Math.abs(baseNormal.dot(worldUp)) > 0.9) {
-              const worldZ = new THREE.Vector3(0, 0, 1)
-              perpVector = baseNormal.clone().cross(worldZ).normalize()
-            } else {
-              perpVector = baseNormal.clone().cross(worldUp).normalize()
-            }
-            
-            const upVector = perpVector.clone().cross(baseNormal).normalize()
-            const height = Math.abs(heightVector.dot(upVector)) || 0.5
-            
-            // Default width to be same as base length for a more uniform box
-            const width = baseLength || 0.5
-            const depth = baseLength * 0.8 || 0.5 // Make depth slightly smaller for better visuals
-            
-            // Calculate center
-            const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
-            const center = baseCenter.clone().add(upVector.clone().multiplyScalar(height / 2))
+            // Calculate center based on all three points
+            const center = new THREE.Vector3(
+              (p1.x + p2.x) / 2,
+              (p1.y + p3.y) / 2,
+              (p1.z + p2.z) / 2
+            )
             
             // Store actual dimensions for BoxGeometry
             const customData = new THREE.Vector3(width, height, depth)
@@ -1453,40 +1424,20 @@ function AddClayHelper({
         {clickPoints.length === 2 && currentPoint && (
           <>
             {shape === 'cube' ? (
-              (() => {
-                // Calculate preview dimensions similar to final box
-                const baseVector = clickPoints[1].clone().sub(clickPoints[0])
-                const baseLength = baseVector.length()
-                const baseNormal = baseVector.clone().normalize()
-                const worldUp = new THREE.Vector3(0, 1, 0)
-                
-                let perpVector: THREE.Vector3
-                if (Math.abs(baseNormal.dot(worldUp)) > 0.9) {
-                  const worldZ = new THREE.Vector3(0, 0, 1)
-                  perpVector = baseNormal.clone().cross(worldZ).normalize()
-                } else {
-                  perpVector = baseNormal.clone().cross(worldUp).normalize()
-                }
-                
-                const upVector = perpVector.clone().cross(baseNormal).normalize()
-                const heightVector = currentPoint.clone().sub(clickPoints[0])
-                const height = Math.abs(heightVector.dot(upVector)) || 0.1
-                
-                const width = baseLength || 0.1
-                const depth = baseLength * 0.8 || 0.1
-                
-                const baseCenter = clickPoints[0].clone().add(clickPoints[1]).multiplyScalar(0.5)
-                const center = baseCenter.clone().add(upVector.clone().multiplyScalar(height / 2))
-                
-                return (
-                  <Box
-                    args={[width, height, depth]}
-                    position={center}
-                  >
-                    <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
-                  </Box>
-                )
-              })()
+              <Box
+                args={[
+                  Math.abs(clickPoints[1].x - clickPoints[0].x) || 0.1,
+                  Math.abs(currentPoint.y - clickPoints[0].y) || 0.1,
+                  Math.abs(clickPoints[1].z - clickPoints[0].z) || 0.1
+                ]}
+                position={[
+                  (clickPoints[0].x + clickPoints[1].x) / 2,
+                  (clickPoints[0].y + currentPoint.y) / 2,
+                  (clickPoints[0].z + clickPoints[1].z) / 2
+                ]}
+              >
+                <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
+              </Box>
             ) : (
               <>
                 {/* Base triangle */}
