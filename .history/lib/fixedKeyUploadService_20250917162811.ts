@@ -100,25 +100,13 @@ export class FixedKeyUploader {
       };
 
       // Create uploader with wallet
-      console.log('[FixedKeyUploader] Step 1: Creating WebUploader instance...');
       const uploader = WebUploader(WebSolana);
-      console.log('[FixedKeyUploader] Step 2: WebUploader instance created');
-      
-      console.log('[FixedKeyUploader] Step 3: Attaching wallet provider...');
       const uploaderWithWallet = await uploader.withProvider(wallet);
-      console.log('[FixedKeyUploader] Step 4: Wallet provider attached successfully');
       
       // Perform upload
-      console.log('[FixedKeyUploader] Step 5: Starting file upload...');
-      console.log('[FixedKeyUploader] File size:', dataFile.size, 'bytes');
-      console.log('[FixedKeyUploader] File type:', dataFile.type);
-      
       const result = await uploaderWithWallet.uploadFile(dataFile, { tags });
       
-      console.log('[FixedKeyUploader] Step 6: Upload completed successfully');
-      console.log('[FixedKeyUploader] Transaction ID:', result.id);
-      console.log('[FixedKeyUploader] Full result:', JSON.stringify(result));
-      
+      console.log('[FixedKeyUploader] Upload successful:', result.id);
       return {
         id: result.id,
         timestamp: result.timestamp || Date.now(),
