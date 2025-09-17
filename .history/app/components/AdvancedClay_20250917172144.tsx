@@ -130,17 +130,6 @@ function BrushGuide({ position, size }: { position: THREE.Vector3; size: number 
   )
 }
 
-// Scene background setter component
-function SceneBackground({ color }: { color: string }) {
-  const { scene } = useThree()
-  
-  useEffect(() => {
-    scene.background = new THREE.Color(color)
-  }, [scene, color])
-  
-  return null
-}
-
 // Individual Clay Component
 // Thumbnail capture component
 function ThumbnailCapture({ captureRequested, onCapture }: { captureRequested: boolean, onCapture: (dataUrl: string) => void }) {
@@ -2581,9 +2570,6 @@ export default function AdvancedClay() {
         className="w-full h-full"
       >
         <Suspense fallback={null}>
-          {/* Set scene background color */}
-          <SceneBackground color={backgroundColor} />
-          
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, 5]} intensity={0.8} />
           <directionalLight position={[-10, -10, -5]} intensity={0.3} />

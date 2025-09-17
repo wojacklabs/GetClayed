@@ -45,9 +45,6 @@ export async function captureSceneThumbnail(
   renderer.setRenderTarget(null)
   renderer.setSize(currentSize.x, currentSize.y)
   
-  // Restore original clear color
-  renderer.setClearColor(currentClearColor, currentClearAlpha)
-  
   // Dispose render target
   renderTarget.dispose()
   

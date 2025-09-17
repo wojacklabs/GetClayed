@@ -95,8 +95,8 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
               
               {/* Payment notice for new projects */}
               {(!currentProjectName || saveMode === 'saveAs') && (
-                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <p className="text-sm text-gray-600">
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
                     <span className="font-medium">Note:</span> First-time project uploads over 90KB require a 0.1 IRYS service fee.
                   </p>
                 </div>
