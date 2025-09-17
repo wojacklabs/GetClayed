@@ -2034,16 +2034,13 @@ export default function AdvancedClay() {
       // Capture thumbnail
       let thumbnailId: string | undefined = undefined;
       
-      console.log('[Save] Step 4: Requesting thumbnail capture...')
       // Request thumbnail capture
       setCaptureRequested(true);
       
-      console.log('[Save] Step 5: Waiting for thumbnail capture...')
       // Wait for thumbnail capture
       await new Promise(resolve => {
         const checkInterval = setInterval(() => {
           if (capturedThumbnail !== null) {
-            console.log('[Save] Step 6: Thumbnail captured, length:', capturedThumbnail?.length || 0)
             clearInterval(checkInterval);
             resolve(true);
           }
@@ -2053,19 +2050,17 @@ export default function AdvancedClay() {
       // Upload thumbnail if captured successfully
       if (capturedThumbnail && capturedThumbnail !== '') {
         try {
-          console.log('[Save] Step 7: Starting thumbnail upload...');
+          console.log('Uploading thumbnail...');
           const result = await uploadProjectThumbnail(
             capturedThumbnail,
             projectId
           );
           thumbnailId = result || undefined;
-          console.log('[Save] Step 8: Thumbnail uploaded:', thumbnailId);
+          console.log('Thumbnail uploaded:', thumbnailId);
         } catch (error) {
-          console.error('[Save] Step 8 ERROR: Failed to upload thumbnail:', error);
+          console.error('Failed to upload thumbnail:', error);
           // Continue without thumbnail
         }
-      } else {
-        console.log('[Save] Step 7: No thumbnail to upload')
       }
       
       // Reset captured thumbnail
@@ -2140,24 +2135,14 @@ export default function AdvancedClay() {
       }
 
       // Step 3: Upload to Irys (no payment needed for free tier)
-      console.log('[Save] Step 9: Starting Irys upload...')
-      console.log('[Save] Step 10: Upload parameters:', {
-        projectId: serialized.id,
-        currentFolder,
-        rootTxId,
-        thumbnailId,
-        dataSize: JSON.stringify(serialized).length
-      })
-      
+      console.log('Starting Irys upload...')
       let uploadResult;
       try {
-        console.log('[Save] Step 11: Calling uploadClayProject...')
         uploadResult = await uploadClayProject(
           serialized,
           currentFolder,
           rootTxId,
           (progress: ChunkProgressType) => {
-            console.log('[Save] Upload progress:', progress)
             setChunkUploadProgress({
               ...progress,
               isOpen: true,
@@ -2166,9 +2151,9 @@ export default function AdvancedClay() {
           },
           thumbnailId
         )
-        console.log('[Save] Step 12: Upload completed, result:', uploadResult)
+        console.log('Upload result:', uploadResult)
       } catch (uploadError: any) {
-        console.error('[Save] Step 12 ERROR: Irys upload failed:', uploadError)
+        console.error('Irys upload failed:', uploadError)
         showPopup('Failed to upload project to Irys. Please try again.', 'error')
         return
       }
