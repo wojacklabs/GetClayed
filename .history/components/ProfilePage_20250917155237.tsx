@@ -68,13 +68,10 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
     // Create a map of date strings to activity details
     const activityMap = new Map<string, { count: number; details: any[] }>()
     
-    console.log('[ProfilePage] Generating activity for', userProjects.length, 'projects')
-    
     // Count projects by date
     userProjects.forEach(project => {
       const date = new Date(project.timestamp)
       const dateStr = date.toISOString().split('T')[0] // YYYY-MM-DD format
-      console.log('[ProfilePage] Project:', project.name, 'Date:', dateStr, 'Timestamp:', project.timestamp)
       const existing = activityMap.get(dateStr) || { count: 0, details: [] }
       existing.count += 1
       existing.details.push({ type: 'project', name: project.name || 'Untitled Project', id: project.id, timestamp: project.timestamp })
