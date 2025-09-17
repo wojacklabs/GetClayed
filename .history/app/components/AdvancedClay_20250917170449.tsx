@@ -1992,7 +1992,7 @@ export default function AdvancedClay() {
 
   const handleSaveProject = async (projectName: string, saveAs: boolean = false) => {
     if (!walletAddress) {
-      showPopup('먼저 지갑을 연결해주세요.', 'warning')
+      showPopup('Please connect your wallet first', 'warning')
       return
     }
     
@@ -2209,7 +2209,7 @@ export default function AdvancedClay() {
         console.log('[Save] Step 12: Upload completed, result:', uploadResult)
       } catch (uploadError: any) {
         console.error('[Save] Step 12 ERROR: Irys upload failed:', uploadError)
-        showPopup('프로젝트 업로드에 실패했습니다. 다시 시도해주세요.', 'error')
+        showPopup('Failed to upload project to Irys. Please try again.', 'error')
         return
       }
 
@@ -2238,7 +2238,7 @@ export default function AdvancedClay() {
       setChunkUploadProgress(prev => ({ ...prev, isOpen: false }))
       
       showPopup(
-        result.isUpdate ? '프로젝트가 업데이트되었습니다.' : '프로젝트가 저장되었습니다.',
+        `Project ${result.isUpdate ? 'updated' : 'saved'} successfully!`,
         'success'
       )
       
@@ -2247,13 +2247,13 @@ export default function AdvancedClay() {
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
-        showPopup('사용자가 거래를 취소했습니다.', 'info')
+        showPopup('Transaction cancelled by user', 'info')
       } else if (error?.message?.includes('Insufficient balance')) {
-        showPopup('잔액이 부족합니다. 프로젝트가 100KB를 초과하여 IRYS 토큰이 필요합니다.', 'error')
+        showPopup('Insufficient balance. Your project is over 100KB and requires IRYS tokens. Please add funds to your wallet.', 'error')
       } else if (error?.message?.includes('over 100KB')) {
-        showPopup('프로젝트 크기가 100KB 무료 제한을 초과했습니다. 결제가 필요합니다.', 'warning')
+        showPopup('Project size exceeds 100KB free tier. Payment is required.', 'warning')
       } else {
-        showPopup('프로젝트 저장에 실패했습니다. 다시 시도해주세요.', 'error')
+        showPopup('Failed to save project. Please try again.', 'error')
       }
     }
   }
@@ -2316,12 +2316,12 @@ export default function AdvancedClay() {
       // Close download progress dialog
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
       
-      showPopup(`프로젝트 "${project.name}"를 성공적으로 불러왔습니다.`, 'success')
+      showPopup(`Project "${project.name}" loaded successfully!`, 'success')
     } catch (error) {
       console.error('Failed to load project:', error)
       // Close download progress dialog on error
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
-      showPopup('프로젝트 불러오기에 실패했습니다. 다시 시도해주세요.', 'error')
+      showPopup('Failed to load project. Please try again.', 'error')
     }
   }
 
@@ -2333,7 +2333,7 @@ export default function AdvancedClay() {
   const handleProjectDelete = async (projectId: string) => {
     try {
       if (!walletAddress) {
-        showPopup('먼저 지갑을 연결해주세요.', 'warning')
+        showPopup('Please connect your wallet first', 'warning')
         return
       }
       
@@ -2346,7 +2346,7 @@ export default function AdvancedClay() {
       // Clear cache to refresh list
       queryCache.delete(`projects-${walletAddress}`)
       
-      showPopup('프로젝트가 삭제되었습니다.', 'success')
+      showPopup('Project deleted successfully!', 'success')
     } catch (error) {
       console.error('Failed to delete project:', error)
       showPopup('Failed to delete project. Please try again.', 'error')
@@ -2356,7 +2356,7 @@ export default function AdvancedClay() {
   const handleProjectRename = async (projectId: string, newName: string) => {
     try {
       if (!walletAddress) {
-        showPopup('먼저 지갑을 연결해주세요.', 'warning')
+        showPopup('Please connect your wallet first', 'warning')
         return
       }
       
@@ -2365,7 +2365,7 @@ export default function AdvancedClay() {
       // If this is the current project, update its name and save
       if (currentProjectInfo && currentProjectInfo.projectId === projectId) {
         await handleSaveProject(newName, false);
-        showPopup('프로젝트 이름이 변경되었습니다.', 'success');
+        showPopup('Project renamed successfully!', 'success');
       } else {
         // For other projects, we need to load, rename, and save
         showPopup('Please open the project to rename it', 'info');
@@ -2400,7 +2400,7 @@ export default function AdvancedClay() {
         author: walletAddress || 'Anonymous',
         description: 'Created with GetClayed'
       })
-      showPopup('GLB 파일이 성공적으로 내보내졌습니다.', 'success')
+      showPopup('GLB file exported successfully', 'success')
     } catch (error) {
       console.error('Failed to export GLB:', error)
       showPopup('Failed to export GLB file', 'error')
@@ -2443,7 +2443,7 @@ export default function AdvancedClay() {
     setBackgroundColor('#f0f0f0')
     setCurrentFolder('')
     setShowNewFileModal(false)
-    showPopup('새 프로젝트가 생성되었습니다.', 'success')
+    showPopup('New project created', 'success')
   }
   
   // Move selected clay with keyboard

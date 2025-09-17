@@ -24,7 +24,7 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
 
   const handleClick = async () => {
     if (!isConnected) {
-      showPopup('먼저 지갑을 연결해주세요.', 'error');
+      showPopup('Please connect your wallet first', 'error');
       return;
     }
     
