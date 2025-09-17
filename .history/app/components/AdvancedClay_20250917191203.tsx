@@ -1483,10 +1483,8 @@ function AddClayHelper({
                     args={[width, height, depth]}
                     position={center}
                   >
-                    <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
-                  </Box>
-                )
-              })()
+                <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
+              </Box>
             ) : (
               <>
                 {/* Base triangle */}
