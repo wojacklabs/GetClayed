@@ -938,7 +938,7 @@ export async function queryUserProjects(
         name: tags['Project-Name'] || 'Untitled',
         author: tags['Author'] || '',
         timestamp,
-        updatedAt: tags['Updated-At'] ? new Date(tags['Updated-At']).getTime() : timestamp,
+        updatedAt: parseInt(tags['Updated-At'] || tags['Created-At'] || edge.node.timestamp || '0'),
         folderPath: tags['Folder'] || '/',
         tags,
         isManifest // Add manifest indicator
