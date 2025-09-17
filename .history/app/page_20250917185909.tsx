@@ -124,7 +124,6 @@ export default function HomePage() {
 
   useEffect(() => {
     filterAndSortProjects()
-    setCurrentPage(1) // Reset to first page when filter/sort changes
   }, [projects, searchQuery, sortBy, followingUsers])
 
   // Handle click outside to close dropdown

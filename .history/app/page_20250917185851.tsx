@@ -124,7 +124,6 @@ export default function HomePage() {
 
   useEffect(() => {
     filterAndSortProjects()
-    setCurrentPage(1) // Reset to first page when filter/sort changes
   }, [projects, searchQuery, sortBy, followingUsers])
 
   // Handle click outside to close dropdown
@@ -626,45 +625,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          
-          {/* Pagination */}
-          {filteredProjects.length > projectsPerPage && (
-            <div className="flex justify-center items-center gap-2 mt-8">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              
-              <div className="flex gap-1">
-                {Array.from({ length: Math.ceil(filteredProjects.length / projectsPerPage) }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 rounded-lg ${
-                      currentPage === page
-                        ? 'bg-gray-900 text-white'
-                        : 'bg-white border border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(Math.min(Math.ceil(filteredProjects.length / projectsPerPage), currentPage + 1))}
-                disabled={currentPage === Math.ceil(filteredProjects.length / projectsPerPage)}
-                className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
           )}
-          </>
-        )}
         </div>
       </main>
     </div>

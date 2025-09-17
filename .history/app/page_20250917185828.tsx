@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User, Wallet, ChevronDown, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, TrendingUp, Clock, Heart, Eye, Star, Search, Filter, User, Wallet, ChevronDown, LogOut } from 'lucide-react'
 import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { getProjectViewCount, getProjectLikeCount, downloadUserProfile, downloadProfileAvatar, getUserFollowing } from '@/lib/profileService'
 import { syncProjectMutableReferences } from '@/lib/mutableSyncService'
@@ -124,7 +124,6 @@ export default function HomePage() {
 
   useEffect(() => {
     filterAndSortProjects()
-    setCurrentPage(1) // Reset to first page when filter/sort changes
   }, [projects, searchQuery, sortBy, followingUsers])
 
   // Handle click outside to close dropdown
@@ -562,11 +561,8 @@ export default function HomePage() {
             </p>
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {filteredProjects
-                .slice((currentPage - 1) * projectsPerPage, currentPage * projectsPerPage)
-                .map((project) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredProjects.map((project) => (
               <div key={project.id} className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow group border border-gray-200">
                 <Link
                   href={`/project/${project.id}`}
@@ -626,45 +622,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          
-          {/* Pagination */}
-          {filteredProjects.length > projectsPerPage && (
-            <div className="flex justify-center items-center gap-2 mt-8">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              
-              <div className="flex gap-1">
-                {Array.from({ length: Math.ceil(filteredProjects.length / projectsPerPage) }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 rounded-lg ${
-                      currentPage === page
-                        ? 'bg-gray-900 text-white'
-                        : 'bg-white border border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(Math.min(Math.ceil(filteredProjects.length / projectsPerPage), currentPage + 1))}
-                disabled={currentPage === Math.ceil(filteredProjects.length / projectsPerPage)}
-                className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
           )}
-          </>
-        )}
         </div>
       </main>
     </div>
