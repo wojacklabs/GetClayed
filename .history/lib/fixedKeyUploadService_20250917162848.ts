@@ -100,25 +100,20 @@ export class FixedKeyUploader {
       };
 
       // Create uploader with wallet
-      console.log('[FixedKeyUploader] Step 1: Creating WebUploader instance...');
+      console.log('[FixedKeyUploader] Creating uploader with wallet...');
       const uploader = WebUploader(WebSolana);
-      console.log('[FixedKeyUploader] Step 2: WebUploader instance created');
-      
-      console.log('[FixedKeyUploader] Step 3: Attaching wallet provider...');
       const uploaderWithWallet = await uploader.withProvider(wallet);
-      console.log('[FixedKeyUploader] Step 4: Wallet provider attached successfully');
       
-      // Perform upload
-      console.log('[FixedKeyUploader] Step 5: Starting file upload...');
-      console.log('[FixedKeyUploader] File size:', dataFile.size, 'bytes');
-      console.log('[FixedKeyUploader] File type:', dataFile.type);
+      // Perform upload with timeout
+      console.log('[FixedKeyUploader] Starting file upload...');
+      const uploadPromise = uploaderWithWallet.uploadFile(dataFile, { tags });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+      );
       
-      const result = await uploaderWithWallet.uploadFile(dataFile, { tags });
+      const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
       
-      console.log('[FixedKeyUploader] Step 6: Upload completed successfully');
-      console.log('[FixedKeyUploader] Transaction ID:', result.id);
-      console.log('[FixedKeyUploader] Full result:', JSON.stringify(result));
-      
+      console.log('[FixedKeyUploader] Upload successful:', result.id);
       return {
         id: result.id,
         timestamp: result.timestamp || Date.now(),

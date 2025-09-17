@@ -248,7 +248,6 @@ export async function uploadClayProject(
   if (sizeInKB < 90) {
     console.log('[uploadClayProject] Data is under 90KB - Irys upload will be free!');
   
-  console.log('[uploadClayProject] Step 1: Preparing tags...');
   const tags = [
     { name: 'Content-Type', value: 'application/json' },
     { name: 'App-Name', value: 'GetClayed' },
@@ -262,30 +261,22 @@ export async function uploadClayProject(
     { name: 'File-Extension', value: '.clay.json' }
   ];
   
-  console.log('[uploadClayProject] Step 2: Base tags created');
-  
   // Add Root-TX tag if this is an update
   if (isUpdate && rootTxId) {
     tags.push({ name: 'Root-TX', value: rootTxId });
-    console.log(`[uploadClayProject] Step 3: Added Root-TX tag: ${rootTxId}`);
+    console.log(`[uploadClayProject] Updating existing project: Root-TX=${rootTxId}`);
   } else {
-    console.log('[uploadClayProject] Step 3: Creating new project (no Root-TX)');
+    console.log('[uploadClayProject] Creating new project');
   }
   
   // Add folder tag if specified
   if (folder) {
     tags.push({ name: 'Folder', value: folder });
-    console.log('[uploadClayProject] Step 4: Added folder tag:', folder);
-  } else {
-    console.log('[uploadClayProject] Step 4: No folder tag');
   }
   
   // Add thumbnail tag if provided
   if (thumbnailId) {
     tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
-    console.log('[uploadClayProject] Step 5: Added thumbnail tag:', thumbnailId);
-  } else {
-    console.log('[uploadClayProject] Step 5: No thumbnail tag');
   }
   
   // Add project tags
@@ -293,19 +284,10 @@ export async function uploadClayProject(
     project.tags.forEach((tag, index) => {
       tags.push({ name: `Tag-${index}`, value: tag });
     });
-    console.log('[uploadClayProject] Step 6: Added', project.tags.length, 'project tags');
-  } else {
-    console.log('[uploadClayProject] Step 6: No project tags');
   }
-  
-  console.log('[uploadClayProject] Step 7: Final tags prepared, count:', tags.length);
-  console.log('[uploadClayProject] Step 8: Calling fixedKeyUploader.upload()...');
   
   // Use fixed key uploader instead of user's wallet
   const receipt = await fixedKeyUploader.upload(data, tags);
-  
-  console.log('[uploadClayProject] Step 9: fixedKeyUploader.upload() completed');
-  console.log('[uploadClayProject] Step 10: Receipt ID:', receipt.id);
   
   // Return the rootTxId (either existing or new transaction ID)
   const finalRootTxId = rootTxId || receipt.id;
