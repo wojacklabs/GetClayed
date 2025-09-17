@@ -924,21 +924,13 @@ export async function queryUserProjects(
       
       let timestamp;
       if (tags['Created-At']) {
-        const createdAt = tags['Created-At'];
-        
-        // Check if Created-At is a number (timestamp) or ISO date string
-        if (/^\d+$/.test(createdAt)) {
-          // It's a timestamp number
-          timestamp = parseInt(createdAt);
-        } else {
-          // Try to parse as ISO date string
-          const parsedDate = new Date(createdAt);
-          timestamp = parsedDate.getTime();
-          // Validate the parsed timestamp
-          if (isNaN(timestamp)) {
-            console.warn(`[ClayStorage] Invalid Created-At date: ${createdAt}, using node timestamp`);
-            timestamp = edge.node.timestamp;
-          }
+        // Created-At is an ISO date string
+        const parsedDate = new Date(tags['Created-At']);
+        timestamp = parsedDate.getTime();
+        // Validate the parsed timestamp
+        if (isNaN(timestamp)) {
+          console.warn(`[ClayStorage] Invalid Created-At date: ${tags['Created-At']}, using node timestamp`);
+          timestamp = edge.node.timestamp;
         }
       } else {
         // Fallback to node timestamp (already in milliseconds)
