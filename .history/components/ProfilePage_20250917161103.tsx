@@ -98,10 +98,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
     // Count likes if provided
     if (userLikes) {
       userLikes.forEach(like => {
-        if (!like.timestamp || isNaN(like.timestamp)) return
         const date = new Date(like.timestamp)
-        if (isNaN(date.getTime())) return
-        
         const dateStr = date.toISOString().split('T')[0]
         const existing = activityMap.get(dateStr) || { count: 0, details: [] }
         existing.count += 1
@@ -113,10 +110,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
     // Count favorites if provided
     if (userFavorites) {
       userFavorites.forEach(fav => {
-        if (!fav.timestamp || isNaN(fav.timestamp)) return
         const date = new Date(fav.timestamp)
-        if (isNaN(date.getTime())) return
-        
         const dateStr = date.toISOString().split('T')[0]
         const existing = activityMap.get(dateStr) || { count: 0, details: [] }
         existing.count += 1
