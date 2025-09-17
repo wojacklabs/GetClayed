@@ -587,7 +587,7 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
         geometry = new THREE.BoxGeometry(
           clayData.size || 2,
           clayData.size || 2,
-          clayData.size || 2
+          (clayData.size || 2) * (clayData.thickness || 1)
         );
         break;
         

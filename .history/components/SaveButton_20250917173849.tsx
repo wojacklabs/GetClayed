@@ -101,21 +101,11 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
               )}
               
               {/* Payment notice for new projects */}
-              {(!currentProjectName || saveMode === 'saveAs') && !loading && (
+              {(!currentProjectName || saveMode === 'saveAs') && (
                 <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                   <p className="text-sm text-gray-600">
                     <span className="font-medium">Note:</span> First-time project uploads over 90KB require a 0.1 IRYS service fee.
                   </p>
-                </div>
-              )}
-              
-              {/* Save progress status */}
-              {loading && saveStatus && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                    <p className="text-sm text-blue-700">{saveStatus}</p>
-                  </div>
                 </div>
               )}
               
@@ -126,13 +116,12 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
                 placeholder={saveMode === 'saveAs' ? "New project name" : "Project name"}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 mb-4"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !loading) {
+                  if (e.key === 'Enter') {
                     e.preventDefault();
                     handleSave();
                   }
                 }}
                 autoFocus
-                disabled={loading}
               />
               
               {currentProjectName && (
