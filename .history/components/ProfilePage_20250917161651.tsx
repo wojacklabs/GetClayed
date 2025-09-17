@@ -735,7 +735,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
           <div className="overflow-x-auto">
             <div className="inline-block">
               {/* Month labels */}
-              <div className="relative h-4 mb-1 ml-8" style={{ width: 'fit-content' }}>
+              <div className="relative h-4 mb-1 ml-8" style={{ width: `${52 * 16 - 4}px` }}>
                 {(() => {
                   // Use same date calculation as generateActivityData
                   const weeks = 52
@@ -754,21 +754,14 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                   let currentMonth = ''
                   let monthStartWeek = 0
                   
-                  // Calculate total weeks to display
-                  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                  const totalWeeks = Math.ceil(totalDays / 7)
-                  
                   // Go through each week to find month boundaries
-                  for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
+                  for (let weekIndex = 0; weekIndex < 52; weekIndex++) {
                     // Check all days in this week to determine the dominant month
                     const weekDates = []
                     for (let day = 0; day < 7; day++) {
                       const date = new Date(startDate)
                       date.setDate(date.getDate() + weekIndex * 7 + day)
-                      // Don't go past end date
-                      if (date <= endDate) {
-                        weekDates.push(date)
-                      }
+                      weekDates.push(date)
                     }
                     
                     // Get the month that appears most in this week
@@ -806,7 +799,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                     monthPositions.push({ 
                       month: currentMonth, 
                       startWeek: monthStartWeek,
-                      endWeek: totalWeeks - 1
+                      endWeek: 51
                     })
                   }
                   

@@ -735,7 +735,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
           <div className="overflow-x-auto">
             <div className="inline-block">
               {/* Month labels */}
-              <div className="relative h-4 mb-1 ml-8" style={{ width: 'fit-content' }}>
+              <div className="relative h-4 mb-1 ml-8" style={{ width: `${52 * 16 - 4}px` }}>
                 {(() => {
                   // Use same date calculation as generateActivityData
                   const weeks = 52
@@ -754,21 +754,14 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                   let currentMonth = ''
                   let monthStartWeek = 0
                   
-                  // Calculate total weeks to display
-                  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                  const totalWeeks = Math.ceil(totalDays / 7)
-                  
                   // Go through each week to find month boundaries
-                  for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
+                  for (let weekIndex = 0; weekIndex < 52; weekIndex++) {
                     // Check all days in this week to determine the dominant month
                     const weekDates = []
                     for (let day = 0; day < 7; day++) {
                       const date = new Date(startDate)
                       date.setDate(date.getDate() + weekIndex * 7 + day)
-                      // Don't go past end date
-                      if (date <= endDate) {
-                        weekDates.push(date)
-                      }
+                      weekDates.push(date)
                     }
                     
                     // Get the month that appears most in this week
@@ -806,7 +799,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                     monthPositions.push({ 
                       month: currentMonth, 
                       startWeek: monthStartWeek,
-                      endWeek: totalWeeks - 1
+                      endWeek: 51
                     })
                   }
                   
@@ -849,57 +842,27 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                 
                 {/* Activity squares by week */}
                 <div className="flex gap-1">
-                  {(() => {
-                    // Group activity data by week
-                    const weekData: Array<Array<typeof activityData[0] | null>> = []
-                    let currentWeek: Array<typeof activityData[0] | null> = []
-                    
-                    // Pad the first week if it doesn't start on Sunday
-                    const firstDay = activityData[0]?.date.getDay() || 0
-                    if (firstDay > 0) {
-                      for (let i = 0; i < firstDay; i++) {
-                        currentWeek.push(null)
-                      }
-                    }
-                    
-                    // Group all days into weeks
-                    activityData.forEach(day => {
-                      currentWeek.push(day)
-                      if (currentWeek.length === 7) {
-                        weekData.push(currentWeek)
-                        currentWeek = []
-                      }
-                    })
-                    
-                    // Add the last partial week if any
-                    if (currentWeek.length > 0) {
-                      // Pad the last week to have 7 days
-                      while (currentWeek.length < 7) {
-                        currentWeek.push(null)
-                      }
-                      weekData.push(currentWeek)
-                    }
-                    
-                    return weekData.map((week, weekIndex) => (
-                      <div key={weekIndex} className="flex flex-col gap-1">
-                        {week.map((day, dayIndex) => {
-                          if (!day) return <div key={dayIndex} className="w-3 h-3" />
-                          
-                          return (
-                            <div
-                              key={dayIndex}
-                              className={`w-3 h-3 rounded-sm cursor-pointer hover:ring-1 hover:ring-gray-400 ${getActivityLevel(day.count)}`}
-                              title={`${day.date.toDateString()}: ${day.count} contribution${day.count !== 1 ? 's' : ''}`}
-                              onClick={() => {
-                                setSelectedDate(day.date)
-                                setSelectedDateDetails(day.details || [])
-                              }}
-                            />
-                          )
-                        })}
-                      </div>
-                    ))
-                  })()}
+                  {Array.from({ length: 52 }, (_, weekIndex) => (
+                    <div key={weekIndex} className="flex flex-col gap-1">
+                      {Array.from({ length: 7 }, (_, dayIndex) => {
+                        const dataIndex = weekIndex * 7 + dayIndex
+                        const day = activityData[dataIndex]
+                        if (!day) return <div key={dayIndex} className="w-3 h-3" />
+                        
+                        return (
+                          <div
+                            key={dayIndex}
+                            className={`w-3 h-3 rounded-sm cursor-pointer hover:ring-1 hover:ring-gray-400 ${getActivityLevel(day.count)}`}
+                            title={`${day.date.toDateString()}: ${day.count} contribution${day.count !== 1 ? 's' : ''}`}
+                            onClick={() => {
+                              setSelectedDate(day.date)
+                              setSelectedDateDetails(day.details || [])
+                            }}
+                          />
+                        )
+                      })}
+                    </div>
+                  ))}
                 </div>
               </div>
               

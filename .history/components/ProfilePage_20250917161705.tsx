@@ -735,7 +735,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
           <div className="overflow-x-auto">
             <div className="inline-block">
               {/* Month labels */}
-              <div className="relative h-4 mb-1 ml-8" style={{ width: 'fit-content' }}>
+              <div className="relative h-4 mb-1 ml-8" style={{ width: `${52 * 16 - 4}px` }}>
                 {(() => {
                   // Use same date calculation as generateActivityData
                   const weeks = 52
@@ -806,7 +806,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                     monthPositions.push({ 
                       month: currentMonth, 
                       startWeek: monthStartWeek,
-                      endWeek: totalWeeks - 1
+                      endWeek: 51
                     })
                   }
                   
