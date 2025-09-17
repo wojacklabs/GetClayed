@@ -1411,14 +1411,14 @@ function AddClayHelper({
             {shape === 'cube' ? (
               <Box
                 args={[
-                  Math.abs(clickPoints[1].x - clickPoints[0].x) || 0.1,
+                  Math.abs(currentPoint.x - clickPoints[0].x) || 0.1,
                   Math.abs(currentPoint.y - clickPoints[0].y) || 0.1,
-                  Math.abs(clickPoints[1].z - clickPoints[0].z) || 0.1
+                  Math.abs(currentPoint.z - clickPoints[0].z) || 0.1
                 ]}
                 position={[
-                  (clickPoints[0].x + clickPoints[1].x) / 2,
+                  (clickPoints[0].x + currentPoint.x) / 2,
                   (clickPoints[0].y + currentPoint.y) / 2,
-                  (clickPoints[0].z + clickPoints[1].z) / 2
+                  (clickPoints[0].z + currentPoint.z) / 2
                 ]}
               >
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />

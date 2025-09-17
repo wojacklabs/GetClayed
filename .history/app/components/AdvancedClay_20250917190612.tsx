@@ -1079,22 +1079,20 @@ function AddClayHelper({
           if (shape === 'cube') {
             const cameraDirection = new THREE.Vector3()
             camera.getWorldDirection(cameraDirection)
-            p3 = point.clone().add(cameraDirection.multiplyScalar(-thirdPointDepthRef.current))
+            p3 = point.clone().add(cameraDirection.multiplyScalar(-thirdPointDepth))
           }
           
           // For cube: use the three points to define a box
           if (shape === 'cube') {
-            // First two points define the base (width and depth)
-            const width = Math.abs(p2.x - p1.x) || 0.5
-            const depth = Math.abs(p2.z - p1.z) || 0.5
-            // Third point defines the height
+            // Calculate box dimensions from three points (like preview)
+            const width = Math.abs(p3.x - p1.x) || 0.5
             const height = Math.abs(p3.y - p1.y) || 0.5
+            const depth = Math.abs(p3.z - p1.z) || 0.5
             
-            // Calculate center based on all three points
             const center = new THREE.Vector3(
-              (p1.x + p2.x) / 2,
+              (p1.x + p3.x) / 2,
               (p1.y + p3.y) / 2,
-              (p1.z + p2.z) / 2
+              (p1.z + p3.z) / 2
             )
             
             // Store actual dimensions for BoxGeometry
@@ -1105,7 +1103,6 @@ function AddClayHelper({
           setClickPoints([])
           setShapeHeight(2) // Reset height
           setThirdPointDepth(0) // Reset depth adjustment
-          thirdPointDepthRef.current = 0 // Reset ref too
         }
       }
     }
@@ -1124,7 +1121,7 @@ function AddClayHelper({
       if (shape === 'cube' && clickPoints.length === 2) {
         const cameraDirection = new THREE.Vector3()
         camera.getWorldDirection(cameraDirection)
-        adjustedPoint = point.clone().add(cameraDirection.multiplyScalar(-thirdPointDepthRef.current))
+        adjustedPoint = point.clone().add(cameraDirection.multiplyScalar(-thirdPointDepth))
       }
       
       // Update hover point for coordinate display
@@ -1411,14 +1408,14 @@ function AddClayHelper({
             {shape === 'cube' ? (
               <Box
                 args={[
-                  Math.abs(clickPoints[1].x - clickPoints[0].x) || 0.1,
+                  Math.abs(currentPoint.x - clickPoints[0].x) || 0.1,
                   Math.abs(currentPoint.y - clickPoints[0].y) || 0.1,
-                  Math.abs(clickPoints[1].z - clickPoints[0].z) || 0.1
+                  Math.abs(currentPoint.z - clickPoints[0].z) || 0.1
                 ]}
                 position={[
-                  (clickPoints[0].x + clickPoints[1].x) / 2,
+                  (clickPoints[0].x + currentPoint.x) / 2,
                   (clickPoints[0].y + currentPoint.y) / 2,
-                  (clickPoints[0].z + clickPoints[1].z) / 2
+                  (clickPoints[0].z + currentPoint.z) / 2
                 ]}
               >
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
