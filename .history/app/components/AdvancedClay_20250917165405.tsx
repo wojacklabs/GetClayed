@@ -1718,7 +1718,6 @@ export default function AdvancedClay() {
   const [showNewFileModal, setShowNewFileModal] = useState(false)
   const [captureRequested, setCaptureRequested] = useState(false)
   const [capturedThumbnail, setCapturedThumbnail] = useState<string | null>(null)
-  const thumbnailResolveRef = useRef<((value: string) => void) | null>(null)
   
   // Track current project
   const [currentProjectInfo, setCurrentProjectInfo] = useState<{
@@ -1992,7 +1991,7 @@ export default function AdvancedClay() {
 
   const handleSaveProject = async (projectName: string, saveAs: boolean = false) => {
     if (!walletAddress) {
-      showPopup('먼저 지갑을 연결해주세요.', 'warning')
+      showPopup('Please connect your wallet first', 'warning')
       return
     }
     
@@ -2065,48 +2064,63 @@ export default function AdvancedClay() {
       // Capture thumbnail
       let thumbnailId: string | undefined = undefined;
       
-      // Step 1: Capture thumbnail first
-      console.log('[Save] Step 4: Capturing thumbnail...')
+      console.log('[Save] Step 4: Requesting thumbnail capture...')
+      // Request thumbnail capture
+      setCaptureRequested(true);
       
-      // Reset previous thumbnail
-      setCapturedThumbnail(null);
+      console.log('[Save] Step 5: Setting up thumbnail capture promise...')
+      console.log('[Save] Current capturedThumbnail state:', capturedThumbnail)
       
-      // Request thumbnail capture and wait for it
-      const thumbnailDataUrl = await new Promise<string>((resolve) => {
-        // Store the resolve function
-        thumbnailResolveRef.current = resolve;
-        
-        // Request capture
-        setCaptureRequested(true);
-        
-        // Set up timeout
+      // Create a promise that will resolve when thumbnail is captured
+      let thumbnailResolve: ((value: boolean) => void) | null = null;
+      const thumbnailPromise = new Promise<boolean>((resolve) => {
+        thumbnailResolve = resolve;
+      });
+      
+      // Store the resolve function to be called from ThumbnailCapture callback
+      const originalOnCapture = (dataUrl: string) => {
+        console.log('[Save] Thumbnail capture callback triggered, dataUrl length:', dataUrl?.length || 0);
+        setCapturedThumbnail(dataUrl);
+        setCaptureRequested(false);
+        if (thumbnailResolve) {
+          thumbnailResolve(true);
+        }
+      };
+      
+      // Temporarily store the callback reference
+      (window as any).__thumbnailCaptureCallback = originalOnCapture;
+      
+      // Wait for thumbnail with timeout
+      const timeoutPromise = new Promise<boolean>((resolve) => {
         setTimeout(() => {
-          if (thumbnailResolveRef.current === resolve) {
-            console.warn('[Save] Thumbnail capture timeout after 10 seconds');
-            thumbnailResolveRef.current = null;
-            setCaptureRequested(false);
-            resolve('');
-          }
+          console.warn('[Save] Thumbnail capture timeout after 10 seconds');
+          resolve(false);
         }, 10000);
       });
       
-      // Step 2: Upload thumbnail if captured successfully
-      if (thumbnailDataUrl && thumbnailDataUrl !== '') {
+      console.log('[Save] Waiting for thumbnail capture or timeout...')
+      const thumbnailCaptured = await Promise.race([thumbnailPromise, timeoutPromise]);
+      
+      // Upload thumbnail if captured successfully
+      if (capturedThumbnail && capturedThumbnail !== '') {
         try {
-          console.log('[Save] Step 5: Uploading thumbnail...');
+          console.log('[Save] Step 7: Starting thumbnail upload...');
           const result = await uploadProjectThumbnail(
-            thumbnailDataUrl,
+            capturedThumbnail,
             projectId
           );
           thumbnailId = result || undefined;
-          console.log('[Save] Step 6: Thumbnail uploaded:', thumbnailId);
+          console.log('[Save] Step 8: Thumbnail uploaded:', thumbnailId);
         } catch (error) {
-          console.error('[Save] Failed to upload thumbnail:', error);
+          console.error('[Save] Step 8 ERROR: Failed to upload thumbnail:', error);
           // Continue without thumbnail
         }
       } else {
-        console.log('[Save] Step 5: No thumbnail captured')
+        console.log('[Save] Step 7: No thumbnail to upload')
       }
+      
+      // Reset captured thumbnail
+      setCapturedThumbnail(null);
       
       // Check project size
       const jsonString = JSON.stringify(serialized);
@@ -2120,9 +2134,6 @@ export default function AdvancedClay() {
       const requiresPayment = isNewProject && sizeInKB >= 90;
       
       if (requiresPayment) {
-        // Show payment notice
-        showPopup('프로젝트 크기가 90KB 이상입니다. 0.1 IRYS 서비스 수수료가 부과됩니다.', 'info')
-        
         try {
           // Get wallet provider (like IrysDune)
           let provider = null;
@@ -2135,7 +2146,7 @@ export default function AdvancedClay() {
           }
           
           if (!provider) {
-            showPopup('지갑을 찾을 수 없습니다. MetaMask, OKX Wallet 등의 지갑을 설치해주세요.', 'error');
+            showPopup('No wallet provider found. Please install MetaMask, OKX Wallet, or another Ethereum wallet.', 'error');
             return;
           }
           
@@ -2150,7 +2161,7 @@ export default function AdvancedClay() {
             }
           } catch (connectError) {
             console.error('[AdvancedClay] Wallet connection error:', connectError);
-            showPopup('지갑 연결에 실패했습니다. 다시 시도해주세요.', 'error');
+            showPopup('Failed to connect wallet. Please try again.', 'error');
             return;
           }
           
@@ -2158,20 +2169,20 @@ export default function AdvancedClay() {
           const paymentTx = await payForUpload(provider)
           console.log('Service fee payment transaction:', paymentTx)
           
-          showPopup('서비스 수수료가 성공적으로 지불되었습니다.', 'success')
+          showPopup(`Service fee paid successfully! TX: ${paymentTx}`, 'success')
         } catch (error: any) {
           console.error('Service fee payment failed:', error)
           if (error?.message?.includes('User rejected')) {
-            showPopup('사용자가 거래를 취소했습니다.', 'info')
+            showPopup('Transaction cancelled by user', 'info')
             return
           } else if (error?.message?.includes('Not connected to Irys testnet')) {
-            showPopup('지갑에서 Irys 테스트넷 네트워크로 전환해주세요.', 'warning')
+            showPopup('Please switch to Irys testnet network in your wallet.', 'warning')
             return
           } else if (error?.message?.includes('Insufficient funds')) {
-            showPopup('잔액이 부족합니다. 0.1 IRYS가 필요합니다.', 'error')
+            showPopup(error.message, 'error')
             return
           } else {
-            showPopup('서비스 수수료 지불에 실패했습니다. 0.1 IRYS 잔액이 있는지 확인해주세요.', 'error')
+            showPopup('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.', 'error')
             return
           }
         }
@@ -2209,7 +2220,7 @@ export default function AdvancedClay() {
         console.log('[Save] Step 12: Upload completed, result:', uploadResult)
       } catch (uploadError: any) {
         console.error('[Save] Step 12 ERROR: Irys upload failed:', uploadError)
-        showPopup('프로젝트 업로드에 실패했습니다. 다시 시도해주세요.', 'error')
+        showPopup('Failed to upload project to Irys. Please try again.', 'error')
         return
       }
 
@@ -2238,7 +2249,7 @@ export default function AdvancedClay() {
       setChunkUploadProgress(prev => ({ ...prev, isOpen: false }))
       
       showPopup(
-        result.isUpdate ? '프로젝트가 업데이트되었습니다.' : '프로젝트가 저장되었습니다.',
+        `Project ${result.isUpdate ? 'updated' : 'saved'} successfully!`,
         'success'
       )
       
@@ -2247,13 +2258,13 @@ export default function AdvancedClay() {
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
-        showPopup('사용자가 거래를 취소했습니다.', 'info')
+        showPopup('Transaction cancelled by user', 'info')
       } else if (error?.message?.includes('Insufficient balance')) {
-        showPopup('잔액이 부족합니다. 프로젝트가 100KB를 초과하여 IRYS 토큰이 필요합니다.', 'error')
+        showPopup('Insufficient balance. Your project is over 100KB and requires IRYS tokens. Please add funds to your wallet.', 'error')
       } else if (error?.message?.includes('over 100KB')) {
-        showPopup('프로젝트 크기가 100KB 무료 제한을 초과했습니다. 결제가 필요합니다.', 'warning')
+        showPopup('Project size exceeds 100KB free tier. Payment is required.', 'warning')
       } else {
-        showPopup('프로젝트 저장에 실패했습니다. 다시 시도해주세요.', 'error')
+        showPopup('Failed to save project. Please try again.', 'error')
       }
     }
   }
@@ -2316,12 +2327,12 @@ export default function AdvancedClay() {
       // Close download progress dialog
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
       
-      showPopup(`프로젝트 "${project.name}"를 성공적으로 불러왔습니다.`, 'success')
+      showPopup(`Project "${project.name}" loaded successfully!`, 'success')
     } catch (error) {
       console.error('Failed to load project:', error)
       // Close download progress dialog on error
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
-      showPopup('프로젝트 불러오기에 실패했습니다. 다시 시도해주세요.', 'error')
+      showPopup('Failed to load project. Please try again.', 'error')
     }
   }
 
@@ -2333,7 +2344,7 @@ export default function AdvancedClay() {
   const handleProjectDelete = async (projectId: string) => {
     try {
       if (!walletAddress) {
-        showPopup('먼저 지갑을 연결해주세요.', 'warning')
+        showPopup('Please connect your wallet first', 'warning')
         return
       }
       
@@ -2346,7 +2357,7 @@ export default function AdvancedClay() {
       // Clear cache to refresh list
       queryCache.delete(`projects-${walletAddress}`)
       
-      showPopup('프로젝트가 삭제되었습니다.', 'success')
+      showPopup('Project deleted successfully!', 'success')
     } catch (error) {
       console.error('Failed to delete project:', error)
       showPopup('Failed to delete project. Please try again.', 'error')
@@ -2356,7 +2367,7 @@ export default function AdvancedClay() {
   const handleProjectRename = async (projectId: string, newName: string) => {
     try {
       if (!walletAddress) {
-        showPopup('먼저 지갑을 연결해주세요.', 'warning')
+        showPopup('Please connect your wallet first', 'warning')
         return
       }
       
@@ -2365,7 +2376,7 @@ export default function AdvancedClay() {
       // If this is the current project, update its name and save
       if (currentProjectInfo && currentProjectInfo.projectId === projectId) {
         await handleSaveProject(newName, false);
-        showPopup('프로젝트 이름이 변경되었습니다.', 'success');
+        showPopup('Project renamed successfully!', 'success');
       } else {
         // For other projects, we need to load, rename, and save
         showPopup('Please open the project to rename it', 'info');
@@ -2400,7 +2411,7 @@ export default function AdvancedClay() {
         author: walletAddress || 'Anonymous',
         description: 'Created with GetClayed'
       })
-      showPopup('GLB 파일이 성공적으로 내보내졌습니다.', 'success')
+      showPopup('GLB file exported successfully', 'success')
     } catch (error) {
       console.error('Failed to export GLB:', error)
       showPopup('Failed to export GLB file', 'error')
@@ -2443,7 +2454,7 @@ export default function AdvancedClay() {
     setBackgroundColor('#f0f0f0')
     setCurrentFolder('')
     setShowNewFileModal(false)
-    showPopup('새 프로젝트가 생성되었습니다.', 'success')
+    showPopup('New project created', 'success')
   }
   
   // Move selected clay with keyboard
@@ -2658,11 +2669,6 @@ export default function AdvancedClay() {
             onCapture={(dataUrl) => {
               setCapturedThumbnail(dataUrl)
               setCaptureRequested(false)
-              // Resolve the promise if waiting
-              if (thumbnailResolveRef.current) {
-                thumbnailResolveRef.current(dataUrl)
-                thumbnailResolveRef.current = null
-              }
             }}
           />
         </Suspense>

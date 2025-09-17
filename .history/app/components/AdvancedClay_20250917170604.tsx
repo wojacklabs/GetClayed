@@ -1992,7 +1992,7 @@ export default function AdvancedClay() {
 
   const handleSaveProject = async (projectName: string, saveAs: boolean = false) => {
     if (!walletAddress) {
-      showPopup('먼저 지갑을 연결해주세요.', 'warning')
+      showPopup('Please connect your wallet first', 'warning')
       return
     }
     
@@ -2333,7 +2333,7 @@ export default function AdvancedClay() {
   const handleProjectDelete = async (projectId: string) => {
     try {
       if (!walletAddress) {
-        showPopup('먼저 지갑을 연결해주세요.', 'warning')
+        showPopup('Please connect your wallet first', 'warning')
         return
       }
       
@@ -2356,7 +2356,7 @@ export default function AdvancedClay() {
   const handleProjectRename = async (projectId: string, newName: string) => {
     try {
       if (!walletAddress) {
-        showPopup('먼저 지갑을 연결해주세요.', 'warning')
+        showPopup('Please connect your wallet first', 'warning')
         return
       }
       

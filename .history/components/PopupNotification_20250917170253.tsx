@@ -55,17 +55,31 @@ export function PopupNotification({
 
   if (!isOpen) return null
 
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5 text-green-500" />
+      case 'error':
+        return <XCircle className="w-5 h-5 text-red-500" />
+      case 'warning':
+        return <AlertCircle className="w-5 h-5 text-yellow-500" />
+      case 'info':
+      default:
+        return <Info className="w-5 h-5 text-blue-500" />
+    }
+  }
+
   const getTypeStyles = () => {
     switch (type) {
       case 'success':
-        return 'text-green-600'
+        return 'border-green-200 bg-green-50'
       case 'error':
-        return 'text-red-600'
+        return 'border-red-200 bg-red-50'
       case 'warning':
-        return 'text-yellow-600'
+        return 'border-yellow-200 bg-yellow-50'
       case 'info':
       default:
-        return 'text-gray-600'
+        return 'border-blue-200 bg-blue-50'
     }
   }
 
@@ -73,28 +87,33 @@ export function PopupNotification({
     <div className="fixed inset-0 flex items-center justify-center z-[10000] pointer-events-none">
       <div
         className={`
-          bg-white rounded-lg shadow-lg border border-gray-200 p-6 max-w-md w-full pointer-events-auto
+          bg-white rounded-xl shadow-xl p-6 max-w-sm w-full pointer-events-auto
           transform transition-all duration-300 ease-out
           ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
         `}
       >
-        <div className="mb-4">
-          {title && (
-            <h3 className={`text-lg font-medium mb-2 ${getTypeStyles()}`}>
-              {title}
-            </h3>
-          )}
-          <div className="text-sm text-gray-700 leading-relaxed">
-            {message}
+        <div className="flex items-start mb-4">
+          <div className="flex-shrink-0">
+            {getIcon()}
+          </div>
+          <div className="ml-3 flex-1">
+            {title && (
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                {title}
+              </h3>
+            )}
+            <div className="text-sm text-gray-600 whitespace-pre-wrap">
+              {message}
+            </div>
           </div>
         </div>
         {showCloseButton && (
           <div className="flex justify-end">
             <button
               onClick={handleClose}
-              className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg transition-all text-sm font-medium"
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium"
             >
-              확인
+              OK
             </button>
           </div>
         )}
