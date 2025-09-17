@@ -1011,43 +1011,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
               )
             })}
           </div>
-          
-          {/* Pagination */}
-          {projects.length > projectsPerPage && (
-            <div className="flex justify-center items-center gap-2 mt-4">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              
-              <div className="flex gap-1">
-                {Array.from({ length: Math.ceil(projects.length / projectsPerPage) }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-2.5 py-1 text-sm rounded-lg ${
-                      currentPage === page
-                        ? 'bg-gray-900 text-white'
-                        : 'bg-gray-50 hover:bg-gray-100'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(Math.min(Math.ceil(projects.length / projectsPerPage), currentPage + 1))}
-                disabled={currentPage === Math.ceil(projects.length / projectsPerPage)}
-                className="p-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          )}
         </div>
       </div>
       
