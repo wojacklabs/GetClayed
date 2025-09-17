@@ -699,9 +699,8 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
       geometry.computeBoundingBox();
       geometry.computeBoundingSphere();
       
-      // Mark geometry as deformed and keep originalShape
+      // Mark geometry as deformed
       geometry.userData.deformed = true;
-      geometry.userData.originalShape = clayData.shape || 'sphere';
     }
     
     // Restore clay object

@@ -85,17 +85,6 @@ export function serializeClayProject(
       }));
     }
     
-    // Save actual box dimensions for cube
-    if (clay.shape === 'cube' && clay.geometry && clay.geometry.type === 'BoxGeometry') {
-      const geo = clay.geometry as THREE.BoxGeometry;
-      const params = geo.parameters;
-      clayData.dimensions = {
-        x: params.width,
-        y: params.height,
-        z: params.depth
-      };
-    }
-    
     // Save deformed vertices if geometry has been modified by push/pull
     if (clay.geometry && clay.geometry.attributes && clay.geometry.attributes.position) {
       // Double check if this is truly a deformed geometry
@@ -596,29 +585,11 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
         break;
         
       case 'cube':
-        if (clayData.dimensions) {
-          // Use saved dimensions for accurate restoration
-          const segments = 10;
-          geometry = new THREE.BoxGeometry(
-            clayData.dimensions.x,
-            clayData.dimensions.y,
-            clayData.dimensions.z,
-            segments,
-            segments,
-            segments
-          );
-        } else {
-          // Fallback to cube with size
-          const segments = 10;
-          geometry = new THREE.BoxGeometry(
-            clayData.size || 2,
-            clayData.size || 2,
-            clayData.size || 2,
-            segments,
-            segments,
-            segments
-          );
-        }
+        geometry = new THREE.BoxGeometry(
+          clayData.size || 2,
+          clayData.size || 2,
+          clayData.size || 2
+        );
         break;
         
       case 'line':
@@ -675,12 +646,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
         break;
     }
     
-    // Set userData for push/pull functionality
-    geometry.userData = {
-      deformed: false,
-      originalShape: clayData.shape || 'sphere'
-    };
-    
     // Restore deformed vertices if they exist
     if (clayData.vertices && clayData.vertices.length > 0) {
       console.log(`[restoreClayObjects] Restoring ${clayData.vertices.length} deformed vertices for clay ${clayData.id}`);
@@ -699,9 +664,8 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
       geometry.computeBoundingBox();
       geometry.computeBoundingSphere();
       
-      // Mark geometry as deformed and keep originalShape
+      // Mark geometry as deformed
       geometry.userData.deformed = true;
-      geometry.userData.originalShape = clayData.shape || 'sphere';
     }
     
     // Restore clay object
