@@ -2581,9 +2581,6 @@ export default function AdvancedClay() {
         className="w-full h-full"
       >
         <Suspense fallback={null}>
-          {/* Set scene background color */}
-          <SceneBackground color={backgroundColor} />
-          
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, 5]} intensity={0.8} />
           <directionalLight position={[-10, -10, -5]} intensity={0.3} />

@@ -357,10 +357,6 @@ export async function uploadChunkManifest(
     tags.push({ name: 'Updated-At', value: new Date().toISOString() });
   }
   
-  if (thumbnailId) {
-    tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
-  }
-  
   const uploadData = Buffer.from(JSON.stringify(manifest), 'utf-8');
   // Use fixed key uploader for manifest
   const receipt = await fixedKeyUploader.upload(uploadData, tags);
