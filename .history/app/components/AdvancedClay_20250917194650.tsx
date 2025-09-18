@@ -1607,7 +1607,7 @@ function AddClayHelper({
                   outlineWidth={0.02}
                   outlineColor="black"
                 >
-                  Scroll to move along axis
+                  Scroll to adjust depth
                 </Text>
               </Billboard>
             )}

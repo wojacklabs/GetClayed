@@ -1498,27 +1498,29 @@ function AddClayHelper({
           <>
             {shape === 'cube' ? (
               (() => {
-                // Create axis-aligned preview box
-                const p1 = clickPoints[0]
-                const p2 = clickPoints[1]
-                const p3 = currentPoint
+                // Calculate preview dimensions similar to final box
+                const baseVector = clickPoints[1].clone().sub(clickPoints[0])
+                const baseLength = baseVector.length()
+                const baseNormal = baseVector.clone().normalize()
+                const worldUp = new THREE.Vector3(0, 1, 0)
                 
-                const minX = Math.min(p1.x, p2.x, p3.x)
-                const maxX = Math.max(p1.x, p2.x, p3.x)
-                const minY = Math.min(p1.y, p2.y, p3.y)
-                const maxY = Math.max(p1.y, p2.y, p3.y)
-                const minZ = Math.min(p1.z, p2.z, p3.z)
-                const maxZ = Math.max(p1.z, p2.z, p3.z)
+                let perpVector: THREE.Vector3
+                if (Math.abs(baseNormal.dot(worldUp)) > 0.9) {
+                  const worldZ = new THREE.Vector3(0, 0, 1)
+                  perpVector = baseNormal.clone().cross(worldZ).normalize()
+                } else {
+                  perpVector = baseNormal.clone().cross(worldUp).normalize()
+                }
                 
-                const width = Math.abs(maxX - minX) || 0.1
-                const height = Math.abs(maxY - minY) || 0.1
-                const depth = Math.abs(maxZ - minZ) || 0.1
+                const upVector = perpVector.clone().cross(baseNormal).normalize()
+                const heightVector = currentPoint.clone().sub(clickPoints[0])
+                const height = Math.abs(heightVector.dot(upVector)) || 0.1
                 
-                const center = new THREE.Vector3(
-                  (minX + maxX) / 2,
-                  (minY + maxY) / 2,
-                  (minZ + maxZ) / 2
-                )
+                const width = baseLength || 0.1
+                const depth = baseLength * 0.8 || 0.1
+                
+                const baseCenter = clickPoints[0].clone().add(clickPoints[1]).multiplyScalar(0.5)
+                const center = baseCenter.clone().add(upVector.clone().multiplyScalar(height / 2))
                 
                 return (
                   <Box
@@ -1607,7 +1609,7 @@ function AddClayHelper({
                   outlineWidth={0.02}
                   outlineColor="black"
                 >
-                  Scroll to move along axis
+                  Scroll to adjust depth
                 </Text>
               </Billboard>
             )}
