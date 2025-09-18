@@ -26,8 +26,7 @@ import {
   RotateCcw,
   User,
   ChevronUp,
-  Home,
-  PenTool
+  Home
 } from 'lucide-react'
 import SaveButton from '../../components/SaveButton'
 import FolderStructure from '../../components/FolderStructure'
@@ -858,7 +857,7 @@ function AddClayHelper({
   onHoverPoint
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
-  shape: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'
+  shape: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'
   onHoverPoint?: (point: THREE.Vector3 | null) => void
 }) {
   const { camera, raycaster, gl } = useThree()
@@ -874,8 +873,6 @@ function AddClayHelper({
   const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth
   const [thirdPointDepth, setThirdPointDepth] = useState(0) // Depth adjustment for third point
   const thirdPointDepthRef = useRef(0) // Use ref for scroll handling
-  const [isDrawingFreehand, setIsDrawingFreehand] = useState(false)
-  const [freehandPoints, setFreehandPoints] = useState<THREE.Vector3[]>([])
   
   // Get camera-distance independent size for guide points
   const getConstantScreenSize = useCallback((position: THREE.Vector3, targetPixelSize: number = 10): number => {
@@ -1022,10 +1019,6 @@ function AddClayHelper({
         
         setDragEnd(offsetPoint)
         setIsDragging(true)
-      } else if (shape === 'freehand') {
-        // Start freehand drawing
-        setIsDrawingFreehand(true)
-        setFreehandPoints([point])
       } else if (shape === 'line') {
         // Line uses 2 click points
         if (clickPoints.length === 0) {
@@ -1140,12 +1133,6 @@ function AddClayHelper({
           // Show preview when not dragging
           setDragEnd(point)
         }
-      } else if (shape === 'freehand' && isDrawingFreehand) {
-        // Add points to freehand path
-        const lastPoint = freehandPoints[freehandPoints.length - 1]
-        if (lastPoint && point.distanceTo(lastPoint) > 0.05) { // Only add if moved enough
-          setFreehandPoints([...freehandPoints, point])
-        }
       } else if (shape === 'curve' && isDraggingCurve) {
         // Update curve control point
         setCurveControlPoint(point)
@@ -1163,20 +1150,7 @@ function AddClayHelper({
     }
     
     const handleMouseUp = (e: MouseEvent) => {
-      if (shape === 'freehand' && isDrawingFreehand && freehandPoints.length > 1) {
-        // Create freehand line
-        const center = freehandPoints.reduce((acc, p) => acc.add(p), new THREE.Vector3()).divideScalar(freehandPoints.length)
-        
-        // Calculate bounding box for size
-        const box = new THREE.Box3()
-        freehandPoints.forEach(p => box.expandByPoint(p))
-        const size = box.getSize(new THREE.Vector3()).length()
-        
-        onAdd(center, size, lineThickness, undefined, freehandPoints)
-        
-        setIsDrawingFreehand(false)
-        setFreehandPoints([])
-      } else if (shape === 'sphere' && isDragging && dragStart && dragEnd) {
+      if (shape === 'sphere' && isDragging && dragStart && dragEnd) {
         const minSize = 0.5 // Minimum size for visibility
         const maxSize = 10 // Maximum size limit
         const size = Math.max(minSize, Math.min(maxSize, getScreenConsistentSize(dragStart, dragEnd)))
@@ -1364,30 +1338,6 @@ function AddClayHelper({
         {currentPoint && (
           <mesh position={currentPoint}>
             <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
-            <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
-          </mesh>
-        )}
-      </>
-    )
-  }
-  
-  // Render for freehand drawing
-  else if (shape === 'freehand') {
-    return (
-      <>
-        {/* Show freehand path while drawing */}
-        {isDrawingFreehand && freehandPoints.length > 1 && (
-          <Line
-            points={freehandPoints.map(p => [p.x, p.y, p.z])}
-            color="#888888"
-            lineWidth={2}
-          />
-        )}
-        
-        {/* Show current drawing point */}
-        {isDrawingFreehand && freehandPoints.length > 0 && (
-          <mesh position={freehandPoints[freehandPoints.length - 1]}>
-            <sphereGeometry args={[lineThickness * 2, 16, 16]} />
             <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
           </mesh>
         )}
@@ -1834,7 +1784,7 @@ export default function AdvancedClay() {
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
-  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'>('sphere')
+  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
   const [backgroundColor, setBackgroundColor] = useState('#f0f0f0')
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
@@ -2140,24 +2090,6 @@ export default function AdvancedClay() {
           geometry = new THREE.TubeGeometry(curve, 32, thickness, 8, false)
         } else {
           geometry = new THREE.TorusGeometry(size/2, thickness, 8, 24, Math.PI)
-        }
-        break
-      
-      case 'freehand':
-        if (controlPoints && controlPoints.length > 1) {
-          // Create a path from freehand points
-          const relativeCurves: THREE.Curve<THREE.Vector3>[] = []
-          for (let i = 0; i < controlPoints.length - 1; i++) {
-            const relativeP1 = controlPoints[i].clone().sub(position)
-            const relativeP2 = controlPoints[i + 1].clone().sub(position)
-            relativeCurves.push(new THREE.LineCurve3(relativeP1, relativeP2))
-          }
-          const path = new THREE.CurvePath<THREE.Vector3>()
-          relativeCurves.forEach(curve => path.add(curve))
-          geometry = new THREE.TubeGeometry(path, controlPoints.length * 2, thickness, 8, false)
-        } else {
-          // Fallback to a simple line
-          geometry = new THREE.CylinderGeometry(thickness, thickness, size, 8)
         }
         break
       
@@ -3318,17 +3250,6 @@ export default function AdvancedClay() {
                       title="Curve"
                     >
                       <Spline size={16} />
-                    </button>
-                    <button
-                      onClick={() => setSelectedShape('freehand')}
-                      className={`p-2 rounded-lg transition-all ${
-                        selectedShape === 'freehand'
-                          ? 'bg-green-500 text-white shadow-md'
-                          : 'bg-white hover:bg-gray-50 text-gray-700'
-                      }`}
-                      title="Freehand Draw"
-                    >
-                      <PenTool size={16} />
                     </button>
                   </>
                 )}
