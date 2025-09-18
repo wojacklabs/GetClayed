@@ -1024,7 +1024,6 @@ function AddClayHelper({
         setIsDragging(true)
       } else if (shape === 'freehand') {
         // Start freehand drawing
-        console.log('Starting freehand drawing at', point)
         setIsDrawingFreehand(true)
         setFreehandPoints([point])
       } else if (shape === 'line') {
@@ -1123,11 +1122,6 @@ function AddClayHelper({
         return
       }
       
-      // Debug log for freehand
-      if (shape === 'freehand' && isDrawingFreehand) {
-        console.log('Mouse move in freehand mode, isDrawing:', isDrawingFreehand, 'points:', freehandPoints.length)
-      }
-      
       // Apply depth adjustment for cube creation preview
       let adjustedPoint = point
       if (shape === 'cube' && clickPoints.length === 1) {
@@ -1148,14 +1142,10 @@ function AddClayHelper({
         }
       } else if (shape === 'freehand' && isDrawingFreehand) {
         // Add points to freehand path
-        setFreehandPoints(prev => {
-          const lastPoint = prev[prev.length - 1]
-          if (lastPoint && point.distanceTo(lastPoint) > 0.01) { // Only add if moved enough
-            console.log('Adding freehand point', point, 'total points:', prev.length + 1)
-            return [...prev, point]
-          }
-          return prev
-        })
+        const lastPoint = freehandPoints[freehandPoints.length - 1]
+        if (lastPoint && point.distanceTo(lastPoint) > 0.05) { // Only add if moved enough
+          setFreehandPoints([...freehandPoints, point])
+        }
       } else if (shape === 'curve' && isDraggingCurve) {
         // Update curve control point
         setCurveControlPoint(point)
@@ -1175,7 +1165,6 @@ function AddClayHelper({
     const handleMouseUp = (e: MouseEvent) => {
       if (shape === 'freehand' && isDrawingFreehand && freehandPoints.length > 1) {
         // Create freehand line
-        console.log('Completing freehand with', freehandPoints.length, 'points')
         const center = freehandPoints.reduce((acc, p) => acc.add(p), new THREE.Vector3()).divideScalar(freehandPoints.length)
         
         // Calculate bounding box for size
@@ -1241,12 +1230,6 @@ function AddClayHelper({
     const handleMouseLeave = () => {
       setIsDragging(false)
       setDragStart(null)
-      // Also cancel freehand drawing if mouse leaves canvas
-      if (shape === 'freehand' && isDrawingFreehand) {
-        console.log('Mouse leave - cancelling freehand drawing')
-        setIsDrawingFreehand(false)
-        setFreehandPoints([])
-      }
     }
     
     const handleWheel = (e: WheelEvent) => {
@@ -1394,30 +1377,11 @@ function AddClayHelper({
       <>
         {/* Show freehand path while drawing */}
         {isDrawingFreehand && freehandPoints.length > 1 && (
-          <>
-            {console.log('Rendering freehand preview with', freehandPoints.length, 'points')}
-            <Line
-              points={freehandPoints}
-              color="#888888"
-              lineWidth={2}
-            />
-            {/* Also show line segments as backup */}
-            <lineSegments>
-              <bufferGeometry>
-                <bufferAttribute
-                  attach="attributes-position"
-                  args={[new Float32Array(
-                    freehandPoints.slice(0, -1).flatMap((p, i) => [
-                      p.x, p.y, p.z,
-                      freehandPoints[i + 1].x, freehandPoints[i + 1].y, freehandPoints[i + 1].z
-                    ])
-                  ), 3]}
-                  count={Math.max(0, (freehandPoints.length - 1) * 2)}
-                />
-              </bufferGeometry>
-              <lineBasicMaterial color="#ff0000" />
-            </lineSegments>
-          </>
+          <Line
+            points={freehandPoints.map(p => [p.x, p.y, p.z])}
+            color="#888888"
+            lineWidth={2}
+          />
         )}
         
         {/* Show current drawing point */}
