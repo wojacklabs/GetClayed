@@ -1970,11 +1970,10 @@ export default function AdvancedClay() {
           addToHistory(restoredObjects);
           return; // Don't check for continued data if auto-save was restored
         }
-        } catch (error) {
-          console.error('Failed to restore auto-save:', error);
-          localStorage.removeItem('clayAutoSave');
-          showPopup('Failed to restore auto-saved data. Starting fresh.', 'error');
-        }
+      } catch (error) {
+        console.error('Failed to restore auto-save:', error);
+        localStorage.removeItem('clayAutoSave');
+      }
     }
     
     // Check if there's continued clay data

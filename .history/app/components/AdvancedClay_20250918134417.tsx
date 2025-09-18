@@ -1953,7 +1953,7 @@ export default function AdvancedClay() {
               geometry,
               position: new THREE.Vector3(clayData.position.x, clayData.position.y, clayData.position.z),
               rotation: clayData.rotation ? new THREE.Euler(clayData.rotation.x, clayData.rotation.y, clayData.rotation.z) : new THREE.Euler(),
-              scale: typeof clayData.scale === 'object' ? (clayData.scale.x || 1) : (clayData.scale || 1)
+              scale: clayData.scale || 1
             };
           });
           
@@ -1970,11 +1970,10 @@ export default function AdvancedClay() {
           addToHistory(restoredObjects);
           return; // Don't check for continued data if auto-save was restored
         }
-        } catch (error) {
-          console.error('Failed to restore auto-save:', error);
-          localStorage.removeItem('clayAutoSave');
-          showPopup('Failed to restore auto-saved data. Starting fresh.', 'error');
-        }
+      } catch (error) {
+        console.error('Failed to restore auto-save:', error);
+        localStorage.removeItem('clayAutoSave');
+      }
     }
     
     // Check if there's continued clay data
