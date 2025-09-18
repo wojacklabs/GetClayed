@@ -1482,16 +1482,15 @@ function AddClayHelper({
             ) : (
               /* Height indicator line from base to current mouse position */
               <Line
-                points={[
-                  [(clickPoints[0].x + clickPoints[1].x) / 2, (clickPoints[0].y + clickPoints[1].y) / 2, (clickPoints[0].z + clickPoints[1].z) / 2],
-                  [currentPoint.x, currentPoint.y, currentPoint.z]
-                ]}
-                color="#00ff00"
-                lineWidth={2}
-                opacity={0.5}
-                transparent
-              />
-            )}
+              points={[
+                [(clickPoints[0].x + clickPoints[1].x) / 2, (clickPoints[0].y + clickPoints[1].y) / 2, (clickPoints[0].z + clickPoints[1].z) / 2],
+                [currentPoint.x, currentPoint.y, currentPoint.z]
+              ]}
+              color="#00ff00"
+              lineWidth={2}
+              opacity={0.5}
+              transparent
+            />
           </>
         )}
         
