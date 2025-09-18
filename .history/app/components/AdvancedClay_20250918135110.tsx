@@ -3100,13 +3100,21 @@ export default function AdvancedClay() {
             <Download size={20} />
           </button>
         </div>
-            {/* Right side - Auto-save indicator */}
+            {/* Right side - Background Color */}
             <div className="flex items-center">
-              {lastAutoSave && (
-                <div className="text-xs text-gray-500">
-                  Saved {Math.floor((new Date().getTime() - lastAutoSave.getTime()) / 60000)}m ago
-                </div>
-              )}
+              <label className="relative cursor-pointer group">
+                <input
+                  type="color"
+                  value={backgroundColor}
+                  onChange={(e) => setBackgroundColor(e.target.value)}
+                  className="sr-only"
+                />
+                <div 
+                  className="w-6 h-6 rounded border border-gray-300 group-hover:border-gray-500 transition-all shadow-sm"
+                  style={{ backgroundColor }}
+                  title="Background"
+                />
+              </label>
             </div>
           </div>
           
@@ -3158,24 +3166,6 @@ export default function AdvancedClay() {
                   title="Custom Color"
                 />
               </label>
-              <div className="w-px h-8 bg-gray-300 mx-1" />
-              {/* Background color button */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600">BG:</span>
-                <label className="relative cursor-pointer group">
-                  <input
-                    type="color"
-                    value={backgroundColor}
-                    onChange={(e) => setBackgroundColor(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div 
-                    className="w-8 h-8 rounded-full border-2 border-gray-300 group-hover:border-gray-500 transition-all shadow-sm"
-                    style={{ backgroundColor }}
-                    title="Background Color"
-                  />
-                </label>
-              </div>
             </div>
           )}
           
