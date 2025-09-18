@@ -1834,7 +1834,7 @@ export default function AdvancedClay() {
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
-  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'>('sphere')
+  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
   const [backgroundColor, setBackgroundColor] = useState('#f0f0f0')
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)

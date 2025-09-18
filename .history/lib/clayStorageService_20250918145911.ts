@@ -630,15 +630,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
           if (clayData.shape === 'line') {
             const curve = new THREE.LineCurve3(points[0], points[1]);
             geometry = new THREE.TubeGeometry(curve, 20, clayData.thickness || 0.1, 8, false);
-          } else if (clayData.shape === 'freehand') {
-            // Create a path from freehand points
-            const curves: THREE.Curve<THREE.Vector3>[] = [];
-            for (let i = 0; i < points.length - 1; i++) {
-              curves.push(new THREE.LineCurve3(points[i], points[i + 1]));
-            }
-            const path = new THREE.CurvePath<THREE.Vector3>();
-            curves.forEach(curve => path.add(curve));
-            geometry = new THREE.TubeGeometry(path, points.length * 2, clayData.thickness || 0.1, 8, false);
           } else {
             // Curve
             const midPoint = clayData.controlPoints[2] ? 

@@ -858,7 +858,7 @@ function AddClayHelper({
   onHoverPoint
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
-  shape: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'
+  shape: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'
   onHoverPoint?: (point: THREE.Vector3 | null) => void
 }) {
   const { camera, raycaster, gl } = useThree()
@@ -1371,30 +1371,6 @@ function AddClayHelper({
     )
   }
   
-  // Render for freehand drawing
-  else if (shape === 'freehand') {
-    return (
-      <>
-        {/* Show freehand path while drawing */}
-        {isDrawingFreehand && freehandPoints.length > 1 && (
-          <Line
-            points={freehandPoints.map(p => [p.x, p.y, p.z])}
-            color="#888888"
-            lineWidth={2}
-          />
-        )}
-        
-        {/* Show current drawing point */}
-        {isDrawingFreehand && freehandPoints.length > 0 && (
-          <mesh position={freehandPoints[freehandPoints.length - 1]}>
-            <sphereGeometry args={[lineThickness * 2, 16, 16]} />
-            <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
-          </mesh>
-        )}
-      </>
-    )
-  }
-  
   // Render for 2D shapes (rectangle, circle)
   else if (shape === 'rectangle' || shape === 'circle') {
     return (
@@ -1834,7 +1810,7 @@ export default function AdvancedClay() {
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
-  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'>('sphere')
+  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
   const [backgroundColor, setBackgroundColor] = useState('#f0f0f0')
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
