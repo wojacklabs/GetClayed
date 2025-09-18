@@ -1397,7 +1397,7 @@ function AddClayHelper({
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
             <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
-            <meshBasicMaterial color={shape === 'cube' ? "#ff0000" : (index === 0 ? "#ff0000" : "#00ff00")} />
+            <meshBasicMaterial color={index === 0 ? "#ff0000" : "#00ff00"} />
           </mesh>
         ))}
         
@@ -1501,8 +1501,8 @@ function AddClayHelper({
               <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
               <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
             </mesh>
-            {/* Show scroll hint for cube depth */}
-            {shape === 'cube' && clickPoints.length === 1 && (
+            {/* Show scroll hint for third point */}
+            {shape === 'cube' && clickPoints.length === 2 && (
               <Billboard
                 follow={true}
                 lockX={false}
@@ -1518,7 +1518,7 @@ function AddClayHelper({
                   outlineWidth={0.02}
                   outlineColor="black"
                 >
-                  Scroll to adjust depth (Z-axis)
+                  Scroll to move along axis
                 </Text>
               </Billboard>
             )}

@@ -1063,35 +1063,84 @@ function AddClayHelper({
           setLineThickness(0.05) // Reset thickness
         }
       } else {
-        // Cube uses 2 click points + scroll for Z
+        // Cube uses 3 click points
         if (clickPoints.length === 0) {
           // First click
           setClickPoints([point])
         } else if (clickPoints.length === 1) {
-          // Second click - create cube immediately with default Z
-          const [p1] = clickPoints
-          const p2 = point
+          // Second click - just store the point, don't create yet
+          setClickPoints([...clickPoints, point])
+        } else if (clickPoints.length === 2) {
+          // Third click - create shape with position and size based on all three points
+          const [p1, p2] = clickPoints
           
-          // For cube: first two points define XY rectangle, Z from scroll
+          // Apply depth adjustment for third point
+          let p3 = point
           if (shape === 'cube') {
-            // Use current scroll depth or default
-            const z = thirdPointDepthRef.current || 1 // Default depth of 1
+            // For cube creation, we want intuitive axis-aligned movement
+            const baseVector = p2.clone().sub(p1)
             
-            // Calculate dimensions - XY from the two points, Z from scroll
-            const minX = Math.min(p1.x, p2.x)
-            const maxX = Math.max(p1.x, p2.x)
-            const minY = Math.min(p1.y, p2.y)
-            const maxY = Math.max(p1.y, p2.y)
+            // Get the dominant axis of the base vector
+            const absX = Math.abs(baseVector.x)
+            const absY = Math.abs(baseVector.y)
+            const absZ = Math.abs(baseVector.z)
             
+            // Determine which plane the first two points mostly lie on
+            let scrollAxis: THREE.Vector3
+            if (absY > absX && absY > absZ) {
+              // Base is mostly vertical (Y axis) - scroll should move in XZ plane
+              const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
+              const toMouse = point.clone().sub(baseCenter)
+              if (Math.abs(toMouse.x) > Math.abs(toMouse.z)) {
+                scrollAxis = new THREE.Vector3(1, 0, 0) // Move along X
+              } else {
+                scrollAxis = new THREE.Vector3(0, 0, 1) // Move along Z
+              }
+            } else if (absX > absY && absX > absZ) {
+              // Base is mostly along X axis - scroll should move in Y or Z
+              const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
+              const toMouse = point.clone().sub(baseCenter)
+              if (Math.abs(toMouse.y) > Math.abs(toMouse.z)) {
+                scrollAxis = new THREE.Vector3(0, 1, 0) // Move along Y
+              } else {
+                scrollAxis = new THREE.Vector3(0, 0, 1) // Move along Z
+              }
+            } else {
+              // Base is mostly along Z axis - scroll should move in X or Y
+              const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
+              const toMouse = point.clone().sub(baseCenter)
+              if (Math.abs(toMouse.x) > Math.abs(toMouse.y)) {
+                scrollAxis = new THREE.Vector3(1, 0, 0) // Move along X
+              } else {
+                scrollAxis = new THREE.Vector3(0, 1, 0) // Move along Y
+              }
+            }
+            
+            // Apply scroll adjustment along the determined axis
+            p3 = point.clone().add(scrollAxis.multiplyScalar(thirdPointDepthRef.current))
+          }
+          
+          // For cube: use the three points to define a box
+          if (shape === 'cube') {
+            // Create axis-aligned bounding box from the three points
+            // p1 and p2 define one edge, p3 defines the opposite corner
+            const minX = Math.min(p1.x, p2.x, p3.x)
+            const maxX = Math.max(p1.x, p2.x, p3.x)
+            const minY = Math.min(p1.y, p2.y, p3.y)
+            const maxY = Math.max(p1.y, p2.y, p3.y)
+            const minZ = Math.min(p1.z, p2.z, p3.z)
+            const maxZ = Math.max(p1.z, p2.z, p3.z)
+            
+            // Calculate dimensions
             const width = Math.abs(maxX - minX) || 0.5
             const height = Math.abs(maxY - minY) || 0.5
-            const depth = Math.abs(z) || 0.5
+            const depth = Math.abs(maxZ - minZ) || 0.5
             
             // Calculate center
             const center = new THREE.Vector3(
               (minX + maxX) / 2,
               (minY + maxY) / 2,
-              p1.z + z / 2 // Base Z + half depth
+              (minZ + maxZ) / 2
             )
             
             // Store actual dimensions for BoxGeometry
@@ -1100,6 +1149,7 @@ function AddClayHelper({
             onAdd(center, size, 1, new THREE.Euler(), [customData])
           }
           setClickPoints([])
+          setShapeHeight(2) // Reset height
           setThirdPointDepth(0) // Reset depth adjustment
           thirdPointDepthRef.current = 0 // Reset ref too
         }
@@ -1115,12 +1165,17 @@ function AddClayHelper({
         return
       }
       
-      // Apply depth adjustment for cube creation preview
+      // Apply depth adjustment for third point in cube creation
       let adjustedPoint = point
-      if (shape === 'cube' && clickPoints.length === 1) {
-        // Show preview of cube with current scroll depth
-        // This is just for visual feedback, actual cube is created on second click
-        adjustedPoint = point // Keep the mouse point as is for XY preview
+      if (shape === 'cube' && clickPoints.length === 2) {
+        // For cube creation: first two points define XY base, third point is Z-only
+        // Keep the X and Y from the second click point, only adjust Z with scroll
+        const baseCenter = clickPoints[0].clone().add(clickPoints[1]).multiplyScalar(0.5)
+        adjustedPoint = new THREE.Vector3(
+          baseCenter.x,
+          baseCenter.y,
+          baseCenter.z + thirdPointDepthRef.current
+        )
       }
       
       // Update hover point for coordinate display
@@ -1213,8 +1268,8 @@ function AddClayHelper({
       if ((shape === 'line' || shape === 'curve') && (clickPoints.length > 0 || isDraggingCurve)) {
         const delta = e.deltaY * -0.0001
         setLineThickness(prev => Math.max(0.01, Math.min(0.5, prev + delta)))
-      } else if (shape === 'cube' && clickPoints.length >= 1) {
-        // Adjust depth for cube creation (works after first click)
+      } else if (shape === 'cube' && clickPoints.length === 2) {
+        // Adjust depth for third point in cube creation
         const scrollSpeed = 0.01
         const depthChange = e.deltaY * scrollSpeed
         thirdPointDepthRef.current += depthChange
@@ -1397,50 +1452,47 @@ function AddClayHelper({
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
             <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
-            <meshBasicMaterial color={shape === 'cube' ? "#ff0000" : (index === 0 ? "#ff0000" : "#00ff00")} />
+            <meshBasicMaterial color={index === 0 ? "#ff0000" : "#00ff00"} />
           </mesh>
         ))}
         
-        {/* Show preview for cube after first point */}
-        {shape === 'cube' && clickPoints.length === 1 && currentPoint && (
+        {/* Show preview if we have 2 points */}
+        {clickPoints.length === 2 && currentPoint && (
           <>
-            {(() => {
-              // Create preview box with XY from points and Z from scroll
-              const p1 = clickPoints[0]
-              const p2 = currentPoint
-              const z = thirdPointDepthRef.current || 1 // Default depth
-              
-              const minX = Math.min(p1.x, p2.x)
-              const maxX = Math.max(p1.x, p2.x)
-              const minY = Math.min(p1.y, p2.y)
-              const maxY = Math.max(p1.y, p2.y)
-              
-              const width = Math.abs(maxX - minX) || 0.1
-              const height = Math.abs(maxY - minY) || 0.1
-              const depth = Math.abs(z) || 0.1
-              
-              const center = new THREE.Vector3(
-                (minX + maxX) / 2,
-                (minY + maxY) / 2,
-                p1.z + z / 2 // Base Z + half depth
-              )
-              
-              return (
-                <Box
-                  args={[width, height, depth]}
-                  position={center}
-                >
-                  <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
-                </Box>
-              )
-            })()}
-          </>
-        )}
-        
-        {/* Show preview for other shapes with 2 points */}
-        {shape !== 'cube' && clickPoints.length === 2 && currentPoint && (
-          <>
-            {shape === 'tetrahedron' ? (
+            {shape === 'cube' ? (
+              (() => {
+                // Create axis-aligned preview box
+                const p1 = clickPoints[0]
+                const p2 = clickPoints[1]
+                const p3 = currentPoint
+                
+                const minX = Math.min(p1.x, p2.x, p3.x)
+                const maxX = Math.max(p1.x, p2.x, p3.x)
+                const minY = Math.min(p1.y, p2.y, p3.y)
+                const maxY = Math.max(p1.y, p2.y, p3.y)
+                const minZ = Math.min(p1.z, p2.z, p3.z)
+                const maxZ = Math.max(p1.z, p2.z, p3.z)
+                
+                const width = Math.abs(maxX - minX) || 0.1
+                const height = Math.abs(maxY - minY) || 0.1
+                const depth = Math.abs(maxZ - minZ) || 0.1
+                
+                const center = new THREE.Vector3(
+                  (minX + maxX) / 2,
+                  (minY + maxY) / 2,
+                  (minZ + maxZ) / 2
+                )
+                
+                return (
+                  <Box
+                    args={[width, height, depth]}
+                    position={center}
+                  >
+                    <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
+                  </Box>
+                )
+              })()
+            ) : (
               <>
                 {/* Base triangle */}
                 <Line
@@ -1501,8 +1553,8 @@ function AddClayHelper({
               <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
               <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
             </mesh>
-            {/* Show scroll hint for cube depth */}
-            {shape === 'cube' && clickPoints.length === 1 && (
+            {/* Show scroll hint for third point */}
+            {shape === 'cube' && clickPoints.length === 2 && (
               <Billboard
                 follow={true}
                 lockX={false}
@@ -1518,7 +1570,7 @@ function AddClayHelper({
                   outlineWidth={0.02}
                   outlineColor="black"
                 >
-                  Scroll to adjust depth (Z-axis)
+                  Scroll to move along axis
                 </Text>
               </Billboard>
             )}
