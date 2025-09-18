@@ -1077,71 +1077,54 @@ function AddClayHelper({
           // Apply depth adjustment for third point
           let p3 = point
           if (shape === 'cube') {
-            // For cube creation, we want intuitive axis-aligned movement
+            // Calculate the normal vector perpendicular to the base plane
             const baseVector = p2.clone().sub(p1)
+            const worldUp = new THREE.Vector3(0, 1, 0)
             
-            // Get the dominant axis of the base vector
-            const absX = Math.abs(baseVector.x)
-            const absY = Math.abs(baseVector.y)
-            const absZ = Math.abs(baseVector.z)
-            
-            // Determine which plane the first two points mostly lie on
-            let scrollAxis: THREE.Vector3
-            if (absY > absX && absY > absZ) {
-              // Base is mostly vertical (Y axis) - scroll should move in XZ plane
-              const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
-              const toMouse = point.clone().sub(baseCenter)
-              if (Math.abs(toMouse.x) > Math.abs(toMouse.z)) {
-                scrollAxis = new THREE.Vector3(1, 0, 0) // Move along X
-              } else {
-                scrollAxis = new THREE.Vector3(0, 0, 1) // Move along Z
-              }
-            } else if (absX > absY && absX > absZ) {
-              // Base is mostly along X axis - scroll should move in Y or Z
-              const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
-              const toMouse = point.clone().sub(baseCenter)
-              if (Math.abs(toMouse.y) > Math.abs(toMouse.z)) {
-                scrollAxis = new THREE.Vector3(0, 1, 0) // Move along Y
-              } else {
-                scrollAxis = new THREE.Vector3(0, 0, 1) // Move along Z
-              }
+            // If base vector is nearly vertical, use a different reference
+            let normal: THREE.Vector3
+            if (Math.abs(baseVector.normalize().dot(worldUp)) > 0.9) {
+              // Base is nearly vertical, use Z axis as reference
+              const worldZ = new THREE.Vector3(0, 0, 1)
+              normal = baseVector.clone().cross(worldZ).normalize()
             } else {
-              // Base is mostly along Z axis - scroll should move in X or Y
-              const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
-              const toMouse = point.clone().sub(baseCenter)
-              if (Math.abs(toMouse.x) > Math.abs(toMouse.y)) {
-                scrollAxis = new THREE.Vector3(1, 0, 0) // Move along X
-              } else {
-                scrollAxis = new THREE.Vector3(0, 1, 0) // Move along Y
-              }
+              // Normal case: cross with world up to get perpendicular direction
+              normal = baseVector.clone().cross(worldUp).normalize().cross(baseVector).normalize()
             }
             
-            // Apply scroll adjustment along the determined axis
-            p3 = point.clone().add(scrollAxis.multiplyScalar(thirdPointDepthRef.current))
+            // Apply scroll adjustment along the calculated normal
+            p3 = point.clone().add(normal.multiplyScalar(thirdPointDepthRef.current))
           }
           
           // For cube: use the three points to define a box
           if (shape === 'cube') {
-            // Create axis-aligned bounding box from the three points
-            // p1 and p2 define one edge, p3 defines the opposite corner
-            const minX = Math.min(p1.x, p2.x, p3.x)
-            const maxX = Math.max(p1.x, p2.x, p3.x)
-            const minY = Math.min(p1.y, p2.y, p3.y)
-            const maxY = Math.max(p1.y, p2.y, p3.y)
-            const minZ = Math.min(p1.z, p2.z, p3.z)
-            const maxZ = Math.max(p1.z, p2.z, p3.z)
+            // Calculate the base dimensions
+            const baseVector = p2.clone().sub(p1)
+            const baseLength = baseVector.length()
             
-            // Calculate dimensions
-            const width = Math.abs(maxX - minX) || 0.5
-            const height = Math.abs(maxY - minY) || 0.5
-            const depth = Math.abs(maxZ - minZ) || 0.5
+            // Calculate height from p1 to p3 along the normal direction
+            const heightVector = p3.clone().sub(p1)
+            const baseNormal = baseVector.clone().normalize()
+            const worldUp = new THREE.Vector3(0, 1, 0)
+            
+            let perpVector: THREE.Vector3
+            if (Math.abs(baseNormal.dot(worldUp)) > 0.9) {
+              const worldZ = new THREE.Vector3(0, 0, 1)
+              perpVector = baseNormal.clone().cross(worldZ).normalize()
+            } else {
+              perpVector = baseNormal.clone().cross(worldUp).normalize()
+            }
+            
+            const upVector = perpVector.clone().cross(baseNormal).normalize()
+            const height = Math.abs(heightVector.dot(upVector)) || 0.5
+            
+            // Default width to be same as base length for a more uniform box
+            const width = baseLength || 0.5
+            const depth = baseLength * 0.8 || 0.5 // Make depth slightly smaller for better visuals
             
             // Calculate center
-            const center = new THREE.Vector3(
-              (minX + maxX) / 2,
-              (minY + maxY) / 2,
-              (minZ + maxZ) / 2
-            )
+            const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
+            const center = baseCenter.clone().add(upVector.clone().multiplyScalar(height / 2))
             
             // Store actual dimensions for BoxGeometry
             const customData = new THREE.Vector3(width, height, depth)
@@ -1168,51 +1151,12 @@ function AddClayHelper({
       // Apply depth adjustment for third point in cube creation
       let adjustedPoint = point
       if (shape === 'cube' && clickPoints.length === 2) {
-        // For cube creation, we want intuitive axis-aligned movement
-        // First two points define one edge of the base
-        const p1 = clickPoints[0]
-        const p2 = clickPoints[1]
-        const baseVector = p2.clone().sub(p1)
+        // Use camera direction for scroll adjustment (same as move tool)
+        const cameraDirection = new THREE.Vector3()
+        camera.getWorldDirection(cameraDirection)
         
-        // Get the dominant axis of the base vector
-        const absX = Math.abs(baseVector.x)
-        const absY = Math.abs(baseVector.y)
-        const absZ = Math.abs(baseVector.z)
-        
-        // Determine which plane the first two points mostly lie on
-        let scrollAxis: THREE.Vector3
-        if (absY > absX && absY > absZ) {
-          // Base is mostly vertical (Y axis) - scroll should move in XZ plane
-          // Choose X or Z based on mouse position relative to base center
-          const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
-          const toMouse = point.clone().sub(baseCenter)
-          if (Math.abs(toMouse.x) > Math.abs(toMouse.z)) {
-            scrollAxis = new THREE.Vector3(1, 0, 0) // Move along X
-          } else {
-            scrollAxis = new THREE.Vector3(0, 0, 1) // Move along Z
-          }
-        } else if (absX > absY && absX > absZ) {
-          // Base is mostly along X axis - scroll should move in Y or Z
-          const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
-          const toMouse = point.clone().sub(baseCenter)
-          if (Math.abs(toMouse.y) > Math.abs(toMouse.z)) {
-            scrollAxis = new THREE.Vector3(0, 1, 0) // Move along Y
-          } else {
-            scrollAxis = new THREE.Vector3(0, 0, 1) // Move along Z
-          }
-        } else {
-          // Base is mostly along Z axis - scroll should move in X or Y
-          const baseCenter = p1.clone().add(p2).multiplyScalar(0.5)
-          const toMouse = point.clone().sub(baseCenter)
-          if (Math.abs(toMouse.x) > Math.abs(toMouse.y)) {
-            scrollAxis = new THREE.Vector3(1, 0, 0) // Move along X
-          } else {
-            scrollAxis = new THREE.Vector3(0, 1, 0) // Move along Y
-          }
-        }
-        
-        // Apply scroll adjustment along the determined axis
-        adjustedPoint = point.clone().add(scrollAxis.multiplyScalar(thirdPointDepthRef.current))
+        // Apply scroll adjustment along camera forward/backward direction
+        adjustedPoint = point.clone().add(cameraDirection.multiplyScalar(-thirdPointDepthRef.current))
       }
       
       // Update hover point for coordinate display
@@ -1498,27 +1442,29 @@ function AddClayHelper({
           <>
             {shape === 'cube' ? (
               (() => {
-                // Create axis-aligned preview box
-                const p1 = clickPoints[0]
-                const p2 = clickPoints[1]
-                const p3 = currentPoint
+                // Calculate preview dimensions similar to final box
+                const baseVector = clickPoints[1].clone().sub(clickPoints[0])
+                const baseLength = baseVector.length()
+                const baseNormal = baseVector.clone().normalize()
+                const worldUp = new THREE.Vector3(0, 1, 0)
                 
-                const minX = Math.min(p1.x, p2.x, p3.x)
-                const maxX = Math.max(p1.x, p2.x, p3.x)
-                const minY = Math.min(p1.y, p2.y, p3.y)
-                const maxY = Math.max(p1.y, p2.y, p3.y)
-                const minZ = Math.min(p1.z, p2.z, p3.z)
-                const maxZ = Math.max(p1.z, p2.z, p3.z)
+                let perpVector: THREE.Vector3
+                if (Math.abs(baseNormal.dot(worldUp)) > 0.9) {
+                  const worldZ = new THREE.Vector3(0, 0, 1)
+                  perpVector = baseNormal.clone().cross(worldZ).normalize()
+                } else {
+                  perpVector = baseNormal.clone().cross(worldUp).normalize()
+                }
                 
-                const width = Math.abs(maxX - minX) || 0.1
-                const height = Math.abs(maxY - minY) || 0.1
-                const depth = Math.abs(maxZ - minZ) || 0.1
+                const upVector = perpVector.clone().cross(baseNormal).normalize()
+                const heightVector = currentPoint.clone().sub(clickPoints[0])
+                const height = Math.abs(heightVector.dot(upVector)) || 0.1
                 
-                const center = new THREE.Vector3(
-                  (minX + maxX) / 2,
-                  (minY + maxY) / 2,
-                  (minZ + maxZ) / 2
-                )
+                const width = baseLength || 0.1
+                const depth = baseLength * 0.8 || 0.1
+                
+                const baseCenter = clickPoints[0].clone().add(clickPoints[1]).multiplyScalar(0.5)
+                const center = baseCenter.clone().add(upVector.clone().multiplyScalar(height / 2))
                 
                 return (
                   <Box
@@ -1607,7 +1553,7 @@ function AddClayHelper({
                   outlineWidth={0.02}
                   outlineColor="black"
                 >
-                  Scroll to move along axis
+                  Scroll to adjust depth
                 </Text>
               </Billboard>
             )}
