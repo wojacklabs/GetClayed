@@ -60,7 +60,7 @@ interface ClayObject {
   color: string
   shape?: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'
   rotation?: THREE.Euler
-  scale?: number | THREE.Vector3
+  scale?: THREE.Vector3
   controlPoints?: THREE.Vector3[] // For line and curve shapes
   size?: number // Original size parameter
   thickness?: number // Original thickness parameter

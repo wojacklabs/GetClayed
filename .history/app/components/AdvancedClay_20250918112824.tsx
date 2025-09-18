@@ -60,7 +60,7 @@ interface ClayObject {
   color: string
   shape?: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle'
   rotation?: THREE.Euler
-  scale?: number | THREE.Vector3
+  scale?: THREE.Vector3
   controlPoints?: THREE.Vector3[] // For line and curve shapes
   size?: number // Original size parameter
   thickness?: number // Original thickness parameter
@@ -2006,7 +2006,7 @@ export default function AdvancedClay() {
           position: new THREE.Vector3(clayData.position.x, clayData.position.y, clayData.position.z),
           color: currentColor,
           shape: clayData.shape || 'sphere',
-          scale: clayData.scale || 1,
+          scale: new THREE.Vector3(clayData.scale, clayData.scale, clayData.scale),
           size: 2,
           detail: detail
         }
@@ -2029,7 +2029,7 @@ export default function AdvancedClay() {
       position: new THREE.Vector3(0, 2, 0), // Start at y=2 so sphere sits on ground
       color: currentColor,
       shape: 'sphere',
-      scale: 1,
+      scale: new THREE.Vector3(1, 1, 1),
       size: 2,
       detail: detail
     }
@@ -2152,7 +2152,7 @@ export default function AdvancedClay() {
       color: currentColor,
       shape: selectedShape,
       rotation: rotation,
-      scale: 1,
+      scale: new THREE.Vector3(1, 1, 1),
       controlPoints: controlPoints,
       size: size,
       thickness: thickness,
@@ -2631,7 +2631,7 @@ export default function AdvancedClay() {
       position: new THREE.Vector3(0, 2, 0),
       color: currentColor,
       shape: 'sphere',
-      scale: 1,
+      scale: new THREE.Vector3(1, 1, 1),
       size: 2,
       detail: detail
     }
