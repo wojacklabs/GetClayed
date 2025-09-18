@@ -1123,11 +1123,6 @@ function AddClayHelper({
         return
       }
       
-      // Debug log for freehand
-      if (shape === 'freehand' && isDrawingFreehand) {
-        console.log('Mouse move in freehand mode, isDrawing:', isDrawingFreehand, 'points:', freehandPoints.length)
-      }
-      
       // Apply depth adjustment for cube creation preview
       let adjustedPoint = point
       if (shape === 'cube' && clickPoints.length === 1) {
@@ -1242,8 +1237,7 @@ function AddClayHelper({
       setIsDragging(false)
       setDragStart(null)
       // Also cancel freehand drawing if mouse leaves canvas
-      if (shape === 'freehand' && isDrawingFreehand) {
-        console.log('Mouse leave - cancelling freehand drawing')
+      if (isDrawingFreehand) {
         setIsDrawingFreehand(false)
         setFreehandPoints([])
       }
@@ -1397,26 +1391,10 @@ function AddClayHelper({
           <>
             {console.log('Rendering freehand preview with', freehandPoints.length, 'points')}
             <Line
-              points={freehandPoints}
+              points={freehandPoints.map(p => [p.x, p.y, p.z])}
               color="#888888"
               lineWidth={2}
             />
-            {/* Also show line segments as backup */}
-            <lineSegments>
-              <bufferGeometry>
-                <bufferAttribute
-                  attach="attributes-position"
-                  args={[new Float32Array(
-                    freehandPoints.slice(0, -1).flatMap((p, i) => [
-                      p.x, p.y, p.z,
-                      freehandPoints[i + 1].x, freehandPoints[i + 1].y, freehandPoints[i + 1].z
-                    ])
-                  ), 3]}
-                  count={Math.max(0, (freehandPoints.length - 1) * 2)}
-                />
-              </bufferGeometry>
-              <lineBasicMaterial color="#ff0000" />
-            </lineSegments>
           </>
         )}
         
