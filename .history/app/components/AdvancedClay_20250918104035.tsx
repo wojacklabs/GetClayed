@@ -1397,7 +1397,7 @@ function AddClayHelper({
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
             <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
-            <meshBasicMaterial color={shape === 'cube' ? "#ff0000" : (index === 0 ? "#ff0000" : "#00ff00")} />
+            <meshBasicMaterial color={index === 0 ? "#ff0000" : "#00ff00"} />
           </mesh>
         ))}
         

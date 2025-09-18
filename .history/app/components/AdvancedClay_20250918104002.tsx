@@ -1397,50 +1397,47 @@ function AddClayHelper({
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
             <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
-            <meshBasicMaterial color={shape === 'cube' ? "#ff0000" : (index === 0 ? "#ff0000" : "#00ff00")} />
+            <meshBasicMaterial color={index === 0 ? "#ff0000" : "#00ff00"} />
           </mesh>
         ))}
         
-        {/* Show preview for cube after first point */}
-        {shape === 'cube' && clickPoints.length === 1 && currentPoint && (
+        {/* Show preview if we have 2 points */}
+        {clickPoints.length === 2 && currentPoint && (
           <>
-            {(() => {
-              // Create preview box with XY from points and Z from scroll
-              const p1 = clickPoints[0]
-              const p2 = currentPoint
-              const z = thirdPointDepthRef.current || 1 // Default depth
-              
-              const minX = Math.min(p1.x, p2.x)
-              const maxX = Math.max(p1.x, p2.x)
-              const minY = Math.min(p1.y, p2.y)
-              const maxY = Math.max(p1.y, p2.y)
-              
-              const width = Math.abs(maxX - minX) || 0.1
-              const height = Math.abs(maxY - minY) || 0.1
-              const depth = Math.abs(z) || 0.1
-              
-              const center = new THREE.Vector3(
-                (minX + maxX) / 2,
-                (minY + maxY) / 2,
-                p1.z + z / 2 // Base Z + half depth
-              )
-              
-              return (
-                <Box
-                  args={[width, height, depth]}
-                  position={center}
-                >
-                  <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
-                </Box>
-              )
-            })()}
-          </>
-        )}
-        
-        {/* Show preview for other shapes with 2 points */}
-        {shape !== 'cube' && clickPoints.length === 2 && currentPoint && (
-          <>
-            {shape === 'tetrahedron' ? (
+            {shape === 'cube' ? (
+              (() => {
+                // Create axis-aligned preview box
+                const p1 = clickPoints[0]
+                const p2 = clickPoints[1]
+                const p3 = currentPoint
+                
+                const minX = Math.min(p1.x, p2.x, p3.x)
+                const maxX = Math.max(p1.x, p2.x, p3.x)
+                const minY = Math.min(p1.y, p2.y, p3.y)
+                const maxY = Math.max(p1.y, p2.y, p3.y)
+                const minZ = Math.min(p1.z, p2.z, p3.z)
+                const maxZ = Math.max(p1.z, p2.z, p3.z)
+                
+                const width = Math.abs(maxX - minX) || 0.1
+                const height = Math.abs(maxY - minY) || 0.1
+                const depth = Math.abs(maxZ - minZ) || 0.1
+                
+                const center = new THREE.Vector3(
+                  (minX + maxX) / 2,
+                  (minY + maxY) / 2,
+                  (minZ + maxZ) / 2
+                )
+                
+                return (
+                  <Box
+                    args={[width, height, depth]}
+                    position={center}
+                  >
+                    <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
+                  </Box>
+                )
+              })()
+            ) : (
               <>
                 {/* Base triangle */}
                 <Line
@@ -1501,8 +1498,8 @@ function AddClayHelper({
               <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
               <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
             </mesh>
-            {/* Show scroll hint for cube depth */}
-            {shape === 'cube' && clickPoints.length === 1 && (
+            {/* Show scroll hint for third point */}
+            {shape === 'cube' && clickPoints.length === 2 && (
               <Billboard
                 follow={true}
                 lockX={false}
@@ -1518,7 +1515,7 @@ function AddClayHelper({
                   outlineWidth={0.02}
                   outlineColor="black"
                 >
-                  Scroll to adjust depth (Z-axis)
+                  Scroll to move along axis
                 </Text>
               </Billboard>
             )}
