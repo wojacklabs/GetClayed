@@ -2764,20 +2764,6 @@ export default function AdvancedClay() {
       // Clear current objects and set new ones
       setClayObjects(restoredObjects)
       
-      // Restore groups if present
-      if (project.groups && project.groups.length > 0) {
-        const restoredGroups = project.groups.map(group => ({
-          ...group,
-          position: new THREE.Vector3(group.position.x, group.position.y, group.position.z),
-          rotation: new THREE.Euler(group.rotation.x, group.rotation.y, group.rotation.z),
-          scale: new THREE.Vector3(group.scale.x, group.scale.y, group.scale.z)
-        }))
-        setClayGroups(restoredGroups)
-        console.log('Restored groups:', restoredGroups)
-      } else {
-        setClayGroups([])
-      }
-      
       // Reset history with new state
       addToHistory(restoredObjects)
       
