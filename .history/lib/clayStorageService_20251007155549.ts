@@ -158,31 +158,6 @@ export function serializeClayProject(
     return clayData;
   });
   
-  // Serialize groups if provided
-  let serializedGroups: ClayGroup[] | undefined;
-  if (groups && groups.length > 0) {
-    serializedGroups = groups.map(group => ({
-      id: group.id,
-      name: group.name,
-      objectIds: group.objectIds,
-      position: {
-        x: Math.round((group.position?.x || 0) * 10000) / 10000,
-        y: Math.round((group.position?.y || 0) * 10000) / 10000,
-        z: Math.round((group.position?.z || 0) * 10000) / 10000
-      },
-      rotation: {
-        x: Math.round((group.rotation?.x || 0) * 10000) / 10000,
-        y: Math.round((group.rotation?.y || 0) * 10000) / 10000,
-        z: Math.round((group.rotation?.z || 0) * 10000) / 10000
-      },
-      scale: {
-        x: group.scale?.x || 1,
-        y: group.scale?.y || 1,
-        z: group.scale?.z || 1
-      }
-    }));
-  }
-  
   const project: ClayProject = {
     id: `clay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     name: projectName,
@@ -191,7 +166,6 @@ export function serializeClayProject(
     updatedAt: Date.now(),
     author,
     clays: serializedClays,
-    groups: serializedGroups,
     tags,
     backgroundColor
   };
@@ -758,7 +732,7 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
     }
     
     // Restore clay object
-    const restoredClay: any = {
+    return {
       id: clayData.id,
       position: new THREE.Vector3(clayData.position.x, clayData.position.y, clayData.position.z),
       rotation: new THREE.Euler(clayData.rotation.x, clayData.rotation.y, clayData.rotation.z),
@@ -771,13 +745,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
       detail: clayData.detail,
       controlPoints: clayData.controlPoints?.map(p => new THREE.Vector3(p.x, p.y, p.z))
     };
-    
-    // Restore groupId if present
-    if (clayData.groupId) {
-      restoredClay.groupId = clayData.groupId;
-    }
-    
-    return restoredClay;
   });
 }
 

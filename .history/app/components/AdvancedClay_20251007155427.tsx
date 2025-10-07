@@ -2189,45 +2189,26 @@ export default function AdvancedClay() {
       if (updatedClay.groupId) {
         const group = clayGroups.find(g => g.id === updatedClay.groupId)
         if (group) {
+          // Calculate the movement delta
           const oldClay = prev.find(c => c.id === updatedClay.id)
           if (oldClay) {
-            // Handle position changes
-            const positionDelta = updatedClay.position.clone().sub(oldClay.position)
+            const delta = updatedClay.position.clone().sub(oldClay.position)
             
-            // Handle scale changes
-            const oldScale = oldClay.scale instanceof THREE.Vector3 ? oldClay.scale.x : (oldClay.scale || 1)
-            const newScale = updatedClay.scale instanceof THREE.Vector3 ? updatedClay.scale.x : (updatedClay.scale || 1)
-            const scaleRatio = newScale / oldScale
-            
-            // Apply changes to all objects in the group
-            const newClays = prev.map(clay => {
+            // Apply the same movement to all objects in the group
+            return prev.map(clay => {
               if (clay.groupId === updatedClay.groupId) {
                 if (clay.id === updatedClay.id) {
                   return updatedClay
                 } else {
-                  // Apply position delta
-                  const newPosition = clay.position.clone().add(positionDelta)
-                  
-                  // Apply scale ratio
-                  let newScale: number | THREE.Vector3
-                  if (clay.scale instanceof THREE.Vector3) {
-                    newScale = clay.scale.clone().multiplyScalar(scaleRatio)
-                  } else {
-                    newScale = (clay.scale || 1) * scaleRatio
-                  }
-                  
+                  // Apply the same delta to other group members
                   return {
                     ...clay,
-                    position: newPosition,
-                    scale: newScale
+                    position: clay.position.clone().add(delta)
                   }
                 }
               }
               return clay
             })
-            
-            addToHistory(newClays)
-            return newClays
           }
         }
       }
@@ -2520,8 +2501,7 @@ export default function AdvancedClay() {
           '', // description
           walletAddress,
           [], // tags
-          backgroundColor,
-          clayGroups
+          backgroundColor
         )
         console.log('[Save] serializeClayProject returned successfully')
       } catch (serializeError) {
@@ -2763,20 +2743,6 @@ export default function AdvancedClay() {
       
       // Clear current objects and set new ones
       setClayObjects(restoredObjects)
-      
-      // Restore groups if present
-      if (project.groups && project.groups.length > 0) {
-        const restoredGroups = project.groups.map(group => ({
-          ...group,
-          position: new THREE.Vector3(group.position.x, group.position.y, group.position.z),
-          rotation: new THREE.Euler(group.rotation.x, group.rotation.y, group.rotation.z),
-          scale: new THREE.Vector3(group.scale.x, group.scale.y, group.scale.z)
-        }))
-        setClayGroups(restoredGroups)
-        console.log('Restored groups:', restoredGroups)
-      } else {
-        setClayGroups([])
-      }
       
       // Reset history with new state
       addToHistory(restoredObjects)

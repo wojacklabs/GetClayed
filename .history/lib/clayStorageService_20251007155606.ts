@@ -758,7 +758,7 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
     }
     
     // Restore clay object
-    const restoredClay: any = {
+    return {
       id: clayData.id,
       position: new THREE.Vector3(clayData.position.x, clayData.position.y, clayData.position.z),
       rotation: new THREE.Euler(clayData.rotation.x, clayData.rotation.y, clayData.rotation.z),
@@ -771,13 +771,6 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
       detail: clayData.detail,
       controlPoints: clayData.controlPoints?.map(p => new THREE.Vector3(p.x, p.y, p.z))
     };
-    
-    // Restore groupId if present
-    if (clayData.groupId) {
-      restoredClay.groupId = clayData.groupId;
-    }
-    
-    return restoredClay;
   });
 }
 

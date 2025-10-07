@@ -474,14 +474,6 @@ function Clay({
           ...clay,
           scale: newScale
         }
-        
-        // If clay is part of a group, update the scale for all group members
-        if (clay.groupId) {
-          // Calculate scale ratio for other objects
-          const scaleRatio = scaleFactor / resizeRef.current.initialScale
-          // We'll handle this in the updateClay function
-        }
-        
         onUpdate(newClay)
       }
     }
@@ -1878,19 +1870,8 @@ function RaycasterManager({
           const clay = clayObjects.find(c => c.id === clayId)
           if (clay) {
             if (tool === 'paint') {
-              // Check if clay is part of a group
-              if (clay.groupId) {
-                // Update all objects in the group
-                clayObjects.forEach(obj => {
-                  if (obj.groupId === clay.groupId) {
-                    const newClay = { ...obj, color: currentColor }
-                    updateClay(newClay)
-                  }
-                })
-              } else {
-                const newClay = { ...clay, color: currentColor }
-                updateClay(newClay)
-              }
+              const newClay = { ...clay, color: currentColor }
+              updateClay(newClay)
             } else if (tool === 'delete') {
               setSelectedClayId(clayId)
               removeClay(clayId)
@@ -2185,61 +2166,13 @@ export default function AdvancedClay() {
   
   const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
-      // Check if the updated clay is part of a group
-      if (updatedClay.groupId) {
-        const group = clayGroups.find(g => g.id === updatedClay.groupId)
-        if (group) {
-          const oldClay = prev.find(c => c.id === updatedClay.id)
-          if (oldClay) {
-            // Handle position changes
-            const positionDelta = updatedClay.position.clone().sub(oldClay.position)
-            
-            // Handle scale changes
-            const oldScale = oldClay.scale instanceof THREE.Vector3 ? oldClay.scale.x : (oldClay.scale || 1)
-            const newScale = updatedClay.scale instanceof THREE.Vector3 ? updatedClay.scale.x : (updatedClay.scale || 1)
-            const scaleRatio = newScale / oldScale
-            
-            // Apply changes to all objects in the group
-            const newClays = prev.map(clay => {
-              if (clay.groupId === updatedClay.groupId) {
-                if (clay.id === updatedClay.id) {
-                  return updatedClay
-                } else {
-                  // Apply position delta
-                  const newPosition = clay.position.clone().add(positionDelta)
-                  
-                  // Apply scale ratio
-                  let newScale: number | THREE.Vector3
-                  if (clay.scale instanceof THREE.Vector3) {
-                    newScale = clay.scale.clone().multiplyScalar(scaleRatio)
-                  } else {
-                    newScale = (clay.scale || 1) * scaleRatio
-                  }
-                  
-                  return {
-                    ...clay,
-                    position: newPosition,
-                    scale: newScale
-                  }
-                }
-              }
-              return clay
-            })
-            
-            addToHistory(newClays)
-            return newClays
-          }
-        }
-      }
-      
-      // Normal update for non-grouped objects
       const newClays = prev.map(clay => 
         clay.id === updatedClay.id ? updatedClay : clay
       )
       addToHistory(newClays)
       return newClays
     })
-  }, [addToHistory, clayGroups])
+  }, [addToHistory])
   
   const removeClay = useCallback((clayId: string) => {
     setClayObjects(prev => {
@@ -2520,8 +2453,7 @@ export default function AdvancedClay() {
           '', // description
           walletAddress,
           [], // tags
-          backgroundColor,
-          clayGroups
+          backgroundColor
         )
         console.log('[Save] serializeClayProject returned successfully')
       } catch (serializeError) {
@@ -2763,20 +2695,6 @@ export default function AdvancedClay() {
       
       // Clear current objects and set new ones
       setClayObjects(restoredObjects)
-      
-      // Restore groups if present
-      if (project.groups && project.groups.length > 0) {
-        const restoredGroups = project.groups.map(group => ({
-          ...group,
-          position: new THREE.Vector3(group.position.x, group.position.y, group.position.z),
-          rotation: new THREE.Euler(group.rotation.x, group.rotation.y, group.rotation.z),
-          scale: new THREE.Vector3(group.scale.x, group.scale.y, group.scale.z)
-        }))
-        setClayGroups(restoredGroups)
-        console.log('Restored groups:', restoredGroups)
-      } else {
-        setClayGroups([])
-      }
       
       // Reset history with new state
       addToHistory(restoredObjects)
