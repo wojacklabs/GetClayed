@@ -189,7 +189,10 @@ function Clay({
   isHovered,
   onHover,
   onHoverEnd,
-  onBrushHover
+  onBrushHover,
+  selectedForGrouping,
+  showGroupingPanel,
+  toggleObjectForGrouping
 }: {
   clay: ClayObject
   tool: string
@@ -204,6 +207,9 @@ function Clay({
   onHover: () => void
   onHoverEnd: () => void
   onBrushHover?: (point: THREE.Vector3 | null) => void
+  selectedForGrouping?: string[]
+  showGroupingPanel?: boolean
+  toggleObjectForGrouping?: (id: string) => void
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const groupRef = useRef<THREE.Group>(null)
@@ -680,6 +686,12 @@ function Clay({
         onPointerDown={(e) => {
           e.stopPropagation()
           
+          // If grouping panel is open and this is a left click, toggle selection
+          if (showGroupingPanel && e.button === 0) {
+            toggleObjectForGrouping?.(clay.id)
+            return
+          }
+          
           if (tool === 'rotateObject' && isSelected && meshRef.current) {
             rotationRef.current.active = true
             rotationRef.current.startX = e.clientX
@@ -735,6 +747,21 @@ function Clay({
             wireframe
             transparent
             opacity={0.8}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+      {/* Grouping selection indicator */}
+      {selectedForGrouping?.includes(clay.id) && (
+        <mesh
+          scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x * 1.05, clay.scale.y * 1.05, clay.scale.z * 1.05] : (clay.scale || 1) * 1.05}
+          userData={{ isOutline: true }}
+        >
+          <meshBasicMaterial
+            color="#3b82f6"
+            wireframe
+            transparent
+            opacity={0.6}
             side={THREE.DoubleSide}
           />
         </mesh>
@@ -3117,6 +3144,9 @@ export default function AdvancedClay() {
                   setHoveredPoint(null)
                 }}
                 onBrushHover={setHoveredPoint}
+                selectedForGrouping={selectedForGrouping}
+                showGroupingPanel={showGroupingPanel}
+                toggleObjectForGrouping={toggleObjectForGrouping}
               />
             </group>
           ))}
@@ -3607,6 +3637,86 @@ export default function AdvancedClay() {
               </div>
             </div>
           )}
+          
+          {/* Grouping Panel */}
+          {showGroupingPanel && (
+            <div className="border-t border-gray-200 px-4 py-2">
+              <div className="flex items-center justify-between gap-4">
+                {/* Shape selection */}
+                <div className="flex items-center gap-2 flex-1 overflow-x-auto">
+                  <span className="text-sm text-gray-600 whitespace-nowrap">Select to group:</span>
+                  {clayObjects.filter(clay => !clay.groupId).map((clay, index) => {
+                    const isSelected = selectedForGrouping.includes(clay.id)
+                    return (
+                      <button
+                        key={clay.id}
+                        onClick={() => toggleObjectForGrouping(clay.id)}
+                        className={`p-2 rounded-lg border-2 transition-all flex items-center gap-1 ${
+                          isSelected 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        title={`Object ${index + 1}`}
+                      >
+                        <div 
+                          className="w-6 h-6 rounded-full"
+                          style={{ backgroundColor: clay.color }}
+                        />
+                        <span className="text-xs">
+                          {clay.shape ? clay.shape.charAt(0).toUpperCase() : 'O'}{index + 1}
+                        </span>
+                      </button>
+                    )
+                  })}
+                  {clayObjects.filter(clay => !clay.groupId).length === 0 && (
+                    <span className="text-sm text-gray-400">No ungrouped objects</span>
+                  )}
+                </div>
+                
+                {/* Group controls */}
+                <div className="flex items-center gap-2">
+                  {selectedForGrouping.length >= 2 && (
+                    <input
+                      type="text"
+                      placeholder="Group name"
+                      className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          createGroup((e.target as HTMLInputElement).value)
+                        }
+                      }}
+                    />
+                  )}
+                  <button
+                    onClick={() => createGroup('')}
+                    disabled={selectedForGrouping.length < 2}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-all ${
+                      selectedForGrouping.length >= 2
+                        ? 'bg-blue-500 text-white hover:bg-blue-600'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Group ({selectedForGrouping.length})
+                  </button>
+                  {clayGroups.length > 0 && (
+                    <div className="flex items-center gap-1 border-l border-gray-300 pl-2">
+                      <span className="text-xs text-gray-500">Groups:</span>
+                      {clayGroups.map(group => (
+                        <button
+                          key={group.id}
+                          onClick={() => ungroupObjects(group.id)}
+                          className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
+                          title={`${group.name} - Click to ungroup`}
+                        >
+                          {group.name || `G${clayGroups.indexOf(group) + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       
@@ -3681,103 +3791,6 @@ export default function AdvancedClay() {
         </div>
       )}
       
-      {/* Grouping Panel */}
-      {showGroupingPanel && (
-        <div className="fixed bottom-20 left-4 right-4 max-w-2xl mx-auto bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-40">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold">Create Group</h3>
-            <button
-              onClick={() => {
-                setShowGroupingPanel(false)
-                setSelectedForGrouping([])
-              }}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Object Selection Grid */}
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-2">Select objects to group (minimum 2):</p>
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-40 overflow-y-auto">
-              {clayObjects.filter(clay => !clay.groupId).map((clay, index) => {
-                const isSelected = selectedForGrouping.includes(clay.id)
-                return (
-                  <button
-                    key={clay.id}
-                    onClick={() => toggleObjectForGrouping(clay.id)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      isSelected 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    title={`Object ${index + 1}`}
-                  >
-                    <div 
-                      className="w-8 h-8 rounded-full mx-auto"
-                      style={{ backgroundColor: clay.color }}
-                    />
-                    <span className="text-xs mt-1 block">
-                      {clay.shape ? clay.shape.charAt(0).toUpperCase() : 'O'}{index + 1}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          
-          {/* Group Name Input */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Group name (optional)"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && selectedForGrouping.length >= 2) {
-                  createGroup((e.target as HTMLInputElement).value)
-                }
-              }}
-            />
-            <button
-              onClick={() => createGroup('')}
-              disabled={selectedForGrouping.length < 2}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedForGrouping.length >= 2
-                  ? 'bg-blue-500 text-white hover:bg-blue-600'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              Create Group ({selectedForGrouping.length})
-            </button>
-          </div>
-          
-          {/* Existing Groups */}
-          {clayGroups.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600 mb-2">Existing groups:</p>
-              <div className="space-y-2">
-                {clayGroups.map(group => (
-                  <div key={group.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <span className="font-medium">{group.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">{group.objectIds.length} objects</span>
-                      <button
-                        onClick={() => ungroupObjects(group.id)}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                      >
-                        Ungroup
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
       
     </div>
   )
