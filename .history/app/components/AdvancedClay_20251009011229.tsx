@@ -748,26 +748,19 @@ function Clay({
               if (group) {
                 rotationRef.current.isGroupRotation = true
                 
-                // Use main object position as rotation center
-                const mainObject = clayObjects?.find(c => c.id === group.mainObjectId)
-                if (mainObject) {
-                  rotationRef.current.groupCenter.copy(mainObject.position)
-                } else {
-                  // Fallback to geometric center if main object not found
-                  const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
-                  const center = new THREE.Vector3()
-                  groupObjects.forEach(obj => {
-                    center.add(obj.position)
-                  })
-                  center.divideScalar(groupObjects.length)
-                  rotationRef.current.groupCenter.copy(center)
-                }
+                // Calculate group center
+                const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
+                const center = new THREE.Vector3()
+                groupObjects.forEach(obj => {
+                  center.add(obj.position)
+                })
+                center.divideScalar(groupObjects.length)
+                rotationRef.current.groupCenter.copy(center)
                 
                 // Store initial positions relative to group center
-                const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
                 rotationRef.current.groupInitialPositions.clear()
                 groupObjects.forEach(obj => {
-                  const relativePos = obj.position.clone().sub(rotationRef.current.groupCenter)
+                  const relativePos = obj.position.clone().sub(center)
                   rotationRef.current.groupInitialPositions.set(obj.id, relativePos)
                 })
               }
@@ -3486,8 +3479,6 @@ export default function AdvancedClay() {
                 if (tool === 'group') {
                   setTool('rotate')
                   setShowGroupingPanel(false)
-                  setSelectedForGrouping([])
-                  setMainObjectForGroup(null)
                 } else {
                   setTool('group')
                   setShowGroupingPanel(true)

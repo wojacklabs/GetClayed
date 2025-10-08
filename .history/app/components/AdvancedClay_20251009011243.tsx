@@ -764,10 +764,9 @@ function Clay({
                 }
                 
                 // Store initial positions relative to group center
-                const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
                 rotationRef.current.groupInitialPositions.clear()
                 groupObjects.forEach(obj => {
-                  const relativePos = obj.position.clone().sub(rotationRef.current.groupCenter)
+                  const relativePos = obj.position.clone().sub(center)
                   rotationRef.current.groupInitialPositions.set(obj.id, relativePos)
                 })
               }
@@ -3486,8 +3485,6 @@ export default function AdvancedClay() {
                 if (tool === 'group') {
                   setTool('rotate')
                   setShowGroupingPanel(false)
-                  setSelectedForGrouping([])
-                  setMainObjectForGroup(null)
                 } else {
                   setTool('group')
                   setShowGroupingPanel(true)
