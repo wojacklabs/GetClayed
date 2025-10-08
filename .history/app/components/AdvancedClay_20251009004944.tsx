@@ -192,9 +192,7 @@ function Clay({
   onBrushHover,
   selectedForGrouping,
   showGroupingPanel,
-  toggleObjectForGrouping,
-  isGroupHighlighted,
-  clayGroups
+  toggleObjectForGrouping
 }: {
   clay: ClayObject
   tool: string
@@ -212,9 +210,6 @@ function Clay({
   selectedForGrouping?: string[]
   showGroupingPanel?: boolean
   toggleObjectForGrouping?: (id: string) => void
-  isGroupHighlighted?: boolean
-  clayGroups?: ClayGroup[]
-  clayObjects?: ClayObject[]
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const groupRef = useRef<THREE.Group>(null)
@@ -451,45 +446,14 @@ function Clay({
         const deltaX = (e.clientX - rotationRef.current.startX) * 0.01
         const deltaY = (e.clientY - rotationRef.current.startY) * 0.01
         
-        if (rotationRef.current.isGroupRotation && clay.groupId && clayObjects) {
-          // Group rotation around group center
-          const rotationMatrix = new THREE.Matrix4()
-          rotationMatrix.makeRotationFromEuler(new THREE.Euler(deltaY, deltaX, 0))
-          
-          // Update all objects in the group
-          clayObjects.forEach(obj => {
-            if (obj.groupId === clay.groupId) {
-              const initialRelativePos = rotationRef.current.groupInitialPositions.get(obj.id)
-              if (initialRelativePos) {
-                // Rotate the relative position
-                const rotatedPos = initialRelativePos.clone().applyMatrix4(rotationMatrix)
-                const newPosition = rotatedPos.add(rotationRef.current.groupCenter)
-                
-                // Update the object
-                const updatedObj = {
-                  ...obj,
-                  position: newPosition,
-                  rotation: new THREE.Euler(
-                    rotationRef.current.initialRotation.x + deltaY,
-                    rotationRef.current.initialRotation.y + deltaX,
-                    rotationRef.current.initialRotation.z
-                  )
-                }
-                onUpdate(updatedObj)
-              }
-            }
-          })
-        } else {
-          // Single object rotation
-          meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
-          meshRef.current.rotation.x = rotationRef.current.initialRotation.x + deltaY
-          
-          const newClay = {
-            ...clay,
-            rotation: meshRef.current.rotation.clone()
-          }
-          onUpdate(newClay)
+        meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
+        meshRef.current.rotation.x = rotationRef.current.initialRotation.x + deltaY
+        
+        const newClay = {
+          ...clay,
+          rotation: meshRef.current.rotation.clone()
         }
+        onUpdate(newClay)
       } else if (tool === 'resize' && resizeRef.current.active && groupRef.current) {
         // Calculate current distance from object center to mouse position
         const rect = gl.domElement.getBoundingClientRect()
@@ -703,10 +667,7 @@ function Clay({
     active: false,
     startX: 0,
     startY: 0,
-    initialRotation: new THREE.Euler(0, 0, 0),
-    groupCenter: new THREE.Vector3(),
-    groupInitialPositions: new Map<string, THREE.Vector3>(),
-    isGroupRotation: false
+    initialRotation: new THREE.Euler(0, 0, 0)
   })
   
   return (
@@ -736,32 +697,6 @@ function Clay({
             rotationRef.current.startX = e.clientX
             rotationRef.current.startY = e.clientY
             rotationRef.current.initialRotation.copy(meshRef.current.rotation)
-            
-            // Check if this is a group rotation
-            if (clay.groupId && clayGroups) {
-              const group = clayGroups.find(g => g.id === clay.groupId)
-              if (group) {
-                rotationRef.current.isGroupRotation = true
-                
-                // Calculate group center
-                const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
-                const center = new THREE.Vector3()
-                groupObjects.forEach(obj => {
-                  center.add(obj.position)
-                })
-                center.divideScalar(groupObjects.length)
-                rotationRef.current.groupCenter.copy(center)
-                
-                // Store initial positions relative to group center
-                rotationRef.current.groupInitialPositions.clear()
-                groupObjects.forEach(obj => {
-                  const relativePos = obj.position.clone().sub(center)
-                  rotationRef.current.groupInitialPositions.set(obj.id, relativePos)
-                })
-              }
-            } else {
-              rotationRef.current.isGroupRotation = false
-            }
           } else if (tool === 'resize' && isSelected) {
             resizeRef.current.active = true
             resizeRef.current.startX = e.clientX
@@ -3192,44 +3127,31 @@ export default function AdvancedClay() {
           />
           
           {/* Clay Objects */}
-          {clayObjects.map(clay => {
-            // Check if this clay is part of a group that contains the selected clay
-            const selectedClay = clayObjects.find(c => c.id === selectedClayId)
-            const isGroupHighlighted = !!(
-              selectedClay?.groupId && 
-              clay.groupId === selectedClay.groupId &&
-              (tool === 'move' || tool === 'resize' || tool === 'rotateObject')
-            )
-            
-            return (
-              <group key={clay.id}>
-                <Clay
-                  clay={clay}
-                  tool={tool}
-                  brushSize={brushSize}
-                  currentColor={currentColor}
-                  onUpdate={updateClay}
-                  onDeformingChange={setIsDeforming}
-                  isSelected={selectedClayId === clay.id}
-                  onSelect={() => setSelectedClayId(clay.id)}
-                  onDelete={() => removeClay(clay.id)}
-                  isHovered={hoveredClayId === clay.id}
-                  onHover={() => setHoveredClayId(clay.id)}
-                  onHoverEnd={() => {
-                    setHoveredClayId(null)
-                    setHoveredPoint(null)
-                  }}
-                  onBrushHover={setHoveredPoint}
-                  selectedForGrouping={selectedForGrouping}
-                  showGroupingPanel={showGroupingPanel}
-                  toggleObjectForGrouping={toggleObjectForGrouping}
-                  isGroupHighlighted={isGroupHighlighted}
-                  clayGroups={clayGroups}
-                  clayObjects={clayObjects}
-                />
-              </group>
-            )
-          })}
+          {clayObjects.map(clay => (
+            <group key={clay.id}>
+              <Clay
+                clay={clay}
+                tool={tool}
+                brushSize={brushSize}
+                currentColor={currentColor}
+                onUpdate={updateClay}
+                onDeformingChange={setIsDeforming}
+                isSelected={selectedClayId === clay.id}
+                onSelect={() => setSelectedClayId(clay.id)}
+                onDelete={() => removeClay(clay.id)}
+                isHovered={hoveredClayId === clay.id}
+                onHover={() => setHoveredClayId(clay.id)}
+                onHoverEnd={() => {
+                  setHoveredClayId(null)
+                  setHoveredPoint(null)
+                }}
+                onBrushHover={setHoveredPoint}
+                selectedForGrouping={selectedForGrouping}
+                showGroupingPanel={showGroupingPanel}
+                toggleObjectForGrouping={toggleObjectForGrouping}
+              />
+            </group>
+          ))}
           
           {/* Brush Size Guide */}
           {(tool === 'push' || tool === 'pull') && hoveredPoint && (
