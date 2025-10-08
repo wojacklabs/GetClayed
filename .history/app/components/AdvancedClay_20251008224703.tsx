@@ -1691,13 +1691,12 @@ function AddClayHelper({
 }
 
 // Screen-locked Isometric Grid Helper
-function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate, isCapturing }: {
+function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate }: {
   tool: string
   selectedClayId: string | null
   clayObjects: ClayObject[]
   hoveredPoint: THREE.Vector3 | null
   onCoordsUpdate: (coords: { x: number; y: number; z: number }) => void
-  isCapturing?: boolean
 }) {
   const { camera } = useThree()
   const [cameraDir, setCameraDir] = useState(new THREE.Vector3())
@@ -1769,14 +1768,11 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
     }
   })
   
-  // Don't render grid during thumbnail capture
-  if (isCapturing) return null
-  
   return (
     <group>
 
-
       
+
       {/* XZ Horizontal Planes for all objects in move and rotate tools */}
       {(tool === 'move' || tool === 'rotate') && clayObjects.map((clay) => {
         // Calculate color based on current Z position (real-time)
@@ -3178,7 +3174,6 @@ export default function AdvancedClay() {
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
               onCoordsUpdate={setCameraRelativeCoords}
-              isCapturing={captureRequested}
             />
           )}
           
