@@ -3300,7 +3300,7 @@ export default function AdvancedClay() {
               <button
                 onClick={() => {
                   setTool('rotateObject')
-                  if (tool === 'group') setShowGroupingPanel(false)
+                  setShowGroupingPanel(false)
                 }}
                 className={`p-3 rounded-lg transition-all ${
                   tool === 'rotateObject' 
@@ -3314,7 +3314,7 @@ export default function AdvancedClay() {
               <button
                 onClick={() => {
                   setTool('resize')
-                  if (tool === 'group') setShowGroupingPanel(false)
+                  setShowGroupingPanel(false)
                 }}
                 className={`p-3 rounded-lg transition-all ${
                   tool === 'resize' 
@@ -3328,7 +3328,7 @@ export default function AdvancedClay() {
             <button
               onClick={() => {
                 setTool('push')
-                if (tool === 'group') setShowGroupingPanel(false)
+                setShowGroupingPanel(false)
               }}
               className={`p-3 rounded-lg transition-all ${
                 tool === 'push' 
@@ -3342,7 +3342,7 @@ export default function AdvancedClay() {
             <button
               onClick={() => {
                 setTool('paint')
-                if (tool === 'group') setShowGroupingPanel(false)
+                setShowGroupingPanel(false)
               }}
               className={`p-3 rounded-lg transition-all ${
                 tool === 'paint' 
@@ -3356,7 +3356,7 @@ export default function AdvancedClay() {
             <button
               onClick={() => {
                 setTool('add')
-                if (tool === 'group') setShowGroupingPanel(false)
+                setShowGroupingPanel(false)
               }}
               className={`p-3 rounded-lg transition-all ${
                 tool === 'add' 
@@ -3370,7 +3370,7 @@ export default function AdvancedClay() {
             <button
               onClick={() => {
                 setTool('move')
-                if (tool === 'group') setShowGroupingPanel(false)
+                setShowGroupingPanel(false)
               }}
               className={`p-3 rounded-lg transition-all ${
                 tool === 'move' 
