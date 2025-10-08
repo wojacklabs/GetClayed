@@ -3178,7 +3178,6 @@ export default function AdvancedClay() {
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
               onCoordsUpdate={setCameraRelativeCoords}
-              isCapturing={captureRequested}
             />
           )}
           

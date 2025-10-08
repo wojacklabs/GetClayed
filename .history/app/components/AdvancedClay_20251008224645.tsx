@@ -1691,13 +1691,12 @@ function AddClayHelper({
 }
 
 // Screen-locked Isometric Grid Helper
-function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate, isCapturing }: {
+function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate }: {
   tool: string
   selectedClayId: string | null
   clayObjects: ClayObject[]
   hoveredPoint: THREE.Vector3 | null
   onCoordsUpdate: (coords: { x: number; y: number; z: number }) => void
-  isCapturing?: boolean
 }) {
   const { camera } = useThree()
   const [cameraDir, setCameraDir] = useState(new THREE.Vector3())
@@ -1769,14 +1768,11 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
     }
   })
   
-  // Don't render grid during thumbnail capture
-  if (isCapturing) return null
-  
   return (
     <group>
 
-
       
+
       {/* XZ Horizontal Planes for all objects in move and rotate tools */}
       {(tool === 'move' || tool === 'rotate') && clayObjects.map((clay) => {
         // Calculate color based on current Z position (real-time)
@@ -3178,7 +3174,6 @@ export default function AdvancedClay() {
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
               onCoordsUpdate={setCameraRelativeCoords}
-              isCapturing={captureRequested}
             />
           )}
           
@@ -3641,68 +3636,6 @@ export default function AdvancedClay() {
                   </>
                 )}
               </div>
-            </div>
-          )}
-          
-          {/* Move Tool Panel */}
-          {tool === 'move' && selectedClayId && !showGroupingPanel && (
-            <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-4">
-              <span className="text-sm text-gray-600">Position:</span>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-1">
-                  <span className="text-xs text-gray-500 w-4">X:</span>
-                  <input
-                    type="number"
-                    value={clayObjects.find(c => c.id === selectedClayId)?.position.x.toFixed(2) || 0}
-                    onChange={(e) => {
-                      const clay = clayObjects.find(c => c.id === selectedClayId)
-                      if (clay) {
-                        const newPosition = clay.position.clone()
-                        newPosition.x = parseFloat(e.target.value) || 0
-                        updateClay({ ...clay, position: newPosition })
-                      }
-                    }}
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    step="0.1"
-                  />
-                </label>
-                <label className="flex items-center gap-1">
-                  <span className="text-xs text-gray-500 w-4">Y:</span>
-                  <input
-                    type="number"
-                    value={clayObjects.find(c => c.id === selectedClayId)?.position.y.toFixed(2) || 0}
-                    onChange={(e) => {
-                      const clay = clayObjects.find(c => c.id === selectedClayId)
-                      if (clay) {
-                        const newPosition = clay.position.clone()
-                        newPosition.y = parseFloat(e.target.value) || 0
-                        updateClay({ ...clay, position: newPosition })
-                      }
-                    }}
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    step="0.1"
-                  />
-                </label>
-                <label className="flex items-center gap-1">
-                  <span className="text-xs text-gray-500 w-4">Z:</span>
-                  <input
-                    type="number"
-                    value={clayObjects.find(c => c.id === selectedClayId)?.position.z.toFixed(2) || 0}
-                    onChange={(e) => {
-                      const clay = clayObjects.find(c => c.id === selectedClayId)
-                      if (clay) {
-                        const newPosition = clay.position.clone()
-                        newPosition.z = parseFloat(e.target.value) || 0
-                        updateClay({ ...clay, position: newPosition })
-                      }
-                    }}
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    step="0.1"
-                  />
-                </label>
-              </div>
-              <div className="w-px h-8 bg-gray-300" />
-              <span className="text-xs text-gray-500">Use arrow keys or drag in 3D view</span>
             </div>
           )}
           
