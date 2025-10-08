@@ -752,35 +752,19 @@ function Clay({
         </mesh>
       )}
       {/* Grouping selection indicator */}
-      {selectedForGrouping && selectedForGrouping.includes(clay.id) && (
-        <>
-          <mesh
-            geometry={clay.geometry}
-            scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x * 1.08, clay.scale.y * 1.08, clay.scale.z * 1.08] : (clay.scale || 1) * 1.08}
-            userData={{ isOutline: true }}
-          >
-            <meshBasicMaterial
-              color="#3b82f6"
-              wireframe
-              transparent
-              opacity={0.8}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-          {/* Also add a glow effect */}
-          <mesh
-            geometry={clay.geometry}
-            scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x * 1.15, clay.scale.y * 1.15, clay.scale.z * 1.15] : (clay.scale || 1) * 1.15}
-            userData={{ isOutline: true }}
-          >
-            <meshBasicMaterial
-              color="#60a5fa"
-              transparent
-              opacity={0.3}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-        </>
+      {selectedForGrouping?.includes(clay.id) && (
+        <mesh
+          scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x * 1.05, clay.scale.y * 1.05, clay.scale.z * 1.05] : (clay.scale || 1) * 1.05}
+          userData={{ isOutline: true }}
+        >
+          <meshBasicMaterial
+            color="#3b82f6"
+            wireframe
+            transparent
+            opacity={0.6}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
       )}
       {/* Size label */}
       {(tool === 'add' || tool === 'push' || tool === 'pull' || tool === 'move' || tool === 'resize') && (
