@@ -194,8 +194,7 @@ function Clay({
   showGroupingPanel,
   toggleObjectForGrouping,
   isGroupHighlighted,
-  clayGroups,
-  clayObjects
+  clayGroups
 }: {
   clay: ClayObject
   tool: string
