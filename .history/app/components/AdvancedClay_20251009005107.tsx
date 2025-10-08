@@ -214,7 +214,6 @@ function Clay({
   toggleObjectForGrouping?: (id: string) => void
   isGroupHighlighted?: boolean
   clayGroups?: ClayGroup[]
-  clayObjects?: ClayObject[]
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const groupRef = useRef<THREE.Group>(null)
@@ -451,45 +450,14 @@ function Clay({
         const deltaX = (e.clientX - rotationRef.current.startX) * 0.01
         const deltaY = (e.clientY - rotationRef.current.startY) * 0.01
         
-        if (rotationRef.current.isGroupRotation && clay.groupId && clayObjects) {
-          // Group rotation around group center
-          const rotationMatrix = new THREE.Matrix4()
-          rotationMatrix.makeRotationFromEuler(new THREE.Euler(deltaY, deltaX, 0))
-          
-          // Update all objects in the group
-          clayObjects.forEach(obj => {
-            if (obj.groupId === clay.groupId) {
-              const initialRelativePos = rotationRef.current.groupInitialPositions.get(obj.id)
-              if (initialRelativePos) {
-                // Rotate the relative position
-                const rotatedPos = initialRelativePos.clone().applyMatrix4(rotationMatrix)
-                const newPosition = rotatedPos.add(rotationRef.current.groupCenter)
-                
-                // Update the object
-                const updatedObj = {
-                  ...obj,
-                  position: newPosition,
-                  rotation: new THREE.Euler(
-                    rotationRef.current.initialRotation.x + deltaY,
-                    rotationRef.current.initialRotation.y + deltaX,
-                    rotationRef.current.initialRotation.z
-                  )
-                }
-                onUpdate(updatedObj)
-              }
-            }
-          })
-        } else {
-          // Single object rotation
-          meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
-          meshRef.current.rotation.x = rotationRef.current.initialRotation.x + deltaY
-          
-          const newClay = {
-            ...clay,
-            rotation: meshRef.current.rotation.clone()
-          }
-          onUpdate(newClay)
+        meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
+        meshRef.current.rotation.x = rotationRef.current.initialRotation.x + deltaY
+        
+        const newClay = {
+          ...clay,
+          rotation: meshRef.current.rotation.clone()
         }
+        onUpdate(newClay)
       } else if (tool === 'resize' && resizeRef.current.active && groupRef.current) {
         // Calculate current distance from object center to mouse position
         const rect = gl.domElement.getBoundingClientRect()
@@ -3225,7 +3193,6 @@ export default function AdvancedClay() {
                   toggleObjectForGrouping={toggleObjectForGrouping}
                   isGroupHighlighted={isGroupHighlighted}
                   clayGroups={clayGroups}
-                  clayObjects={clayObjects}
                 />
               </group>
             )
