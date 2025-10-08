@@ -3283,34 +3283,22 @@ export default function AdvancedClay() {
           <div className="flex items-center justify-center gap-2">
           {/* Main Tools */}
           <div className="flex gap-2 bg-gray-100 rounded-lg p-2">
-            <button
-              onClick={() => {
-                setTool('rotate')
-                setShowGroupingPanel(false)
-              }}
-              disabled={showGroupingPanel}
-              className={`p-3 rounded-lg transition-all ${
-                tool === 'rotate' && !showGroupingPanel
-                  ? 'bg-gray-800 text-white shadow-md' 
-                  : showGroupingPanel
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white hover:bg-gray-50 text-gray-700'
-              }`}
-              title="Rotate View"
-            >
-              <SwitchCamera size={20} />
-            </button>
-              <button
-                onClick={() => {
-                  setTool('rotateObject')
-                  setShowGroupingPanel(false)
-                }}
-                disabled={showGroupingPanel}
+                          <button
+                onClick={() => setTool('rotate')}
                 className={`p-3 rounded-lg transition-all ${
-                  tool === 'rotateObject' && !showGroupingPanel
+                  tool === 'rotate' 
                     ? 'bg-gray-800 text-white shadow-md' 
-                    : showGroupingPanel
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white hover:bg-gray-50 text-gray-700'
+                }`}
+                title="Rotate View"
+              >
+                <SwitchCamera size={20} />
+              </button>
+              <button
+                onClick={() => setTool('rotateObject')}
+                className={`p-3 rounded-lg transition-all ${
+                  tool === 'rotateObject' 
+                    ? 'bg-gray-800 text-white shadow-md' 
                     : 'bg-white hover:bg-gray-50 text-gray-700'
                 }`}
                 title="Rotate Object"
@@ -3318,16 +3306,10 @@ export default function AdvancedClay() {
                 <RotateCw size={20} />
               </button>
               <button
-                onClick={() => {
-                  setTool('resize')
-                  setShowGroupingPanel(false)
-                }}
-                disabled={showGroupingPanel}
+                onClick={() => setTool('resize')}
                 className={`p-3 rounded-lg transition-all ${
-                  tool === 'resize' && !showGroupingPanel
+                  tool === 'resize' 
                     ? 'bg-gray-800 text-white shadow-md' 
-                    : showGroupingPanel
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-white hover:bg-gray-50 text-gray-700'
                 }`}
                 title="Resize Object"
@@ -3335,16 +3317,10 @@ export default function AdvancedClay() {
                 <Maximize2 size={20} />
               </button>
             <button
-              onClick={() => {
-                setTool('push')
-                setShowGroupingPanel(false)
-              }}
-              disabled={showGroupingPanel}
+              onClick={() => setTool('push')}
               className={`p-3 rounded-lg transition-all ${
-                tool === 'push' && !showGroupingPanel
+                tool === 'push' 
                   ? 'bg-gray-800 text-white shadow-md' 
-                  : showGroupingPanel
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white hover:bg-gray-50 text-gray-700'
               }`}
               title="Push & Drag"
@@ -3352,16 +3328,10 @@ export default function AdvancedClay() {
               <SplinePointer size={20} />
             </button>
             <button
-              onClick={() => {
-                setTool('paint')
-                setShowGroupingPanel(false)
-              }}
-              disabled={showGroupingPanel}
+              onClick={() => setTool('paint')}
               className={`p-3 rounded-lg transition-all ${
-                tool === 'paint' && !showGroupingPanel
+                tool === 'paint' 
                   ? 'bg-gray-800 text-white shadow-md' 
-                  : showGroupingPanel
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white hover:bg-gray-50 text-gray-700'
               }`}
               title="Paint"
@@ -3369,16 +3339,10 @@ export default function AdvancedClay() {
               <PaintbrushVertical size={20} />
             </button>
             <button
-              onClick={() => {
-                setTool('add')
-                setShowGroupingPanel(false)
-              }}
-              disabled={showGroupingPanel}
+              onClick={() => setTool('add')}
               className={`p-3 rounded-lg transition-all ${
-                tool === 'add' && !showGroupingPanel
+                tool === 'add' 
                   ? 'bg-gray-800 text-white shadow-md' 
-                  : showGroupingPanel
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white hover:bg-gray-50 text-gray-700'
               }`}
               title="Add Clay"
@@ -3386,45 +3350,38 @@ export default function AdvancedClay() {
               <Plus size={20} />
             </button>
             <button
-              onClick={() => {
-                setTool('move')
-                setShowGroupingPanel(false)
-              }}
-              disabled={showGroupingPanel}
+              onClick={() => setTool('move')}
               className={`p-3 rounded-lg transition-all ${
-                tool === 'move' && !showGroupingPanel
+                tool === 'move' 
                   ? 'bg-gray-800 text-white shadow-md' 
-                  : showGroupingPanel
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white hover:bg-gray-50 text-gray-700'
               }`}
               title="Move Clay"
             >
               <Move size={18} />
             </button>
-            <button
-              onClick={() => {
-                setShowGroupingPanel(!showGroupingPanel)
-                if (!showGroupingPanel) {
-                  setTool('rotate') // Reset to rotate when enabling grouping
-                }
-              }}
-              className={`p-3 rounded-lg transition-all ${
-                showGroupingPanel 
-                  ? 'bg-gray-800 text-white shadow-md' 
-                  : 'bg-white hover:bg-gray-50 text-gray-700'
-              }`}
-              title="Group Objects"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <path d="M10 6.5h4M10 17.5h4M6.5 10v4M17.5 10v4" />
-              </svg>
-            </button>
           </div>
+          
+          <div className="w-px h-10 bg-gray-300" />
+          
+          {/* Group Button */}
+          <button
+            onClick={() => setShowGroupingPanel(!showGroupingPanel)}
+            className={`p-3 rounded-lg transition-all ${
+              showGroupingPanel 
+                ? 'bg-gray-800 text-white shadow-md' 
+                : 'bg-white hover:bg-gray-50 text-gray-700'
+            }`}
+            title="Group Objects"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <path d="M10 6.5h4M10 17.5h4M6.5 10v4M17.5 10v4" />
+            </svg>
+          </button>
           
           <div className="w-px h-10 bg-gray-300" />
           
