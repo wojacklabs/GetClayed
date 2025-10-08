@@ -194,8 +194,7 @@ function Clay({
   showGroupingPanel,
   toggleObjectForGrouping,
   isGroupHighlighted,
-  clayGroups,
-  clayObjects
+  clayGroups
 }: {
   clay: ClayObject
   tool: string
@@ -447,21 +446,18 @@ function Clay({
   useEffect(() => {
     if (!isSelected) return
     
-    // Capture clayObjects in the effect scope
-    const currentClayObjects = clayObjects
-    
     const handleToolMouseMove = (e: MouseEvent) => {
       if (tool === 'rotateObject' && rotationRef.current.active && meshRef.current) {
         const deltaX = (e.clientX - rotationRef.current.startX) * 0.01
         const deltaY = (e.clientY - rotationRef.current.startY) * 0.01
         
-        if (rotationRef.current.isGroupRotation && clay.groupId && currentClayObjects) {
+        if (rotationRef.current.isGroupRotation && clay.groupId && clayObjects) {
           // Group rotation around group center
           const rotationMatrix = new THREE.Matrix4()
           rotationMatrix.makeRotationFromEuler(new THREE.Euler(deltaY, deltaX, 0))
           
           // Update all objects in the group
-          currentClayObjects.forEach(obj => {
+          clayObjects.forEach(obj => {
             if (obj.groupId === clay.groupId) {
               const initialRelativePos = rotationRef.current.groupInitialPositions.get(obj.id)
               if (initialRelativePos) {
@@ -710,7 +706,8 @@ function Clay({
     initialRotation: new THREE.Euler(0, 0, 0),
     groupCenter: new THREE.Vector3(),
     groupInitialPositions: new Map<string, THREE.Vector3>(),
-    isGroupRotation: false
+    isGroupRotation: false,
+    groupObjects: [] as ClayObject[]
   })
   
   return (
@@ -749,6 +746,7 @@ function Clay({
                 
                 // Calculate group center
                 const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
+                rotationRef.current.groupObjects = groupObjects
                 const center = new THREE.Vector3()
                 groupObjects.forEach(obj => {
                   center.add(obj.position)
