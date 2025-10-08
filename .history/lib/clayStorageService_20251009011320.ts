@@ -166,7 +166,6 @@ export function serializeClayProject(
       id: group.id,
       name: group.name,
       objectIds: group.objectIds,
-      mainObjectId: group.mainObjectId,
       position: {
         x: Math.round((group.position?.x || 0) * 10000) / 10000,
         y: Math.round((group.position?.y || 0) * 10000) / 10000,

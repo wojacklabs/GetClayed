@@ -748,26 +748,19 @@ function Clay({
               if (group) {
                 rotationRef.current.isGroupRotation = true
                 
-                // Use main object position as rotation center
-                const mainObject = clayObjects?.find(c => c.id === group.mainObjectId)
-                if (mainObject) {
-                  rotationRef.current.groupCenter.copy(mainObject.position)
-                } else {
-                  // Fallback to geometric center if main object not found
-                  const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
-                  const center = new THREE.Vector3()
-                  groupObjects.forEach(obj => {
-                    center.add(obj.position)
-                  })
-                  center.divideScalar(groupObjects.length)
-                  rotationRef.current.groupCenter.copy(center)
-                }
+                // Calculate group center
+                const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
+                const center = new THREE.Vector3()
+                groupObjects.forEach(obj => {
+                  center.add(obj.position)
+                })
+                center.divideScalar(groupObjects.length)
+                rotationRef.current.groupCenter.copy(center)
                 
                 // Store initial positions relative to group center
-                const groupObjects = clayObjects?.filter(c => c.groupId === clay.groupId) || []
                 rotationRef.current.groupInitialPositions.clear()
                 groupObjects.forEach(obj => {
-                  const relativePos = obj.position.clone().sub(rotationRef.current.groupCenter)
+                  const relativePos = obj.position.clone().sub(center)
                   rotationRef.current.groupInitialPositions.set(obj.id, relativePos)
                 })
               }
@@ -2360,17 +2353,11 @@ export default function AdvancedClay() {
       return
     }
     
-    if (!mainObjectForGroup) {
-      showPopup('Please select a main object for the group', 'error')
-      return
-    }
-    
     const groupId = `group-${Date.now()}`
     const newGroup: ClayGroup = {
       id: groupId,
       name: name || `Group ${clayGroups.length + 1}`,
       objectIds: [...selectedForGrouping],
-      mainObjectId: mainObjectForGroup,
       position: new THREE.Vector3(0, 0, 0),
       rotation: new THREE.Euler(0, 0, 0),
       scale: new THREE.Vector3(1, 1, 1)
@@ -2389,10 +2376,9 @@ export default function AdvancedClay() {
     
     setClayGroups(prev => [...prev, newGroup])
     setSelectedForGrouping([])
-    setMainObjectForGroup(null)
     setShowGroupingPanel(false)
     showPopup(`Created group: ${newGroup.name}`, 'success')
-  }, [selectedForGrouping, mainObjectForGroup, clayGroups, addToHistory, showPopup])
+  }, [selectedForGrouping, clayGroups, addToHistory, showPopup])
   
   const ungroupObjects = useCallback((groupId: string) => {
     // Remove group reference from objects
@@ -2420,23 +2406,12 @@ export default function AdvancedClay() {
   }, [])
   
   const toggleObjectForGrouping = useCallback((clayId: string) => {
-    setSelectedForGrouping(prev => {
-      const newSelection = prev.includes(clayId) 
+    setSelectedForGrouping(prev => 
+      prev.includes(clayId) 
         ? prev.filter(id => id !== clayId)
         : [...prev, clayId]
-      
-      // If this is the first object selected, make it the main object
-      if (newSelection.length === 1 && !prev.includes(clayId)) {
-        setMainObjectForGroup(clayId)
-      }
-      // If we're removing the main object, clear it
-      else if (mainObjectForGroup === clayId && prev.includes(clayId)) {
-        setMainObjectForGroup(newSelection.length > 0 ? newSelection[0] : null)
-      }
-      
-      return newSelection
-    })
-  }, [mainObjectForGroup])
+    )
+  }, [])
   
   const addNewClay = useCallback((position: THREE.Vector3, size: number = 2, thickness: number = 1, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => {
     let geometry: THREE.BufferGeometry
@@ -3486,8 +3461,6 @@ export default function AdvancedClay() {
                 if (tool === 'group') {
                   setTool('rotate')
                   setShowGroupingPanel(false)
-                  setSelectedForGrouping([])
-                  setMainObjectForGroup(null)
                 } else {
                   setTool('group')
                   setShowGroupingPanel(true)
@@ -3846,32 +3819,27 @@ export default function AdvancedClay() {
               <div className="flex items-center gap-2">
                 {clayObjects.filter(clay => !clay.groupId).map((clay, index) => {
                   const isSelected = selectedForGrouping.includes(clay.id)
-                  const isMainObject = mainObjectForGroup === clay.id
                   return (
                     <button
                       key={clay.id}
                       onClick={() => toggleObjectForGrouping(clay.id)}
-                      className={`p-2 rounded-lg transition-all relative ${
+                      className={`p-2 rounded-lg transition-all ${
                         isSelected 
                           ? 'bg-blue-500 text-white shadow-md' 
                           : 'bg-white hover:bg-gray-50 text-gray-700'
                       }`}
-                      title={`Object ${index + 1}${isMainObject ? ' (Main)' : ''}`}
+                      title={`Object ${index + 1}`}
                     >
-                      {isMainObject && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-white" />
-                      )}
                       <div className="flex flex-col items-center gap-1">
                         <div 
                           className="w-8 h-8 rounded-full border-2"
                           style={{ 
                             backgroundColor: clay.color,
-                            borderColor: isSelected ? (isMainObject ? '#fbbf24' : 'white') : clay.color
+                            borderColor: isSelected ? 'white' : clay.color
                           }}
                         />
                         <span className="text-xs">
                           {clay.shape ? clay.shape.charAt(0).toUpperCase() : 'O'}{index + 1}
-                          {isMainObject && ' ★'}
                         </span>
                       </div>
                     </button>
@@ -3887,22 +3855,17 @@ export default function AdvancedClay() {
               
               {/* Group controls */}
               <div className="flex items-center gap-2">
-                {selectedForGrouping.length >= 2 && mainObjectForGroup && (
-                  <>
-                    <div className="text-sm text-gray-600">
-                      Main: <span className="font-medium">{clayObjects.find(c => c.id === mainObjectForGroup)?.shape?.[0].toUpperCase() || 'O'}</span>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Group name"
-                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          createGroup((e.target as HTMLInputElement).value)
-                        }
-                      }}
-                    />
-                  </>
+                {selectedForGrouping.length >= 2 && (
+                  <input
+                    type="text"
+                    placeholder="Group name"
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        createGroup((e.target as HTMLInputElement).value)
+                      }
+                    }}
+                  />
                 )}
                 <button
                   onClick={() => createGroup('')}

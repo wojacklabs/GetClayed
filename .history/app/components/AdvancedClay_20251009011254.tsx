@@ -3486,8 +3486,6 @@ export default function AdvancedClay() {
                 if (tool === 'group') {
                   setTool('rotate')
                   setShowGroupingPanel(false)
-                  setSelectedForGrouping([])
-                  setMainObjectForGroup(null)
                 } else {
                   setTool('group')
                   setShowGroupingPanel(true)
