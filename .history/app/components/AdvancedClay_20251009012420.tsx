@@ -457,48 +457,30 @@ function Clay({
         const deltaY = (e.clientY - rotationRef.current.startY) * 0.01
         
         if (rotationRef.current.isGroupRotation && clay.groupId && currentClayObjects) {
-          // Group rotation around main object
+          // Group rotation around group center
           const rotationMatrix = new THREE.Matrix4()
           rotationMatrix.makeRotationFromEuler(new THREE.Euler(deltaY, deltaX, 0))
           
           // Update all objects in the group
           currentClayObjects.forEach(obj => {
             if (obj.groupId === clay.groupId) {
-              const initialRotation = rotationRef.current.groupInitialRotations.get(obj.id)
-              
-              if (obj.id === rotationRef.current.mainObjectId) {
-                // Main object: only rotate, don't move
-                if (initialRotation) {
-                  const updatedObj = {
-                    ...obj,
-                    rotation: new THREE.Euler(
-                      initialRotation.x + deltaY,
-                      initialRotation.y + deltaX,
-                      initialRotation.z
-                    )
-                  }
-                  onUpdate(updatedObj)
+              const initialRelativePos = rotationRef.current.groupInitialPositions.get(obj.id)
+              if (initialRelativePos) {
+                // Rotate the relative position
+                const rotatedPos = initialRelativePos.clone().applyMatrix4(rotationMatrix)
+                const newPosition = rotatedPos.add(rotationRef.current.groupCenter)
+                
+                // Update the object
+                const updatedObj = {
+                  ...obj,
+                  position: newPosition,
+                  rotation: new THREE.Euler(
+                    rotationRef.current.initialRotation.x + deltaY,
+                    rotationRef.current.initialRotation.y + deltaX,
+                    rotationRef.current.initialRotation.z
+                  )
                 }
-              } else {
-                // Other objects: rotate around main object
-                const initialRelativePos = rotationRef.current.groupInitialPositions.get(obj.id)
-                if (initialRelativePos && initialRotation) {
-                  // Rotate the relative position
-                  const rotatedPos = initialRelativePos.clone().applyMatrix4(rotationMatrix)
-                  const newPosition = rotatedPos.add(rotationRef.current.groupCenter)
-                  
-                  // Update the object
-                  const updatedObj = {
-                    ...obj,
-                    position: newPosition,
-                    rotation: new THREE.Euler(
-                      initialRotation.x + deltaY,
-                      initialRotation.y + deltaX,
-                      initialRotation.z
-                    )
-                  }
-                  onUpdate(updatedObj)
-                }
+                onUpdate(updatedObj)
               }
             }
           })
