@@ -444,10 +444,9 @@ function Clay({
     }
   }, [tool, brushSize, camera, raycaster, gl, onDeformingChange, clay, onUpdate, onSelect, isSelected])
   
-  // Handle tool-specific mouse events when selected or when rotation tool is active
+  // Handle tool-specific mouse events when selected
   useEffect(() => {
-    // For rotation tool, we don't need selection; for other tools we do
-    if (tool !== 'rotateObject' && !isSelected) return
+    if (!isSelected) return
     
     // Capture clayObjects in the effect scope
     const currentClayObjects = clayObjects
@@ -561,7 +560,7 @@ function Clay({
       }
     }
     
-    if (tool === 'rotateObject' || (tool === 'resize' && isSelected)) {
+    if (tool === 'rotateObject' || tool === 'resize') {
       window.addEventListener('mousemove', handleToolMouseMove)
       window.addEventListener('mouseup', handleToolMouseUp)
       
