@@ -3956,46 +3956,55 @@ export default function AdvancedClay() {
                 )}
               </div>
               
+              {/* Separator */}
+              <div className="w-px h-8 bg-gray-300" />
+              
               {/* Group controls */}
-              {selectedForGrouping.length >= 2 && mainObjectForGroup && (
-                <>
-                  <div className="w-px h-10 bg-gray-200" />
-                  <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {selectedForGrouping.length >= 2 && mainObjectForGroup && (
+                  <>
+                    <div className="text-sm text-gray-600">
+                      Main: <span className="font-medium">{clayObjects.find(c => c.id === mainObjectForGroup)?.shape?.[0].toUpperCase() || 'O'}</span>
+                    </div>
                     <input
                       type="text"
-                      placeholder="Group name (optional)"
-                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Group name"
+                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           createGroup((e.target as HTMLInputElement).value)
                         }
                       }}
                     />
-                    <button
-                      onClick={() => createGroup('')}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-all"
-                    >
-                      Create Group
-                    </button>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+                <button
+                  onClick={() => createGroup('')}
+                  disabled={selectedForGrouping.length < 2}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    selectedForGrouping.length >= 2
+                      ? 'bg-blue-500 text-white hover:bg-blue-600'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  Create Group ({selectedForGrouping.length})
+                </button>
+              </div>
               
               {/* Existing groups */}
               {clayGroups.length > 0 && (
                 <>
-                  <div className="w-px h-10 bg-gray-200" />
+                  <div className="w-px h-8 bg-gray-300" />
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">Groups:</span>
+                    <span className="text-sm text-gray-600">Groups:</span>
                     {clayGroups.map((group, index) => (
                       <button
                         key={group.id}
                         onClick={() => ungroupObjects(group.id)}
-                        className="group flex items-center gap-1 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-all"
-                        title="Click to ungroup"
+                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-all"
+                        title={`${group.name} - Click to ungroup`}
                       >
-                        <span className="text-gray-700">{group.name || `Group ${index + 1}`}</span>
-                        <span className="text-gray-400 group-hover:text-gray-600 text-xs">×</span>
+                        {group.name || `Group ${index + 1}`}
                       </button>
                     ))}
                   </div>
