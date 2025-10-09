@@ -3984,18 +3984,17 @@ export default function AdvancedClay() {
               {/* Existing groups */}
               {clayGroups.length > 0 && (
                 <>
-                  <div className="w-px h-10 bg-gray-200" />
+                  <div className="w-px h-8 bg-gray-300" />
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">Groups:</span>
+                    <span className="text-sm text-gray-600">Groups:</span>
                     {clayGroups.map((group, index) => (
                       <button
                         key={group.id}
                         onClick={() => ungroupObjects(group.id)}
-                        className="group flex items-center gap-1 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-all"
-                        title="Click to ungroup"
+                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-all"
+                        title={`${group.name} - Click to ungroup`}
                       >
-                        <span className="text-gray-700">{group.name || `Group ${index + 1}`}</span>
-                        <span className="text-gray-400 group-hover:text-gray-600 text-xs">×</span>
+                        {group.name || `Group ${index + 1}`}
                       </button>
                     ))}
                   </div>
