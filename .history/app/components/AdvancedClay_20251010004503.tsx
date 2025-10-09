@@ -2330,23 +2330,7 @@ export default function AdvancedClay() {
   }, [])
 
   
-  const updateClay = useCallback((updatedClay: ClayObject & { _batchUpdates?: ClayObject[] }) => {
-    // Handle batch updates for group rotation
-    if (updatedClay._batchUpdates) {
-      setClayObjects(prev => {
-        const newClays = [...prev]
-        updatedClay._batchUpdates!.forEach(update => {
-          const index = newClays.findIndex(c => c.id === update.id)
-          if (index !== -1) {
-            newClays[index] = update
-          }
-        })
-        addToHistory(newClays)
-        return newClays
-      })
-      return
-    }
-    
+  const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
       // Check if the updated clay is part of a group
       if (updatedClay.groupId) {

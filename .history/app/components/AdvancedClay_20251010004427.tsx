@@ -503,19 +503,8 @@ function Clay({
             }
           })
           
-          // For group rotation, we need to update all objects at once to avoid updateClay's group sync
-          // Get the parent component's setClayObjects function
-          const parentUpdate = onUpdate
-          
-          // Instead of calling onUpdate for each object (which triggers group sync),
-          // we'll update the entire state at once
-          if (updates.length > 0) {
-            // Find the AdvancedClay's setClayObjects through a custom update
-            parentUpdate({
-              ...updates[0],
-              _batchUpdates: updates
-            } as any)
-          }
+          // Apply all updates at once
+          updates.forEach(updatedObj => onUpdate(updatedObj))
         } else {
           // Single object rotation
           meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
@@ -2330,23 +2319,7 @@ export default function AdvancedClay() {
   }, [])
 
   
-  const updateClay = useCallback((updatedClay: ClayObject & { _batchUpdates?: ClayObject[] }) => {
-    // Handle batch updates for group rotation
-    if (updatedClay._batchUpdates) {
-      setClayObjects(prev => {
-        const newClays = [...prev]
-        updatedClay._batchUpdates!.forEach(update => {
-          const index = newClays.findIndex(c => c.id === update.id)
-          if (index !== -1) {
-            newClays[index] = update
-          }
-        })
-        addToHistory(newClays)
-        return newClays
-      })
-      return
-    }
-    
+  const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
       // Check if the updated clay is part of a group
       if (updatedClay.groupId) {

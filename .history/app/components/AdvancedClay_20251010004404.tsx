@@ -462,9 +462,7 @@ function Clay({
           const rotationMatrix = new THREE.Matrix4()
           rotationMatrix.makeRotationFromEuler(new THREE.Euler(deltaY, deltaX, 0))
           
-          // Collect all updates first
-          const updates: typeof currentClayObjects = []
-          
+          // Update all objects in the group
           currentClayObjects.forEach(obj => {
             if (obj.groupId === clay.groupId) {
               const initialRotation = rotationRef.current.groupInitialRotations.get(obj.id)
@@ -472,14 +470,15 @@ function Clay({
               if (obj.id === rotationRef.current.mainObjectId) {
                 // Main object: only rotate, don't move
                 if (initialRotation) {
-                  updates.push({
+                  const updatedObj = {
                     ...obj,
                     rotation: new THREE.Euler(
                       initialRotation.x + deltaY,
                       initialRotation.y + deltaX,
                       initialRotation.z
                     )
-                  })
+                  }
+                  onUpdate(updatedObj)
                 }
               } else {
                 // Other objects: rotate around main object
@@ -487,9 +486,10 @@ function Clay({
                 if (initialRelativePos && initialRotation) {
                   // Rotate the relative position
                   const rotatedPos = initialRelativePos.clone().applyMatrix4(rotationMatrix)
-                  const newPosition = new THREE.Vector3().addVectors(rotatedPos, rotationRef.current.groupCenter)
+                  const newPosition = rotatedPos.clone().add(rotationRef.current.groupCenter)
                   
-                  updates.push({
+                  // Update the object
+                  const updatedObj = {
                     ...obj,
                     position: newPosition,
                     rotation: new THREE.Euler(
@@ -497,25 +497,12 @@ function Clay({
                       initialRotation.y + deltaX,
                       initialRotation.z
                     )
-                  })
+                  }
+                  onUpdate(updatedObj)
                 }
               }
             }
           })
-          
-          // For group rotation, we need to update all objects at once to avoid updateClay's group sync
-          // Get the parent component's setClayObjects function
-          const parentUpdate = onUpdate
-          
-          // Instead of calling onUpdate for each object (which triggers group sync),
-          // we'll update the entire state at once
-          if (updates.length > 0) {
-            // Find the AdvancedClay's setClayObjects through a custom update
-            parentUpdate({
-              ...updates[0],
-              _batchUpdates: updates
-            } as any)
-          }
         } else {
           // Single object rotation
           meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
@@ -2330,23 +2317,7 @@ export default function AdvancedClay() {
   }, [])
 
   
-  const updateClay = useCallback((updatedClay: ClayObject & { _batchUpdates?: ClayObject[] }) => {
-    // Handle batch updates for group rotation
-    if (updatedClay._batchUpdates) {
-      setClayObjects(prev => {
-        const newClays = [...prev]
-        updatedClay._batchUpdates!.forEach(update => {
-          const index = newClays.findIndex(c => c.id === update.id)
-          if (index !== -1) {
-            newClays[index] = update
-          }
-        })
-        addToHistory(newClays)
-        return newClays
-      })
-      return
-    }
-    
+  const updateClay = useCallback((updatedClay: ClayObject) => {
     setClayObjects(prev => {
       // Check if the updated clay is part of a group
       if (updatedClay.groupId) {
