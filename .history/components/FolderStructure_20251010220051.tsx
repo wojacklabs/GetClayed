@@ -568,12 +568,7 @@ export default function FolderStructure({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <>
-              <span className="text-sm truncate" title={node.name}>{node.name}</span>
-              {isDeleting && (
-                <span className="ml-auto text-xs text-gray-500">Deleting...</span>
-              )}
-            </>
+            <span className="text-sm truncate" title={node.name}>{node.name}</span>
           )}
         </div>
         

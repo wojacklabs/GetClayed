@@ -514,7 +514,7 @@ export default function FolderStructure({
             isSelected ? 'bg-blue-100' : ''
           } ${isDragOver ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
             isUploading || isPending ? 'opacity-60' : ''
-          } ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
+          }`}
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={() => {
             if (node.type === 'folder') {
@@ -568,12 +568,7 @@ export default function FolderStructure({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <>
-              <span className="text-sm truncate" title={node.name}>{node.name}</span>
-              {isDeleting && (
-                <span className="ml-auto text-xs text-gray-500">Deleting...</span>
-              )}
-            </>
+            <span className="text-sm truncate" title={node.name}>{node.name}</span>
           )}
         </div>
         
