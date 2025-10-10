@@ -2222,7 +2222,7 @@ export default function AdvancedClay() {
         clearTimeout(autoSaveTimeoutRef.current)
       }
     }
-  }, [clayObjects, clayGroups, backgroundColor, selectedShape, detail, currentProjectInfo])
+  }, [clayObjects, backgroundColor, selectedShape, detail, currentProjectInfo])
   
   // Initialize with one clay or continue from SimpleClay
   useEffect(() => {
@@ -2250,15 +2250,7 @@ export default function AdvancedClay() {
                 break;
             }
             
-            // Restore deformed vertices if available
-            if (clayData.vertices && clayData.vertices.length > 0) {
-              const positions = new Float32Array(clayData.vertices);
-              geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-              geometry.computeVertexNormals();
-              geometry.userData = { deformed: true, originalShape: clayData.shape || 'sphere' };
-            } else {
-              geometry.userData = { deformed: false, originalShape: clayData.shape || 'sphere' };
-            }
+            geometry.userData = { deformed: false, originalShape: clayData.shape || 'sphere' };
             
             return {
               ...clayData,
@@ -2273,17 +2265,6 @@ export default function AdvancedClay() {
           setBackgroundColor(saved.backgroundColor || '#f0f0f0');
           setSelectedShape(saved.selectedShape || 'sphere');
           setDetail(saved.detail || 48);
-          
-          // Restore groups if available
-          if (saved.clayGroups && saved.clayGroups.length > 0) {
-            const restoredGroups = saved.clayGroups.map((groupData: any) => ({
-              ...groupData,
-              position: new THREE.Vector3(groupData.position.x, groupData.position.y, groupData.position.z),
-              rotation: new THREE.Euler(groupData.rotation.x, groupData.rotation.y, groupData.rotation.z),
-              scale: new THREE.Vector3(groupData.scale.x, groupData.scale.y, groupData.scale.z)
-            }));
-            setClayGroups(restoredGroups);
-          }
           
           if (saved.currentProjectInfo) {
             setCurrentProjectInfo(saved.currentProjectInfo);

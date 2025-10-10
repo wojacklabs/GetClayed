@@ -2274,17 +2274,6 @@ export default function AdvancedClay() {
           setSelectedShape(saved.selectedShape || 'sphere');
           setDetail(saved.detail || 48);
           
-          // Restore groups if available
-          if (saved.clayGroups && saved.clayGroups.length > 0) {
-            const restoredGroups = saved.clayGroups.map((groupData: any) => ({
-              ...groupData,
-              position: new THREE.Vector3(groupData.position.x, groupData.position.y, groupData.position.z),
-              rotation: new THREE.Euler(groupData.rotation.x, groupData.rotation.y, groupData.rotation.z),
-              scale: new THREE.Vector3(groupData.scale.x, groupData.scale.y, groupData.scale.z)
-            }));
-            setClayGroups(restoredGroups);
-          }
-          
           if (saved.currentProjectInfo) {
             setCurrentProjectInfo(saved.currentProjectInfo);
           }
