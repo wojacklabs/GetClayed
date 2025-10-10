@@ -21,7 +21,7 @@ interface FolderStructureProps {
   onProjectMove: (projectId: string, folderPath: string) => void;
   onProjectDelete: (projectId: string) => void;
   onFolderCreate: (folderPath: string) => void;
-  onFolderDelete: (folderPath: string) => Promise<void>;
+  onFolderDelete: (folderPath: string) => void;
   onProjectRename: (projectId: string, newName: string) => void;
   currentFolder: string;
   onFolderChange?: (folderPath: string) => void;
@@ -837,14 +837,7 @@ export default function FolderStructure({
             <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
             <p className="text-gray-600 mb-6">
               Are you sure you want to delete "{deleteItem.name}"?
-              {deleteItem.type === 'folder' && (
-                <>
-                  <br />
-                  <span className="text-red-600 font-medium">
-                    ⚠️ This will permanently delete all projects and subfolders inside this folder.
-                  </span>
-                </>
-              )}
+              {deleteItem.type === 'folder' && ' This will also delete all items inside this folder.'}
             </p>
             <div className="flex justify-end gap-3">
               <button
