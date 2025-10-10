@@ -923,12 +923,6 @@ export async function queryAllProjects(
       const projectId = tags['Project-ID'] || node.id;
       const rootTxId = tags['Root-TX'];
       
-      // Skip deleted projects
-      if (deletedProjectIds.has(projectId)) {
-        console.log(`[ClayStorage] Skipping deleted project: ${projectId}`);
-        continue;
-      }
-      
       // Check if we already have this project
       const existingProject = projectMap.get(projectId);
       
