@@ -17,15 +17,12 @@ export async function captureSceneThumbnail(
   const currentClearColor = renderer.getClearColor(new THREE.Color())
   const currentClearAlpha = renderer.getClearAlpha()
   
-  // Create a render target for thumbnail with high quality settings
+  // Create a render target for thumbnail
   const renderTarget = new THREE.WebGLRenderTarget(width, height, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     format: THREE.RGBAFormat,
-    type: THREE.UnsignedByteType,
-    samples: 4, // Enable multisampling for anti-aliasing
-    stencilBuffer: false,
-    depthBuffer: true
+    type: THREE.UnsignedByteType
   })
   
   // Set renderer clear color to match scene background
