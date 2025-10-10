@@ -977,7 +977,6 @@ export async function queryUserProjects(
   folderPath?: string
 ): Promise<Array<{
   id: string;
-  projectId: string;
   name: string;
   author: string;
   timestamp: number;
