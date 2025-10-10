@@ -402,94 +402,60 @@ export default function FolderStructure({
     if (deleteItem && walletAddress) {
       const item = deleteItem;
       if (item.type === 'folder' && walletAddress) {
-        // Mark folder and its contents as deleting
-        setDeletingItems(prev => new Set(prev).add(item.id));
+        // Remove from local storage
+        removeLocalFolder(walletAddress, item.id);
         
-        // Close modal immediately
-        setShowDeleteModal(false);
-        setDeleteItem(null);
+        // Mark folder as uploading
+        setUploadingFolders(prev => new Set(prev).add(item.id));
+        
+        // Call the delete handler which will delete all contents
+        await onFolderDelete(item.id);
+        // Force re-render
+        setForceUpdate(prev => prev + 1);
         
         try {
-          // Call the delete handler which will delete all contents
-          await onFolderDelete(item.id);
-          
-          // All project deletions uploaded, now update folder structure
-          showPopup('Folder contents deleted, updating structure...', 'info');
-          
-          // Remove from local storage only after successful deletion
-          removeLocalFolder(walletAddress, item.id);
-          
-          // Upload updated folder structure
+          // Get all folders and upload to blockchain
           const allFolders = getLocalFolders(walletAddress);
           await uploadFolderStructure(walletAddress, allFolders, (status) => {
             if (status === 'complete') {
-              showPopup('Folder structure updated, refreshing...', 'success');
+              setUploadingFolders(prev => {
+                const next = new Set(prev);
+                next.delete(item.id);
+                return next;
+              });
+              showPopup('Folder deleted successfully', 'success');
             } else if (status === 'error') {
+              setUploadingFolders(prev => {
+                const next = new Set(prev);
+                next.delete(item.id);
+                return next;
+              });
               // Re-add to local storage on error
               addLocalFolder(walletAddress, item.id);
-              throw new Error('Failed to update folder structure');
+              showPopup('Failed to delete folder from cloud', 'error');
             }
           });
-          
-          // Clear cache and refresh
-          queryCache.delete(`projects-${walletAddress}`);
-          await fetchProjects();
-          
-          // Force re-render
-          setForceUpdate(prev => prev + 1);
-          
-          // Remove from deleting state after everything succeeds
-          setDeletingItems(prev => {
-            const next = new Set(prev);
-            next.delete(item.id);
-            return next;
-          });
         } catch (error) {
-          console.error('Failed to delete folder:', error);
-          setDeletingItems(prev => {
+          console.error('Failed to upload folder structure:', error);
+          setUploadingFolders(prev => {
             const next = new Set(prev);
             next.delete(item.id);
             return next;
           });
-          showPopup('Failed to delete folder', 'error');
+          // Re-add to local storage on error
+          addLocalFolder(walletAddress, item.id);
         }
       } else if (item.type === 'file' && item.projectId) {
-        // Mark as deleting
-        setDeletingItems(prev => new Set(prev).add(item.projectId!));
-        
-        // Close modal immediately
-        setShowDeleteModal(false);
-        setDeleteItem(null);
-        
-        try {
-          // Wait for deletion marker upload to complete
-          await onProjectDelete(item.projectId);
-          
-          // Upload completed, show success
-          showPopup(`${item.name} deletion uploaded, refreshing...`, 'success');
-          
-          // Clear cache and refresh
-          queryCache.delete(`projects-${walletAddress}`);
-          
-          // Keep showing loading state while querying
-          await fetchProjects();
-          
-          // Remove from deleting state after query succeeds
-          setDeletingItems(prev => {
-            const next = new Set(prev);
-            next.delete(item.projectId!);
-            return next;
-          });
-        } catch (error) {
-          // Remove from deleting state on error
-          setDeletingItems(prev => {
-            const next = new Set(prev);
-            next.delete(item.projectId!);
-            return next;
-          });
-          showPopup('Failed to delete project', 'error');
-        }
+        onProjectDelete(item.projectId);
+        // Clear cache to refresh
+        queryCache.delete(`projects-${walletAddress}`);
+        fetchProjects();
       }
+      
+      // Close modal
+      setShowDeleteModal(false);
+      setDeleteItem(null);
+      showPopup(`${item.name} deleted successfully`, 'success');
     }
   };
 
@@ -505,7 +471,6 @@ export default function FolderStructure({
     const isDragOver = dragOverFolder === node.id;
     const isUploading = uploadingFolders.has(node.id);
     const isPending = pendingFolders.has(node.id);
-    const isDeleting = deletingItems.has(node.type === 'file' ? node.projectId || node.id : node.id);
 
     return (
       <div key={node.id}>
@@ -514,7 +479,7 @@ export default function FolderStructure({
             isSelected ? 'bg-blue-100' : ''
           } ${isDragOver ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
             isUploading || isPending ? 'opacity-60' : ''
-          } ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
+          }`}
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={() => {
             if (node.type === 'folder') {
@@ -568,12 +533,7 @@ export default function FolderStructure({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <>
-              <span className="text-sm truncate" title={node.name}>{node.name}</span>
-              {isDeleting && (
-                <span className="ml-auto text-xs text-gray-500">Deleting...</span>
-              )}
-            </>
+            <span className="text-sm truncate" title={node.name}>{node.name}</span>
           )}
         </div>
         
