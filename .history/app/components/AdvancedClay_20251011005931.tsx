@@ -764,12 +764,8 @@ function Clay({
         onPointerDown={(e) => {
           e.stopPropagation()
           
-          // Check if it's a touch event (button is undefined for touch)
-          const isTouch = e.pointerType === 'touch'
-          const isLeftClick = e.button === 0 || (isTouch && e.button === undefined)
-          
-          // If grouping panel is open and this is a left click/touch, toggle selection
-          if (showGroupingPanel && isLeftClick) {
+          // If grouping panel is open and this is a left click, toggle selection
+          if (showGroupingPanel && e.button === 0) {
             toggleObjectForGrouping?.(clay.id)
             return
           }
@@ -3353,6 +3349,10 @@ export default function AdvancedClay() {
             maxDistance={100}
             staticMoving={false}
             dynamicDampingFactor={0.1}
+            touches={{
+              ONE: THREE.TOUCH.ROTATE,
+              TWO: THREE.TOUCH.DOLLY_ROTATE
+            }}
           />
           
           {/* Camera Reset Component */}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { PopupNotificationProvider } from "../components/PopupNotification";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,6 +16,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GetClayed - 3D Clay Sculpting",
   description: "Create and sculpt 3D clay objects in your browser",
+  icons: {
+    icon: [
+      { url: '/favicon.png', type: 'image/png' },
+      { url: '/clay.png', type: 'image/png' }
+    ],
+    shortcut: [{ url: '/favicon.png', type: 'image/png' }],
+    apple: [{ url: '/clay.png', type: 'image/png' }],
+  },
+  manifest: '/manifest.json',
+  themeColor: '#3b82f6',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover'
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'GetClayed',
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +50,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <PopupNotificationProvider>
+          {children}
+        </PopupNotificationProvider>
       </body>
     </html>
   );
