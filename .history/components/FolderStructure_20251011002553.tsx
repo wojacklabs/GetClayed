@@ -524,7 +524,7 @@ export default function FolderStructure({
               toggleFolder(node.id);
             } else {
               setSelectedItem(node.id);
-              onProjectSelect(node.transactionId || node.id); // Use transaction ID for opening projects
+              onProjectSelect(node.projectId!);
             }
           }}
           onDragStart={(e) => handleDragStart(e, node)}

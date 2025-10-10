@@ -210,11 +210,10 @@ export default function FolderStructure({
       const parent = folderPath ? folderMap.get(folderPath) || tree : tree;
       
       parent.children!.push({
-        id: project.projectId || project.id, // Use actual project ID as node ID
+        id: project.id,
         name: project.name,
         type: 'file',
-        projectId: project.projectId || project.id, // Actual project ID for deletion
-        transactionId: project.id // Transaction ID for opening projects
+        projectId: project.id
       });
     });
 
@@ -524,7 +523,7 @@ export default function FolderStructure({
               toggleFolder(node.id);
             } else {
               setSelectedItem(node.id);
-              onProjectSelect(node.transactionId || node.id); // Use transaction ID for opening projects
+              onProjectSelect(node.projectId!);
             }
           }}
           onDragStart={(e) => handleDragStart(e, node)}
