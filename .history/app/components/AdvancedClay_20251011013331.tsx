@@ -3472,11 +3472,7 @@ export default function AdvancedClay() {
           <div className="flex items-center gap-2">
             {/* Home Button */}
             <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                router.push('/')
-              }}
+              onClick={() => router.push('/')}
               className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
               title="Home"
             >
