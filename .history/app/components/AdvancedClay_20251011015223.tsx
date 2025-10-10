@@ -2966,7 +2966,7 @@ export default function AdvancedClay() {
         setChunkDownloadProgress({
           ...progress,
           isOpen: true,
-          projectName: projectName
+          projectName: progress.projectName || projectName
         });
       })
       console.log('Downloaded project:', project)
@@ -3475,11 +3475,9 @@ export default function AdvancedClay() {
               type="button"
               onClick={(e) => {
                 e.preventDefault()
-                e.stopPropagation()
-                console.log('Home button clicked, navigating to /')
-                window.location.href = '/'
+                router.push('/')
               }}
-              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200 cursor-pointer"
+              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
               title="Home"
             >
               <Home size={20} />

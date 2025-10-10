@@ -2966,7 +2966,7 @@ export default function AdvancedClay() {
         setChunkDownloadProgress({
           ...progress,
           isOpen: true,
-          projectName: projectName
+          projectName: progress.projectName || projectName
         });
       })
       console.log('Downloaded project:', project)

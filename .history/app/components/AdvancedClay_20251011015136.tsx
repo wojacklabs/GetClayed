@@ -2959,7 +2959,7 @@ export default function AdvancedClay() {
       console.log('Loading project:', projectId)
       
       // Get project name from metadata if available
-      const projectName = 'Loading project...'; // Don't show ID
+      const projectName = projectId.substring(0, 20) + '...'; // Truncate for display
       
       // Download project from Irys with progress callback
       const project = await downloadClayProject(projectId, (progress) => {
@@ -3475,11 +3475,9 @@ export default function AdvancedClay() {
               type="button"
               onClick={(e) => {
                 e.preventDefault()
-                e.stopPropagation()
-                console.log('Home button clicked, navigating to /')
-                window.location.href = '/'
+                router.push('/')
               }}
-              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200 cursor-pointer"
+              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
               title="Home"
             >
               <Home size={20} />
