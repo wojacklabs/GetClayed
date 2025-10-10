@@ -3353,6 +3353,10 @@ export default function AdvancedClay() {
             maxDistance={100}
             staticMoving={false}
             dynamicDampingFactor={0.1}
+            touches={{
+              ONE: THREE.TOUCH.ROTATE,
+              TWO: THREE.TOUCH.DOLLY_ROTATE
+            }}
           />
           
           {/* Camera Reset Component */}
