@@ -1088,6 +1088,55 @@ export async function queryUserProjects(
       return [];
     }
     
+    // Then, query all deletions
+    const deletionQuery = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["clay-project-deletion"] },
+            { name: "Deleted-By", values: ["${walletAddress}"] }
+          ],
+          first: 100,
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+              tags {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
+    
+    const deletionResponse = await axios.post(IRYS_GRAPHQL_URL, { 
+      query: deletionQuery 
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    // Extract deleted project IDs
+    const deletedProjectIds = new Set<string>();
+    if (deletionResponse.data?.data?.transactions?.edges) {
+      deletionResponse.data.data.transactions.edges.forEach((edge: any) => {
+        const tags: Record<string, string> = {};
+        edge.node.tags.forEach((tag: any) => {
+          tags[tag.name] = tag.value;
+        });
+        if (tags['Project-ID']) {
+          deletedProjectIds.add(tags['Project-ID']);
+        }
+      });
+    }
+    
+    console.log(`[ClayStorage] Found ${deletedProjectIds.size} deleted projects`);
+    
     // Group by project ID to find latest versions
     const projectMap = new Map<string, any>();
     
