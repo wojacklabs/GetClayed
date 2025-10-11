@@ -441,19 +441,13 @@ export async function downloadUserProfile(walletAddress: string): Promise<UserPr
     });
     
     const result = await response.json();
-    let latestTxId: string;
-    let latestTx: any = null;
+    let latestTxId = rootTxId; // Default to root if no updates found
     
     if (result.data?.transactions?.edges?.length > 0) {
-      latestTx = result.data.transactions.edges[0].node;
-      latestTxId = latestTx.id;
+      latestTxId = result.data.transactions.edges[0].node.id;
       console.log(`[ProfileService] Found latest profile update: ${latestTxId}`);
-    } else if (rootTxId) {
-      latestTxId = rootTxId;
-      console.log(`[ProfileService] No updates found, using root: ${rootTxId}`);
     } else {
-      console.log('[ProfileService] No profile found for wallet:', walletAddress);
-      return null;
+      console.log(`[ProfileService] No updates found, using root: ${rootTxId}`);
     }
     
     // Download the latest profile data
@@ -484,19 +478,6 @@ export async function downloadUserProfile(walletAddress: string): Promise<UserPr
         return profile;
       } else {
         // Direct profile data
-        // Save the root TX ID if we didn't have one
-        if (!rootTxId && latestTx) {
-          const tags = latestTx.tags.reduce((acc: any, tag: any) => {
-            acc[tag.name] = tag.value;
-            return acc;
-          }, {});
-          
-          const foundRootTx = tags['Root-TX'] || latestTx.id;
-          if (foundRootTx) {
-            saveProfileMutableReference(walletAddress, foundRootTx);
-            console.log('[ProfileService] Saved profile mutable reference for future use');
-          }
-        }
         return data as UserProfile;
       }
     } catch (parseError) {

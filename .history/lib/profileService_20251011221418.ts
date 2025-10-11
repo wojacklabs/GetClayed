@@ -493,7 +493,7 @@ export async function downloadUserProfile(walletAddress: string): Promise<UserPr
           
           const foundRootTx = tags['Root-TX'] || latestTx.id;
           if (foundRootTx) {
-            saveProfileMutableReference(walletAddress, foundRootTx);
+            saveProfileMutableReference(walletAddress, foundRootTx, latestTx.id);
             console.log('[ProfileService] Saved profile mutable reference for future use');
           }
         }
