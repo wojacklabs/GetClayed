@@ -917,8 +917,4 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
       )}
     </div>
   );
-});
-
-FolderStructure.displayName = 'FolderStructure';
-
-export default FolderStructure;
+}

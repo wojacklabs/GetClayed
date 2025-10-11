@@ -3343,7 +3343,6 @@ export default function AdvancedClay() {
       {/* Folder Structure - Only show when wallet connected */}
       {walletAddress && (
         <FolderStructure
-          ref={folderStructureRef}
           walletAddress={walletAddress}
           onProjectSelect={handleProjectSelect}
           onProjectMove={handleProjectMove}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderPlus, FileText, MoreVertical, Trash2, Edit2, RefreshCw, Loader2 } from 'lucide-react';
 import { getUserFolderStructure } from '../lib/clayStorageService';
 import { queryCache } from '../lib/queryCache';
@@ -28,11 +28,7 @@ interface FolderStructureProps {
   onFolderChange?: (folderPath: string) => void;
 }
 
-export interface FolderStructureHandle {
-  refreshProjects: () => void;
-}
-
-const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(({ 
+export default function FolderStructure({ 
   walletAddress, 
   onProjectSelect, 
   onProjectMove,
@@ -42,7 +38,7 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
   onProjectRename,
   currentFolder,
   onFolderChange
-}, ref) => {
+}: FolderStructureProps) {
   const [folderTree, setFolderTree] = useState<FolderNode>({
     id: 'root',
     name: 'My Projects',
@@ -113,14 +109,6 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
   useEffect(() => {
     fetchProjects();
   }, [walletAddress, forceUpdate]);
-  
-  // Expose refresh method to parent components
-  useImperativeHandle(ref, () => ({
-    refreshProjects: () => {
-      queryCache.delete(`projects-${walletAddress}`);
-      setForceUpdate(prev => prev + 1);
-    }
-  }), [walletAddress]);
 
   // Build folder tree from projects and local folders
   // Load and sync folder structure from blockchain
@@ -917,8 +905,4 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
       )}
     </div>
   );
-});
-
-FolderStructure.displayName = 'FolderStructure';
-
-export default FolderStructure;
+}

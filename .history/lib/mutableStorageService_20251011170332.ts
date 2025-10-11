@@ -125,7 +125,7 @@ export function markProjectDirty(isDirty: boolean = true): void {
   const current = getCurrentProject();
   if (current) {
     current.isDirty = isDirty;
-    setCurrentProject(current, true); // Silent mode to avoid excessive logging
+    setCurrentProject(current);
   }
 }
 
