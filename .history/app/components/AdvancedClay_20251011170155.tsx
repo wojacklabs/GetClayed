@@ -2158,7 +2158,6 @@ export default function AdvancedClay() {
   
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
-  const folderStructureRef = useRef<FolderStructureHandle>(null)
   
   // Warn before leaving page with unsaved changes
   useEffect(() => {
@@ -2957,9 +2956,6 @@ export default function AdvancedClay() {
       
       // Clear cache to refresh projects list
       queryCache.delete(`projects-${walletAddress}`)
-      
-      // Refresh folder structure to show new project
-      folderStructureRef.current?.refreshProjects()
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
@@ -3343,7 +3339,6 @@ export default function AdvancedClay() {
       {/* Folder Structure - Only show when wallet connected */}
       {walletAddress && (
         <FolderStructure
-          ref={folderStructureRef}
           walletAddress={walletAddress}
           onProjectSelect={handleProjectSelect}
           onProjectMove={handleProjectMove}

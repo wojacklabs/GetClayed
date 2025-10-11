@@ -100,14 +100,18 @@ export function getCurrentProject(): CurrentProject | null {
 /**
  * Set the currently open project
  */
-export function setCurrentProject(project: CurrentProject | null): void {
+export function setCurrentProject(project: CurrentProject | null, silent: boolean = false): void {
   try {
     if (project) {
       localStorage.setItem(CURRENT_PROJECT_KEY, JSON.stringify(project));
-      console.log(`[MutableStorage] Set current project: ${project.projectId} (${project.name})`);
+      if (!silent) {
+        console.log(`[MutableStorage] Set current project: ${project.projectId} (${project.name})`);
+      }
     } else {
       localStorage.removeItem(CURRENT_PROJECT_KEY);
-      console.log('[MutableStorage] Cleared current project');
+      if (!silent) {
+        console.log('[MutableStorage] Cleared current project');
+      }
     }
   } catch (error) {
     console.error('[MutableStorage] Error setting current project:', error);
@@ -121,7 +125,7 @@ export function markProjectDirty(isDirty: boolean = true): void {
   const current = getCurrentProject();
   if (current) {
     current.isDirty = isDirty;
-    setCurrentProject(current);
+    setCurrentProject(current, true); // Silent mode to avoid excessive logging
   }
 }
 

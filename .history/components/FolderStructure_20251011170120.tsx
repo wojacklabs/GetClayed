@@ -113,14 +113,6 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
   useEffect(() => {
     fetchProjects();
   }, [walletAddress, forceUpdate]);
-  
-  // Expose refresh method to parent components
-  useImperativeHandle(ref, () => ({
-    refreshProjects: () => {
-      queryCache.delete(`projects-${walletAddress}`);
-      setForceUpdate(prev => prev + 1);
-    }
-  }), [walletAddress]);
 
   // Build folder tree from projects and local folders
   // Load and sync folder structure from blockchain
@@ -917,8 +909,4 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
       )}
     </div>
   );
-});
-
-FolderStructure.displayName = 'FolderStructure';
-
-export default FolderStructure;
+}
