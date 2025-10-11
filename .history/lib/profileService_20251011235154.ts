@@ -408,15 +408,14 @@ export async function downloadUserProfile(walletAddress: string): Promise<UserPr
         }
       `;
     } else {
-      // If no root TX ID, query by Wallet-Address tag (for backward compatibility) or Author tag
-      // First try Wallet-Address (legacy)
+      // If no root TX ID, query by Author tag only
       query = `
         query {
           transactions(
             tags: [
               { name: "App-Name", values: ["GetClayed"] },
               { name: "Data-Type", values: ["user-profile"] },
-              { name: "Wallet-Address", values: ["${walletAddress.toLowerCase()}"] }
+              { name: "Author", values: ["${walletAddress.toLowerCase()}"] }
             ],
             first: 1,
             order: DESC
