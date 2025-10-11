@@ -2815,7 +2815,6 @@ export default function AdvancedClay() {
       if (thumbnailDataUrl && thumbnailDataUrl !== '') {
         try {
           console.log('[Save] Step 5: Uploading thumbnail...');
-          console.log('[Save] Thumbnail data URL length:', thumbnailDataUrl.length);
           onProgress?.('Uploading thumbnail...')
           const result = await uploadProjectThumbnail(
             thumbnailDataUrl,
@@ -2828,8 +2827,7 @@ export default function AdvancedClay() {
           // Continue without thumbnail
         }
       } else {
-        console.log('[Save] Step 5: No thumbnail captured - dataUrl is empty or null')
-        console.log('[Save] thumbnailDataUrl value:', thumbnailDataUrl)
+        console.log('[Save] Step 5: No thumbnail captured')
       }
       
       // Check project size
