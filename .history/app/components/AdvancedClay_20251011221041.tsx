@@ -456,14 +456,10 @@ function Clay({
     // Capture clayObjects in the effect scope
     const currentClayObjects = clayObjects
     
-    const handleToolMouseMove = (e: MouseEvent | TouchEvent) => {
+    const handleToolMouseMove = (e: MouseEvent) => {
       if (tool === 'rotateObject' && rotationRef.current.active && meshRef.current) {
-        // Get coordinates from mouse or touch
-        const point = e.type.includes('touch') && 'touches' in e && e.touches[0] 
-          ? e.touches[0] 
-          : e as MouseEvent
-        const deltaX = (point.clientX - rotationRef.current.startX) * 0.01
-        const deltaY = (point.clientY - rotationRef.current.startY) * 0.01
+        const deltaX = (e.clientX - rotationRef.current.startX) * 0.01
+        const deltaY = (e.clientY - rotationRef.current.startY) * 0.01
         
         if (rotationRef.current.isGroupRotation && clay.groupId && currentClayObjects) {
           // Group rotation around main object
@@ -538,11 +534,8 @@ function Clay({
       } else if (tool === 'resize' && resizeRef.current.active && groupRef.current) {
         // Calculate current distance from object center to mouse position
         const rect = gl.domElement.getBoundingClientRect()
-        const point = e.type.includes('touch') && 'touches' in e && e.touches[0] 
-          ? e.touches[0] 
-          : e as MouseEvent
-        const x = ((point.clientX - rect.left) / rect.width) * 2 - 1
-        const y = -((point.clientY - rect.top) / rect.height) * 2 + 1
+        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+        const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
         
         // Get object center in screen space
         const objectWorldPos = new THREE.Vector3()
@@ -588,14 +581,10 @@ function Clay({
     if (tool === 'rotateObject' || (tool === 'resize' && isSelected)) {
       window.addEventListener('mousemove', handleToolMouseMove)
       window.addEventListener('mouseup', handleToolMouseUp)
-      window.addEventListener('touchmove', handleToolMouseMove, { passive: false })
-      window.addEventListener('touchend', handleToolMouseUp)
       
       return () => {
         window.removeEventListener('mousemove', handleToolMouseMove)
         window.removeEventListener('mouseup', handleToolMouseUp)
-        window.removeEventListener('touchmove', handleToolMouseMove)
-        window.removeEventListener('touchend', handleToolMouseUp)
       }
     }
   }, [tool, isSelected, clay, onUpdate, gl, camera, clayObjects, clayGroups])
@@ -801,9 +790,10 @@ function Clay({
             }
             
             rotationRef.current.active = true
-            // For three.js pointer events, clientX/Y are already available
-            rotationRef.current.startX = e.clientX
-            rotationRef.current.startY = e.clientY
+            // Use clientX/Y for mouse, or first touch point for touch events
+            const point = e.pointerType === 'touch' && e.touches?.[0] ? e.touches[0] : e
+            rotationRef.current.startX = point.clientX || e.clientX
+            rotationRef.current.startY = point.clientY || e.clientY
             rotationRef.current.initialRotation.copy(meshRef.current.rotation)
             
             // Check if this is a group rotation

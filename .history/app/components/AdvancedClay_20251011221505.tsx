@@ -801,9 +801,10 @@ function Clay({
             }
             
             rotationRef.current.active = true
-            // For three.js pointer events, clientX/Y are already available
-            rotationRef.current.startX = e.clientX
-            rotationRef.current.startY = e.clientY
+            // Use clientX/Y for mouse, or first touch point for touch events
+            const point = e.pointerType === 'touch' && e.touches?.[0] ? e.touches[0] : e
+            rotationRef.current.startX = point.clientX || e.clientX
+            rotationRef.current.startY = point.clientY || e.clientY
             rotationRef.current.initialRotation.copy(meshRef.current.rotation)
             
             // Check if this is a group rotation
