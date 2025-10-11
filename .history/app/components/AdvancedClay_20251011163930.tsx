@@ -948,8 +948,8 @@ function Clay({
               e.stopPropagation()
               
               // Prevent default touch behavior
-              if (e.pointerType === 'touch' && e.nativeEvent) {
-                e.nativeEvent.preventDefault()
+              if (e.pointerType === 'touch') {
+                e.preventDefault()
               }
               
               onSelect()

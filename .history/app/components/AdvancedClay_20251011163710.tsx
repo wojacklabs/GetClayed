@@ -769,8 +769,8 @@ function Clay({
           const isLeftClick = e.button === 0 || (isTouch && e.button === undefined)
           
           // Prevent default touch behavior (text selection, etc.)
-          if (isTouch && e.nativeEvent) {
-            e.nativeEvent.preventDefault()
+          if (isTouch) {
+            e.preventDefault()
           }
           
           // If grouping panel is open and this is a left click/touch, toggle selection
@@ -946,12 +946,6 @@ function Clay({
           onPointerDown={(e) => {
             if (tool === 'move' && meshRef.current && groupRef.current) {
               e.stopPropagation()
-              
-              // Prevent default touch behavior
-              if (e.pointerType === 'touch' && e.nativeEvent) {
-                e.nativeEvent.preventDefault()
-              }
-              
               onSelect()
               
               // Start drag for move tool
@@ -1999,11 +1993,6 @@ function RaycasterManager({
   useEffect(() => {
     const handlePointerClick = (event: PointerEvent) => {
       if (tool !== 'paint' && tool !== 'delete' && tool !== 'rotateObject') return
-      
-      // Prevent default touch behavior
-      if (event.pointerType === 'touch') {
-        event.preventDefault()
-      }
       
       // Calculate mouse position in normalized device coordinates
       const rect = gl.domElement.getBoundingClientRect()
@@ -3348,12 +3337,11 @@ export default function AdvancedClay() {
       )}
       
       {/* Main content area with Canvas */}
-      <div className="flex-1 relative overflow-hidden" style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}>
+      <div className="flex-1 relative overflow-hidden">
         <Canvas 
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
-        onContextMenu={(e) => e.preventDefault()}
       >
         <Suspense fallback={null}>
           {/* Set scene background color */}

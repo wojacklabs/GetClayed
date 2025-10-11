@@ -769,8 +769,8 @@ function Clay({
           const isLeftClick = e.button === 0 || (isTouch && e.button === undefined)
           
           // Prevent default touch behavior (text selection, etc.)
-          if (isTouch && e.nativeEvent) {
-            e.nativeEvent.preventDefault()
+          if (isTouch) {
+            e.preventDefault()
           }
           
           // If grouping panel is open and this is a left click/touch, toggle selection
@@ -948,8 +948,8 @@ function Clay({
               e.stopPropagation()
               
               // Prevent default touch behavior
-              if (e.pointerType === 'touch' && e.nativeEvent) {
-                e.nativeEvent.preventDefault()
+              if (e.pointerType === 'touch') {
+                e.preventDefault()
               }
               
               onSelect()
