@@ -3702,7 +3702,7 @@ export default function AdvancedClay() {
           {/* Main Tools */}
           <div className="flex gap-2 bg-gray-100 rounded-lg p-2">
             <button
-              ref={(el) => { toolButtonsRef.current['rotate'] = el }}
+              ref={(el) => toolButtonsRef.current['rotate'] = el}
               onClick={() => {
                 setTool('rotate')
                 if (tool === 'group') setShowGroupingPanel(false)
@@ -4350,60 +4350,6 @@ export default function AdvancedClay() {
         </div>
       )}
       
-      {/* Tool Guide Tooltip */}
-      {showGuide && (
-        <div className="fixed inset-0 z-[10000] pointer-events-none">
-          <div className="absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto">
-            <div className="bg-white rounded-lg shadow-xl border-2 border-blue-500 p-4 max-w-sm">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold text-gray-900">{toolGuides[guideStep].title}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{toolGuides[guideStep].description}</p>
-                </div>
-                <button
-                  onClick={skipGuide}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  title="Close guide"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
-                <div className="flex gap-2">
-                  <button
-                    onClick={prevGuideStep}
-                    disabled={guideStep === 0}
-                    className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Before
-                  </button>
-                  <button
-                    onClick={skipGuide}
-                    className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    Skip
-                  </button>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-500">
-                    {guideStep + 1} / {toolGuides.length}
-                  </span>
-                  <button
-                    onClick={nextGuideStep}
-                    className="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-                  >
-                    {guideStep === toolGuides.length - 1 ? 'Done' : 'Next'}
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Arrow pointing to toolbar */}
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-r-2 border-b-2 border-blue-500 transform rotate-45"></div>
-          </div>
-        </div>
-      )}
       
     </div>
   )

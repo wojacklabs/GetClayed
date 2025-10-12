@@ -3,6 +3,7 @@
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { TrackballControls, Environment, Box, Line, Text, Billboard } from '@react-three/drei'
 import { useRef, useState, useEffect, Suspense, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import * as THREE from 'three'
 import { 
   SwitchCamera,
@@ -16,20 +17,25 @@ import {
   Eraser,
   RotateCw,
   Circle,
-  Triangle,
   Square,
   Minus,
   Spline,
   Download,
   FilePlus,
   Maximize2,
-  RotateCcw
+  RotateCcw,
+  User,
+  ChevronUp,
+  Home,
+  PenTool,
+  HelpCircle,
+  X
 } from 'lucide-react'
 import SaveButton from '../../components/SaveButton'
-import FolderStructure from '../../components/FolderStructure'
+import FolderStructure, { FolderStructureHandle } from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
-import { createIrysUploader, uploadToIrys } from '../../lib/irys'
-import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject } from '../../lib/clayStorageService'
+import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject, uploadProjectThumbnail, downloadProjectThumbnail } from '../../lib/clayStorageService'
+import { captureSceneThumbnail, compressImageDataUrl } from '../../lib/thumbnailService'
 import { getUploadPrice, payForUpload } from '../../lib/contractService'
 import { ethers } from 'ethers'
 import { downloadAsGLB } from '../../lib/glbService'
@@ -45,19 +51,34 @@ import {
 import { createDetailedGeometry } from '../../lib/geometryUtils'
 import { ChunkUploadProgress } from '../../components/ChunkUploadProgress'
 import { ChunkUploadProgress as ChunkProgressType } from '../../lib/chunkUploadService'
+import { usePopup } from '../../components/PopupNotification'
+import ProfilePage from '../../components/ProfilePage'
+import ProjectDetailView from '../../components/ProjectDetailView'
+import { downloadUserProfile } from '../../lib/profileService'
 
 interface ClayObject {
   id: string
   geometry: THREE.BufferGeometry
   position: THREE.Vector3
   color: string
-  shape?: 'sphere' | 'tetrahedron' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
+  shape?: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'
   rotation?: THREE.Euler
-  scale?: THREE.Vector3
+  scale?: number | THREE.Vector3
   controlPoints?: THREE.Vector3[] // For line and curve shapes
   size?: number // Original size parameter
   thickness?: number // Original thickness parameter
   detail?: number // For sphere detail
+  groupId?: string // ID of the group this object belongs to
+}
+
+interface ClayGroup {
+  id: string
+  name: string
+  objectIds: string[]
+  mainObjectId: string
+  position: THREE.Vector3
+  rotation: THREE.Euler
+  scale: THREE.Vector3
 }
 
 interface HistoryState {
@@ -123,7 +144,45 @@ function BrushGuide({ position, size }: { position: THREE.Vector3; size: number 
   )
 }
 
+// Scene background setter component
+function SceneBackground({ color }: { color: string }) {
+  const { scene } = useThree()
+  
+  useEffect(() => {
+    scene.background = new THREE.Color(color)
+  }, [scene, color])
+  
+  return null
+}
+
 // Individual Clay Component
+// Thumbnail capture component
+function ThumbnailCapture({ captureRequested, onCapture }: { captureRequested: boolean, onCapture: (dataUrl: string) => void }) {
+  const { gl, scene, camera } = useThree()
+  
+  useEffect(() => {
+    if (captureRequested) {
+      const capture = async () => {
+        try {
+          console.log('[ThumbnailCapture] Starting thumbnail capture...')
+          const thumbnail = await captureSceneThumbnail(gl, scene, camera, 2560, 1920)
+          console.log('[ThumbnailCapture] Raw thumbnail captured, size:', thumbnail.length)
+          const compressed = await compressImageDataUrl(thumbnail, 1200, 0.92)
+          console.log('[ThumbnailCapture] Compressed thumbnail, size:', compressed.length)
+          onCapture(compressed)
+        } catch (error) {
+          console.error('[ThumbnailCapture] Failed to capture thumbnail:', error)
+          onCapture('')
+        }
+      }
+      // Add a small delay to ensure the scene is properly rendered
+      setTimeout(capture, 100)
+    }
+  }, [captureRequested, gl, scene, camera, onCapture])
+  
+  return null
+}
+
 function Clay({ 
   clay, 
   tool, 
@@ -137,7 +196,13 @@ function Clay({
   isHovered,
   onHover,
   onHoverEnd,
-  onBrushHover
+  onBrushHover,
+  selectedForGrouping,
+  showGroupingPanel,
+  toggleObjectForGrouping,
+  isGroupHighlighted,
+  clayGroups,
+  clayObjects
 }: {
   clay: ClayObject
   tool: string
@@ -152,6 +217,12 @@ function Clay({
   onHover: () => void
   onHoverEnd: () => void
   onBrushHover?: (point: THREE.Vector3 | null) => void
+  selectedForGrouping?: string[]
+  showGroupingPanel?: boolean
+  toggleObjectForGrouping?: (id: string) => void
+  isGroupHighlighted?: boolean
+  clayGroups?: ClayGroup[]
+  clayObjects?: ClayObject[]
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const groupRef = useRef<THREE.Group>(null)
@@ -161,8 +232,10 @@ function Clay({
   // Resize state
   const resizeRef = useRef({
     active: false,
+    startX: 0,
     startY: 0,
-    initialScale: clay.scale instanceof THREE.Vector3 ? clay.scale.x : (clay.scale || 1)
+    initialScale: clay.scale instanceof THREE.Vector3 ? clay.scale.x : (clay.scale || 1),
+    initialDistance: 0
   })
   
   // Drag state
@@ -377,26 +450,115 @@ function Clay({
     }
   }, [tool, brushSize, camera, raycaster, gl, onDeformingChange, clay, onUpdate, onSelect, isSelected])
   
-  // Handle tool-specific mouse events when selected
+  // Handle tool-specific mouse events when selected or when rotation tool is active
   useEffect(() => {
-    if (!isSelected) return
+    // For rotation tool, we don't need selection; for other tools we do
+    if (tool !== 'rotateObject' && !isSelected) return
     
-    const handleToolMouseMove = (e: MouseEvent) => {
+    // Capture clayObjects in the effect scope
+    const currentClayObjects = clayObjects
+    
+    const handleToolMouseMove = (e: MouseEvent | TouchEvent) => {
       if (tool === 'rotateObject' && rotationRef.current.active && meshRef.current) {
-        const deltaX = (e.clientX - rotationRef.current.startX) * 0.01
-        const deltaY = (e.clientY - rotationRef.current.startY) * 0.01
+        // Get coordinates from mouse or touch
+        const point = e.type.includes('touch') && 'touches' in e && e.touches[0] 
+          ? e.touches[0] 
+          : e as MouseEvent
+        const deltaX = (point.clientX - rotationRef.current.startX) * 0.01
+        const deltaY = (point.clientY - rotationRef.current.startY) * 0.01
         
-        meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
-        meshRef.current.rotation.x = rotationRef.current.initialRotation.x + deltaY
-        
-        const newClay = {
-          ...clay,
-          rotation: meshRef.current.rotation.clone()
+        if (rotationRef.current.isGroupRotation && clay.groupId && currentClayObjects) {
+          // Group rotation around main object
+          const rotationMatrix = new THREE.Matrix4()
+          rotationMatrix.makeRotationFromEuler(new THREE.Euler(deltaY, deltaX, 0))
+          
+          // Collect all updates first
+          const updates: typeof currentClayObjects = []
+          
+          currentClayObjects.forEach(obj => {
+            if (obj.groupId === clay.groupId) {
+              const initialRotation = rotationRef.current.groupInitialRotations.get(obj.id)
+              
+              if (obj.id === rotationRef.current.mainObjectId) {
+                // Main object: only rotate, don't move
+                if (initialRotation) {
+                  updates.push({
+                    ...obj,
+                    rotation: new THREE.Euler(
+                      initialRotation.x + deltaY,
+                      initialRotation.y + deltaX,
+                      initialRotation.z
+                    )
+                  })
+                }
+              } else {
+                // Other objects: rotate around main object
+                const initialRelativePos = rotationRef.current.groupInitialPositions.get(obj.id)
+                if (initialRelativePos && initialRotation) {
+                  // Rotate the relative position
+                  const rotatedPos = initialRelativePos.clone().applyMatrix4(rotationMatrix)
+                  const newPosition = new THREE.Vector3().addVectors(rotatedPos, rotationRef.current.groupCenter)
+                  
+                  updates.push({
+                    ...obj,
+                    position: newPosition,
+                    rotation: new THREE.Euler(
+                      initialRotation.x + deltaY,
+                      initialRotation.y + deltaX,
+                      initialRotation.z
+                    )
+                  })
+                }
+              }
+            }
+          })
+          
+          // For group rotation, we need to update all objects at once to avoid updateClay's group sync
+          // Get the parent component's setClayObjects function
+          const parentUpdate = onUpdate
+          
+          // Instead of calling onUpdate for each object (which triggers group sync),
+          // we'll update the entire state at once
+          if (updates.length > 0) {
+            // Find the AdvancedClay's setClayObjects through a custom update
+            parentUpdate({
+              ...updates[0],
+              _batchUpdates: updates
+            } as any)
+          }
+        } else {
+          // Single object rotation
+          meshRef.current.rotation.y = rotationRef.current.initialRotation.y + deltaX
+          meshRef.current.rotation.x = rotationRef.current.initialRotation.x + deltaY
+          
+          const newClay = {
+            ...clay,
+            rotation: meshRef.current.rotation.clone()
+          }
+          onUpdate(newClay)
         }
-        onUpdate(newClay)
-      } else if (tool === 'resize' && resizeRef.current.active) {
-        const deltaY = (resizeRef.current.startY - e.clientY) * 0.01
-        const scaleFactor = Math.max(0.1, Math.min(5, resizeRef.current.initialScale + deltaY))
+      } else if (tool === 'resize' && resizeRef.current.active && groupRef.current) {
+        // Calculate current distance from object center to mouse position
+        const rect = gl.domElement.getBoundingClientRect()
+        const point = e.type.includes('touch') && 'touches' in e && e.touches[0] 
+          ? e.touches[0] 
+          : e as MouseEvent
+        const x = ((point.clientX - rect.left) / rect.width) * 2 - 1
+        const y = -((point.clientY - rect.top) / rect.height) * 2 + 1
+        
+        // Get object center in screen space
+        const objectWorldPos = new THREE.Vector3()
+        groupRef.current.getWorldPosition(objectWorldPos)
+        const screenPos = objectWorldPos.clone().project(camera)
+        
+        // Calculate current distance in screen space
+        const dx = x - screenPos.x
+        const dy = y - screenPos.y
+        const currentDistance = Math.sqrt(dx * dx + dy * dy)
+        
+        // Calculate scale based on distance ratio
+        const distanceRatio = currentDistance / (resizeRef.current.initialDistance || 1)
+        const scaleFactor = Math.max(0.1, Math.min(5, resizeRef.current.initialScale * distanceRatio))
         
         const newScale = new THREE.Vector3(scaleFactor, scaleFactor, scaleFactor)
         
@@ -404,6 +566,14 @@ function Clay({
           ...clay,
           scale: newScale
         }
+        
+        // If clay is part of a group, update the scale for all group members
+        if (clay.groupId) {
+          // Calculate scale ratio for other objects
+          const scaleRatio = scaleFactor / resizeRef.current.initialScale
+          // We'll handle this in the updateClay function
+        }
+        
         onUpdate(newClay)
       }
     }
@@ -417,16 +587,20 @@ function Clay({
       }
     }
     
-    if (tool === 'rotateObject' || tool === 'resize') {
+    if (tool === 'rotateObject' || (tool === 'resize' && isSelected)) {
       window.addEventListener('mousemove', handleToolMouseMove)
       window.addEventListener('mouseup', handleToolMouseUp)
+      window.addEventListener('touchmove', handleToolMouseMove, { passive: false })
+      window.addEventListener('touchend', handleToolMouseUp)
       
       return () => {
         window.removeEventListener('mousemove', handleToolMouseMove)
         window.removeEventListener('mouseup', handleToolMouseUp)
+        window.removeEventListener('touchmove', handleToolMouseMove)
+        window.removeEventListener('touchend', handleToolMouseUp)
       }
     }
-  }, [tool, isSelected, clay, onUpdate])
+  }, [tool, isSelected, clay, onUpdate, gl, camera, clayObjects, clayGroups])
   
   // Frame update for dragging
   useFrame(() => {
@@ -527,12 +701,38 @@ function Clay({
     // Calculate movement delta from original hit point
     const movementDelta = targetLocal.clone().sub(dragState.current.hitPoint)
     
+    // Get camera's coordinate system for screen-based deformation
+    const cameraDirection = new THREE.Vector3()
+    camera.getWorldDirection(cameraDirection)
+    
+    // Calculate camera's right vector (screen X axis)
+    const worldUp = new THREE.Vector3(0, 1, 0)
+    const cameraRight = new THREE.Vector3().crossVectors(cameraDirection, worldUp).normalize()
+    
+    // Calculate camera's up vector (screen Y axis)
+    const cameraUp = new THREE.Vector3().crossVectors(cameraRight, cameraDirection).normalize()
+    
+    // Project movement delta onto camera's coordinate system
+    const screenMovement = new THREE.Vector3()
+    
+    // Get the movement components in screen space
+    const movementRight = movementDelta.dot(cameraRight)
+    const movementUp = movementDelta.dot(cameraUp)
+    const movementForward = movementDelta.dot(cameraDirection)
+    
+    // For push/pull, we primarily want movement along the camera's forward direction
+    // but also preserve some screen-space movement for better control
+    screenMovement
+      .addScaledVector(cameraRight, movementRight * 0.7)  // Reduce lateral movement
+      .addScaledVector(cameraUp, movementUp * 0.7)        // Reduce vertical movement
+      .addScaledVector(cameraDirection, movementForward)   // Full forward/backward movement
+    
     // Update vertices based on their distance from hit point
     for (const v of dragState.current.vertices) {
       if (tool === 'push' || tool === 'pull') {
         // For pull, reverse the movement direction
         const direction = tool === 'pull' ? -1 : 1
-        const movement = movementDelta.clone().multiplyScalar(v.weight * direction)
+        const movement = screenMovement.clone().multiplyScalar(v.weight * direction)
         const newPos = v.startPos.clone().add(movement)
         positions.setXYZ(v.index, newPos.x, newPos.y, newPos.z)
       }
@@ -557,14 +757,19 @@ function Clay({
     active: false,
     startX: 0,
     startY: 0,
-    initialRotation: new THREE.Euler(0, 0, 0)
+    initialRotation: new THREE.Euler(0, 0, 0),
+    groupCenter: new THREE.Vector3(),
+    groupInitialPositions: new Map<string, THREE.Vector3>(),
+    groupInitialRotations: new Map<string, THREE.Euler>(),
+    isGroupRotation: false,
+    mainObjectId: null as string | null
   })
   
   return (
     <group ref={groupRef} position={clay.position} rotation={clay.rotation || new THREE.Euler()}>
       <mesh
         ref={meshRef}
-        scale={clay.scale || 1}
+        scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x, clay.scale.y, clay.scale.z] : clay.scale || 1}
         userData={{ clayId: clay.id }}
         onPointerEnter={onHover}
         onPointerLeave={onHoverEnd}
@@ -576,15 +781,92 @@ function Clay({
         onPointerDown={(e) => {
           e.stopPropagation()
           
-          if (tool === 'rotateObject' && isSelected && meshRef.current) {
+          // Check if it's a touch event (button is undefined for touch)
+          const isTouch = e.pointerType === 'touch'
+          const isLeftClick = e.button === 0 || (isTouch && e.button === undefined)
+          
+          // Prevent default touch behavior (text selection, etc.)
+          if (isTouch && e.nativeEvent) {
+            e.nativeEvent.preventDefault()
+          }
+          
+          // If grouping panel is open and this is a left click/touch, toggle selection
+          if (showGroupingPanel && isLeftClick) {
+            toggleObjectForGrouping?.(clay.id)
+            return
+          }
+          
+          if (tool === 'rotateObject' && meshRef.current) {
+            // Select the object if not already selected
+            if (!isSelected) {
+              onSelect()
+            }
+            
             rotationRef.current.active = true
+            // For three.js pointer events, clientX/Y are already available
             rotationRef.current.startX = e.clientX
             rotationRef.current.startY = e.clientY
             rotationRef.current.initialRotation.copy(meshRef.current.rotation)
+            
+            // Check if this is a group rotation
+            if (clay.groupId && clayGroups && clayObjects) {
+              const group = clayGroups.find(g => g.id === clay.groupId)
+              if (group) {
+                rotationRef.current.isGroupRotation = true
+                rotationRef.current.mainObjectId = group.mainObjectId
+                
+                // Use main object position as rotation center
+                const mainObject = clayObjects.find(c => c.id === group.mainObjectId)
+                if (mainObject) {
+                  rotationRef.current.groupCenter.copy(mainObject.position)
+                } else {
+                  // Fallback to geometric center if main object not found
+                  const groupObjects = clayObjects.filter(c => c.groupId === clay.groupId)
+                  const center = new THREE.Vector3()
+                  groupObjects.forEach(obj => {
+                    center.add(obj.position)
+                  })
+                  center.divideScalar(groupObjects.length)
+                  rotationRef.current.groupCenter.copy(center)
+                }
+                
+                // Store initial positions and rotations for all group objects
+                const groupObjects = clayObjects.filter(c => c.groupId === clay.groupId)
+                rotationRef.current.groupInitialPositions.clear()
+                rotationRef.current.groupInitialRotations.clear()
+                groupObjects.forEach(obj => {
+                  // Store position relative to group center (for non-main objects)
+                  const relativePos = obj.position.clone().sub(rotationRef.current.groupCenter)
+                  rotationRef.current.groupInitialPositions.set(obj.id, relativePos)
+                  
+                  // Store initial rotation for each object
+                  rotationRef.current.groupInitialRotations.set(obj.id, obj.rotation?.clone() || new THREE.Euler(0, 0, 0))
+                })
+              }
+            } else {
+              rotationRef.current.isGroupRotation = false
+              rotationRef.current.mainObjectId = null
+            }
           } else if (tool === 'resize' && isSelected) {
             resizeRef.current.active = true
+            resizeRef.current.startX = e.clientX
             resizeRef.current.startY = e.clientY
             resizeRef.current.initialScale = clay.scale instanceof THREE.Vector3 ? clay.scale.x : (clay.scale || 1)
+            
+            // Calculate initial distance from object center to mouse position
+            const rect = gl.domElement.getBoundingClientRect()
+            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+            
+            // Get object center in screen space
+            const objectWorldPos = new THREE.Vector3()
+            groupRef.current?.getWorldPosition(objectWorldPos)
+            const screenPos = objectWorldPos.clone().project(camera)
+            
+            // Calculate distance in screen space
+            const dx = x - screenPos.x
+            const dy = y - screenPos.y
+            resizeRef.current.initialDistance = Math.sqrt(dx * dx + dy * dy)
           } else {
             onSelect()
           }
@@ -597,21 +879,28 @@ function Clay({
           shininess={50}
           side={THREE.DoubleSide}
           emissive={
-            isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize')
+            isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize' || tool === 'rotate')
               ? '#0099ff' 
               : '#000000'
           }
           emissiveIntensity={isSelected ? 0.5 : 0}
         />
       </mesh>
-      {/* Hover outline */}
-      {isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize') && (
+      {/* Unified selection/hover indicator */}
+      {((isHovered && (tool === 'paint' || tool === 'rotateObject' || tool === 'resize')) ||
+        (selectedForGrouping && selectedForGrouping.includes(clay.id)) ||
+        (isGroupHighlighted)) && (
         <mesh
-          scale={clay.scale instanceof THREE.Vector3 ? clay.scale.x * 1.02 : (clay.scale || 1) * 1.02}
+          geometry={clay.geometry}
+          scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x * 1.08, clay.scale.y * 1.08, clay.scale.z * 1.08] : (clay.scale || 1) * 1.08}
           userData={{ isOutline: true }}
         >
           <meshBasicMaterial
-            color="#ffffff"
+            color={
+              (selectedForGrouping && selectedForGrouping.includes(clay.id)) || isGroupHighlighted
+                ? "#3b82f6"  // Blue for grouping
+                : "#ffffff"  // White for hover
+            }
             wireframe
             transparent
             opacity={0.8}
@@ -675,6 +964,12 @@ function Clay({
           onPointerDown={(e) => {
             if (tool === 'move' && meshRef.current && groupRef.current) {
               e.stopPropagation()
+              
+              // Prevent default touch behavior
+              if (e.pointerType === 'touch' && e.nativeEvent) {
+                e.nativeEvent.preventDefault()
+              }
+              
               onSelect()
               
               // Start drag for move tool
@@ -782,7 +1077,7 @@ function AddClayHelper({
   onHoverPoint
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
-  shape: 'sphere' | 'tetrahedron' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'
+  shape: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'
   onHoverPoint?: (point: THREE.Vector3 | null) => void
 }) {
   const { camera, raycaster, gl } = useThree()
@@ -796,6 +1091,22 @@ function AddClayHelper({
   const [curveControlPoint, setCurveControlPoint] = useState<THREE.Vector3 | null>(null)
   const [lineThickness, setLineThickness] = useState(0.05) // Much thinner default
   const [currentDepth, setCurrentDepth] = useState(0) // Z-axis depth
+  const [thirdPointDepth, setThirdPointDepth] = useState(0) // Depth adjustment for third point
+  const thirdPointDepthRef = useRef(0) // Use ref for scroll handling
+  const [isDrawingFreehand, setIsDrawingFreehand] = useState(false)
+  const [freehandPoints, setFreehandPoints] = useState<THREE.Vector3[]>([])
+  
+  // Get camera-distance independent size for guide points
+  const getConstantScreenSize = useCallback((position: THREE.Vector3, targetPixelSize: number = 10): number => {
+    const distance = camera.position.distanceTo(position);
+    const fov = (camera as THREE.PerspectiveCamera).fov || 50;
+    const canvas = gl.domElement;
+    const height = canvas.clientHeight;
+    
+    // Calculate world size that appears as targetPixelSize pixels on screen
+    const worldSize = (2 * Math.tan((fov * Math.PI) / 360) * distance * targetPixelSize) / height;
+    return worldSize;
+  }, [camera, gl]);
   
   // Convert screen-space distance to world-space size
   const getScreenConsistentSize = useCallback((p1: THREE.Vector3, p2: THREE.Vector3): number => {
@@ -930,6 +1241,11 @@ function AddClayHelper({
         
         setDragEnd(offsetPoint)
         setIsDragging(true)
+      } else if (shape === 'freehand') {
+        // Start freehand drawing
+        console.log('Starting freehand drawing at', point)
+        setIsDrawingFreehand(true)
+        setFreehandPoints([point])
       } else if (shape === 'line') {
         // Line uses 2 click points
         if (clickPoints.length === 0) {
@@ -956,7 +1272,7 @@ function AddClayHelper({
           setIsDraggingCurve(true)
           setCurveControlPoint(point)
         }
-      } else if (shape === 'rectangle' || shape === 'triangle' || shape === 'circle') {
+      } else if (shape === 'rectangle' || shape === 'circle') {
         // 2D shapes use 2 click points
         if (clickPoints.length === 0) {
           setClickPoints([point])
@@ -974,68 +1290,45 @@ function AddClayHelper({
           setLineThickness(0.05) // Reset thickness
         }
       } else {
-        // Tetrahedron and Cube use 3 click points
+        // Cube uses 2 click points + scroll for Z
         if (clickPoints.length === 0) {
           // First click
           setClickPoints([point])
         } else if (clickPoints.length === 1) {
-          // Second click - just store the point, don't create yet
-          setClickPoints([...clickPoints, point])
-        } else if (clickPoints.length === 2) {
-          // Third click - create shape with position and size based on all three points
-          const [p1, p2] = clickPoints
-          const p3 = point // Third click point
+          // Second click - create cube immediately with default Z
+          const [p1] = clickPoints
+          const p2 = point
           
-          // For cube: use the three points to define a box
+          // For cube: first two points define XY rectangle, Z from scroll
           if (shape === 'cube') {
-            // Calculate box dimensions from three points (like preview)
-            const width = Math.abs(p3.x - p1.x) || 0.5
-            const height = Math.abs(p3.y - p1.y) || 0.5
-            const depth = Math.abs(p3.z - p1.z) || 0.5
+            // Use current scroll depth or default
+            const z = thirdPointDepthRef.current || 1 // Default depth of 1
             
+            // Calculate dimensions - XY from the two points, Z from scroll
+            const minX = Math.min(p1.x, p2.x)
+            const maxX = Math.max(p1.x, p2.x)
+            const minY = Math.min(p1.y, p2.y)
+            const maxY = Math.max(p1.y, p2.y)
+            
+            const width = Math.abs(maxX - minX) || 0.5
+            const height = Math.abs(maxY - minY) || 0.5
+            const depth = Math.abs(z) || 0.5
+            
+            // Calculate center
             const center = new THREE.Vector3(
-              (p1.x + p3.x) / 2,
-              (p1.y + p3.y) / 2,
-              (p1.z + p3.z) / 2
+              (minX + maxX) / 2,
+              (minY + maxY) / 2,
+              p1.z + z / 2 // Base Z + half depth
             )
             
             // Store actual dimensions for BoxGeometry
             const customData = new THREE.Vector3(width, height, depth)
             const size = Math.max(width, height, depth) // This is ignored when using custom dimensions
             onAdd(center, size, 1, new THREE.Euler(), [customData])
-          } else {
-            // For tetrahedron: use p1 and p2 as base, p3 as apex
-            const baseCenter = new THREE.Vector3(
-              (p1.x + p2.x) / 2,
-              (p1.y + p2.y) / 2,
-              (p1.z + p2.z) / 2
-            )
-            
-            // Calculate size based on the base edge using screen space
-            const rawBaseSize = getScreenConsistentSize(p1, p2) * 0.8
-            const baseSize = Math.max(0.5, Math.min(10, rawBaseSize))
-            
-            // Calculate the direction from base center to apex
-            const apexVector = p3.clone().sub(baseCenter)
-            
-            // Calculate proper center (centroid of tetrahedron is at 1/4 height)
-            const center = baseCenter.clone().add(apexVector.clone().multiplyScalar(0.25))
-            
-            // Calculate rotation to orient tetrahedron correctly
-            const up = apexVector.normalize()
-            const rotation = new THREE.Euler()
-            
-            // Only rotate if apex is not directly above base
-            if (Math.abs(up.dot(new THREE.Vector3(0, 1, 0))) < 0.999) {
-              const quaternion = new THREE.Quaternion()
-              quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), up)
-              rotation.setFromQuaternion(quaternion)
-            }
-            
-            onAdd(center, baseSize, 1, rotation)
           }
           setClickPoints([])
-          setShapeHeight(2) // Reset height
+          setThirdPointDepth(0) // Reset depth adjustment
+          thirdPointDepthRef.current = 0 // Reset ref too
         }
       }
     }
@@ -1043,12 +1336,27 @@ function AddClayHelper({
     const handleMouseMove = (e: MouseEvent) => {
       const point = getIntersectionPoint(e)
       
-      // Update hover point for coordinate display
-      if (onHoverPoint) {
-        onHoverPoint(point)
+      if (!point) {
+        setCurrentPoint(null)
+        onHoverPoint?.(null)
+        return
       }
       
-      if (!point) return
+      // Debug log for freehand
+      if (shape === 'freehand' && isDrawingFreehand) {
+        console.log('Mouse move in freehand mode, isDrawing:', isDrawingFreehand, 'points:', freehandPoints.length)
+      }
+      
+      // Apply depth adjustment for cube creation preview
+      let adjustedPoint = point
+      if (shape === 'cube' && clickPoints.length === 1) {
+        // Show preview of cube with current scroll depth
+        // This is just for visual feedback, actual cube is created on second click
+        adjustedPoint = point // Keep the mouse point as is for XY preview
+      }
+      
+      // Update hover point for coordinate display
+      onHoverPoint?.(adjustedPoint)
       
       if (shape === 'sphere') {
         if (isDragging && dragStart) {
@@ -1057,24 +1365,48 @@ function AddClayHelper({
           // Show preview when not dragging
           setDragEnd(point)
         }
+      } else if (shape === 'freehand' && isDrawingFreehand) {
+        // Add points to freehand path
+        setFreehandPoints(prev => {
+          const lastPoint = prev[prev.length - 1]
+          if (lastPoint && point.distanceTo(lastPoint) > 0.01) { // Only add if moved enough
+            console.log('Adding freehand point', point, 'total points:', prev.length + 1)
+            return [...prev, point]
+          }
+          return prev
+        })
       } else if (shape === 'curve' && isDraggingCurve) {
         // Update curve control point
         setCurveControlPoint(point)
       } else {
         // Show preview for next click point
-        setCurrentPoint(point)
+        setCurrentPoint(adjustedPoint)
         
         // If we have 2 points, update height based on mouse Y position
-        if (shape !== 'line' && shape !== 'curve' && clickPoints.length === 2 && point) {
+        if (shape !== 'line' && shape !== 'curve' && clickPoints.length === 2) {
           const baseY = (clickPoints[0].y + clickPoints[1].y) / 2
-          const heightFromMouse = Math.max(0.1, Math.abs(point.y - baseY) * 2)
+          const heightFromMouse = Math.max(0.1, Math.abs(adjustedPoint.y - baseY) * 2)
           setShapeHeight(heightFromMouse)
         }
       }
     }
     
     const handleMouseUp = (e: MouseEvent) => {
-      if (shape === 'sphere' && isDragging && dragStart && dragEnd) {
+      if (shape === 'freehand' && isDrawingFreehand && freehandPoints.length > 1) {
+        // Create freehand line
+        console.log('Completing freehand with', freehandPoints.length, 'points')
+        const center = freehandPoints.reduce((acc, p) => acc.add(p), new THREE.Vector3()).divideScalar(freehandPoints.length)
+        
+        // Calculate bounding box for size
+        const box = new THREE.Box3()
+        freehandPoints.forEach(p => box.expandByPoint(p))
+        const size = box.getSize(new THREE.Vector3()).length()
+        
+        onAdd(center, size, lineThickness, undefined, freehandPoints)
+        
+        setIsDrawingFreehand(false)
+        setFreehandPoints([])
+      } else if (shape === 'sphere' && isDragging && dragStart && dragEnd) {
         const minSize = 0.5 // Minimum size for visibility
         const maxSize = 10 // Maximum size limit
         const size = Math.max(minSize, Math.min(maxSize, getScreenConsistentSize(dragStart, dragEnd)))
@@ -1128,18 +1460,27 @@ function AddClayHelper({
     const handleMouseLeave = () => {
       setIsDragging(false)
       setDragStart(null)
+      // Also cancel freehand drawing if mouse leaves canvas
+      if (shape === 'freehand' && isDrawingFreehand) {
+        console.log('Mouse leave - cancelling freehand drawing')
+        setIsDrawingFreehand(false)
+        setFreehandPoints([])
+      }
     }
     
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
       
-      // Adjust thickness for line and curve
-      if ((shape === 'line' || shape === 'curve') && (clickPoints.length > 0 || isDraggingCurve)) {
+      // Adjust thickness for line, curve, and freehand
+      if ((shape === 'line' || shape === 'curve' || shape === 'freehand') && (clickPoints.length > 0 || isDraggingCurve || isDrawingFreehand)) {
         const delta = e.deltaY * -0.0001
         setLineThickness(prev => Math.max(0.01, Math.min(0.5, prev + delta)))
-      } else {
-        // Don't change depth with scroll - keep shapes at z=0
-        // Scroll can be used for other purposes in the future
+      } else if (shape === 'cube' && clickPoints.length >= 1) {
+        // Adjust depth for cube creation (works after first click)
+        const scrollSpeed = 0.01
+        const depthChange = e.deltaY * scrollSpeed
+        thirdPointDepthRef.current += depthChange
+        setThirdPointDepth(thirdPointDepthRef.current)
       }
     }
     
@@ -1153,7 +1494,7 @@ function AddClayHelper({
       canvas.removeEventListener('mouseleave', handleMouseLeave)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth, getScreenConsistentSize])
+  }, [camera, raycaster, gl, dragStart, dragEnd, isDragging, onAdd, shape, clickPoints, shapeHeight, lineThickness, isDraggingCurve, curveControlPoint, currentDepth, thirdPointDepth, getScreenConsistentSize, isDrawingFreehand, freehandPoints])
   
   // Render for sphere (drag method)
   if (shape === 'sphere') {
@@ -1187,7 +1528,7 @@ function AddClayHelper({
       // Show small preview at cursor
       return (
         <mesh position={dragEnd}>
-          <sphereGeometry args={[0.1, 16, 16]} />
+          <sphereGeometry args={[getConstantScreenSize(dragEnd, 12), 16, 16]} />
           <meshPhongMaterial color="#888888" opacity={0.3} transparent />
         </mesh>
       )
@@ -1201,7 +1542,7 @@ function AddClayHelper({
         {/* Show existing click points */}
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
-            <sphereGeometry args={[0.05, 16, 16]} />
+            <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
             <meshBasicMaterial color="#ff0000" />
           </mesh>
         ))}
@@ -1249,7 +1590,7 @@ function AddClayHelper({
             </mesh>
             {/* Control point */}
             <mesh position={curveControlPoint}>
-              <sphereGeometry args={[0.1, 16, 16]} />
+              <sphereGeometry args={[getConstantScreenSize(curveControlPoint, 12), 16, 16]} />
               <meshBasicMaterial color="#00ff00" />
             </mesh>
           </>
@@ -1258,7 +1599,7 @@ function AddClayHelper({
         {/* Show current point preview */}
         {currentPoint && (
           <mesh position={currentPoint}>
-            <sphereGeometry args={[0.08, 16, 16]} />
+            <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
             <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
           </mesh>
         )}
@@ -1266,14 +1607,57 @@ function AddClayHelper({
     )
   }
   
-  // Render for 2D shapes (rectangle, triangle, circle)
-  else if (shape === 'rectangle' || shape === 'triangle' || shape === 'circle') {
+  // Render for freehand drawing
+  else if (shape === 'freehand') {
+    return (
+      <>
+        {/* Show freehand path while drawing */}
+        {isDrawingFreehand && freehandPoints.length > 1 && (
+          <>
+            {console.log('Rendering freehand preview with', freehandPoints.length, 'points')}
+            <Line
+              points={freehandPoints}
+              color="#888888"
+              lineWidth={2}
+            />
+            {/* Also show line segments as backup */}
+            <lineSegments>
+              <bufferGeometry>
+                <bufferAttribute
+                  attach="attributes-position"
+                  args={[new Float32Array(
+                    freehandPoints.slice(0, -1).flatMap((p, i) => [
+                      p.x, p.y, p.z,
+                      freehandPoints[i + 1].x, freehandPoints[i + 1].y, freehandPoints[i + 1].z
+                    ])
+                  ), 3]}
+                  count={Math.max(0, (freehandPoints.length - 1) * 2)}
+                />
+              </bufferGeometry>
+              <lineBasicMaterial color="#ff0000" />
+            </lineSegments>
+          </>
+        )}
+        
+        {/* Show current drawing point */}
+        {isDrawingFreehand && freehandPoints.length > 0 && (
+          <mesh position={freehandPoints[freehandPoints.length - 1]}>
+            <sphereGeometry args={[lineThickness * 2, 16, 16]} />
+            <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
+          </mesh>
+        )}
+      </>
+    )
+  }
+  
+  // Render for 2D shapes (rectangle, circle)
+  else if (shape === 'rectangle' || shape === 'circle') {
     return (
       <>
         {/* Show existing click points */}
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
-            <sphereGeometry args={[0.05, 16, 16]} />
+            <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
             <meshBasicMaterial color={index === 0 ? "#ff0000" : "#00ff00"} />
           </mesh>
         ))}
@@ -1290,21 +1674,6 @@ function AddClayHelper({
                 <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
               </mesh>
             )}
-            {shape === 'triangle' && (
-              <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
-                <shapeGeometry args={[(() => {
-                  const width = Math.abs(currentPoint.x - clickPoints[0].x) || 0.1
-                  const height = Math.abs(currentPoint.y - clickPoints[0].y) || 0.1
-                  const shape = new THREE.Shape()
-                  shape.moveTo(0, -height/2)
-                  shape.lineTo(-width/2, height/2)
-                  shape.lineTo(width/2, height/2)
-                  shape.closePath()
-                  return shape
-                })()]} />
-                <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
-              </mesh>
-            )}
             {shape === 'circle' && (
               <mesh position={clickPoints[0].clone().add(currentPoint).multiplyScalar(0.5)}>
                 <circleGeometry args={[Math.max(0.5, Math.min(10, getScreenConsistentSize(clickPoints[0], currentPoint))), 32]} />
@@ -1317,7 +1686,7 @@ function AddClayHelper({
         {/* Show current point preview */}
         {currentPoint && (
           <mesh position={currentPoint}>
-            <sphereGeometry args={[0.08, 16, 16]} />
+            <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
             <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
           </mesh>
         )}
@@ -1325,37 +1694,58 @@ function AddClayHelper({
     )
   }
   
-  // Render for tetrahedron and cube (click method)
+  // Render for cube (click method)
   else {
     return (
       <>
         {/* Show existing click points */}
         {clickPoints.map((point, index) => (
           <mesh key={index} position={point}>
-            <sphereGeometry args={[0.05, 16, 16]} />
-            <meshBasicMaterial color={index === 0 ? "#ff0000" : "#00ff00"} />
+            <sphereGeometry args={[getConstantScreenSize(point, 8), 16, 16]} />
+            <meshBasicMaterial color={shape === 'cube' ? "#ff0000" : (index === 0 ? "#ff0000" : "#00ff00")} />
           </mesh>
         ))}
         
-        {/* Show preview if we have 2 points */}
-        {clickPoints.length === 2 && currentPoint && (
+        {/* Show preview for cube after first point */}
+        {shape === 'cube' && clickPoints.length === 1 && currentPoint && (
           <>
-            {shape === 'cube' ? (
-              <Box
-                args={[
-                  Math.abs(currentPoint.x - clickPoints[0].x) || 0.1,
-                  Math.abs(currentPoint.y - clickPoints[0].y) || 0.1,
-                  Math.abs(currentPoint.z - clickPoints[0].z) || 0.1
-                ]}
-                position={[
-                  (clickPoints[0].x + currentPoint.x) / 2,
-                  (clickPoints[0].y + currentPoint.y) / 2,
-                  (clickPoints[0].z + currentPoint.z) / 2
-                ]}
-              >
-                <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
-              </Box>
-            ) : (
+            {(() => {
+              // Create preview box with XY from points and Z from scroll
+              const p1 = clickPoints[0]
+              const p2 = currentPoint
+              const z = thirdPointDepthRef.current || 1 // Default depth
+              
+              const minX = Math.min(p1.x, p2.x)
+              const maxX = Math.max(p1.x, p2.x)
+              const minY = Math.min(p1.y, p2.y)
+              const maxY = Math.max(p1.y, p2.y)
+              
+              const width = Math.abs(maxX - minX) || 0.1
+              const height = Math.abs(maxY - minY) || 0.1
+              const depth = Math.abs(z) || 0.1
+              
+              const center = new THREE.Vector3(
+                (minX + maxX) / 2,
+                (minY + maxY) / 2,
+                p1.z + z / 2 // Base Z + half depth
+              )
+              
+              return (
+                <Box
+                  args={[width, height, depth]}
+                  position={center}
+                >
+                  <meshBasicMaterial color="#888888" opacity={0.3} transparent wireframe />
+                </Box>
+              )
+            })()}
+          </>
+        )}
+        
+        {/* Show preview for other shapes with 2 points */}
+        {shape !== 'cube' && clickPoints.length === 2 && currentPoint && (
+          <>
+            {shape === 'tetrahedron' ? (
               <>
                 {/* Base triangle */}
                 <Line
@@ -1394,27 +1784,51 @@ function AddClayHelper({
                   lineWidth={1}
                 />
               </>
+            ) : (
+              /* Height indicator line from base to current mouse position */
+              <Line
+                points={[
+                  [(clickPoints[0].x + clickPoints[1].x) / 2, (clickPoints[0].y + clickPoints[1].y) / 2, (clickPoints[0].z + clickPoints[1].z) / 2],
+                  [currentPoint.x, currentPoint.y, currentPoint.z]
+                ]}
+                color="#00ff00"
+                lineWidth={2}
+                opacity={0.5}
+                transparent
+              />
             )}
-            {/* Height indicator line from base to current mouse position */}
-            <Line
-              points={[
-                [(clickPoints[0].x + clickPoints[1].x) / 2, (clickPoints[0].y + clickPoints[1].y) / 2, (clickPoints[0].z + clickPoints[1].z) / 2],
-                [currentPoint.x, currentPoint.y, currentPoint.z]
-              ]}
-              color="#00ff00"
-              lineWidth={2}
-              opacity={0.5}
-              transparent
-            />
           </>
         )}
         
         {/* Show current point preview */}
         {currentPoint && (
-          <mesh position={currentPoint}>
-            <sphereGeometry args={[0.08, 16, 16]} />
-            <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
-          </mesh>
+          <>
+            <mesh position={currentPoint}>
+              <sphereGeometry args={[getConstantScreenSize(currentPoint, 10), 16, 16]} />
+              <meshBasicMaterial color="#0088ff" opacity={0.5} transparent />
+            </mesh>
+            {/* Show scroll hint for cube depth */}
+            {shape === 'cube' && clickPoints.length === 1 && (
+              <Billboard
+                follow={true}
+                lockX={false}
+                lockY={false}
+                lockZ={false}
+                position={currentPoint.clone().add(new THREE.Vector3(0, 0.5, 0))}
+              >
+                <Text
+                  fontSize={0.15}
+                  color="white"
+                  anchorX="center"
+                  anchorY="middle"
+                  outlineWidth={0.02}
+                  outlineColor="black"
+                >
+                  Scroll to adjust depth (Z-axis)
+                </Text>
+              </Billboard>
+            )}
+          </>
         )}
       </>
     )
@@ -1424,12 +1838,13 @@ function AddClayHelper({
 }
 
 // Screen-locked Isometric Grid Helper
-function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate }: {
+function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, onCoordsUpdate, isCapturing }: {
   tool: string
   selectedClayId: string | null
   clayObjects: ClayObject[]
   hoveredPoint: THREE.Vector3 | null
   onCoordsUpdate: (coords: { x: number; y: number; z: number }) => void
+  isCapturing?: boolean
 }) {
   const { camera } = useThree()
   const [cameraDir, setCameraDir] = useState(new THREE.Vector3())
@@ -1501,13 +1916,16 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
     }
   })
   
+  // Don't render grid during thumbnail capture
+  if (isCapturing) return null
+  
   return (
     <group>
 
-      
 
-      {/* XZ Horizontal Planes for all objects in move tool */}
-      {tool === 'move' && clayObjects.map((clay) => {
+      
+      {/* XZ Horizontal Planes for all objects in move and rotate tools */}
+      {(tool === 'move' || tool === 'rotate') && clayObjects.map((clay) => {
         // Calculate color based on current Z position (real-time)
         const z = clay.position.z
         
@@ -1532,7 +1950,7 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
                 color={color}
                 wireframe
                 transparent
-                opacity={selectedClayId === clay.id ? 0.3 : 0.1}
+                opacity={tool === 'move' ? (selectedClayId === clay.id ? 0.3 : 0.1) : 0.1}
                 side={THREE.DoubleSide}
               />
             </mesh>
@@ -1573,6 +1991,7 @@ function DynamicGridHelper({ tool, selectedClayId, clayObjects, hoveredPoint, on
           </mesh>
         </group>
       )}
+      
     </group>
   )
 }
@@ -1598,6 +2017,11 @@ function RaycasterManager({
   useEffect(() => {
     const handlePointerClick = (event: PointerEvent) => {
       if (tool !== 'paint' && tool !== 'delete' && tool !== 'rotateObject') return
+      
+      // Prevent default touch behavior
+      if (event.pointerType === 'touch') {
+        event.preventDefault()
+      }
       
       // Calculate mouse position in normalized device coordinates
       const rect = gl.domElement.getBoundingClientRect()
@@ -1638,8 +2062,19 @@ function RaycasterManager({
           const clay = clayObjects.find(c => c.id === clayId)
           if (clay) {
             if (tool === 'paint') {
-              const newClay = { ...clay, color: currentColor }
-              updateClay(newClay)
+              // Check if clay is part of a group
+              if (clay.groupId) {
+                // Update all objects in the group
+                clayObjects.forEach(obj => {
+                  if (obj.groupId === clay.groupId) {
+                    const newClay = { ...obj, color: currentColor }
+                    updateClay(newClay)
+                  }
+                })
+              } else {
+                const newClay = { ...clay, color: currentColor }
+                updateClay(newClay)
+              }
             } else if (tool === 'delete') {
               setSelectedClayId(clayId)
               removeClay(clayId)
@@ -1664,21 +2099,51 @@ function RaycasterManager({
 
 export default function AdvancedClay() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const { showPopup } = usePopup()
+  const router = useRouter()
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
-  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize'>('rotate')
+  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize' | 'group'>('rotate')
   const [brushSize, setBrushSize] = useState(0.8)
-  const [currentColor, setCurrentColor] = useState('#ff6b6b')
+  const [currentColor, setCurrentColor] = useState('#B8C5D6')
   const [detail, setDetail] = useState(48)
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
-  const [selectedShape, setSelectedShape] = useState<'sphere' | 'tetrahedron' | 'cube' | 'line' | 'curve' | 'rectangle' | 'triangle' | 'circle'>('sphere')
+  const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
   const [backgroundColor, setBackgroundColor] = useState('#f0f0f0')
+  const [clayGroups, setClayGroups] = useState<ClayGroup[]>([])
+  const [showGroupingPanel, setShowGroupingPanel] = useState(false)
+  const [selectedForGrouping, setSelectedForGrouping] = useState<string[]>([])
+  const [mainObjectForGroup, setMainObjectForGroup] = useState<string | null>(null)
+  const [clipboardClay, setClipboardClay] = useState<ClayObject | null>(null)
+  const [clipboardMode, setClipboardMode] = useState<'copy' | 'cut' | null>(null)
+  const [showGuide, setShowGuide] = useState(false)
+  const [guideStep, setGuideStep] = useState(0)
+  
+  // Tool guide data
+  const toolGuides = [
+    { tool: 'rotate', title: 'Camera Angle', description: 'Drag to rotate camera view' },
+    { tool: 'add', title: 'Add Shape', description: 'Click to add new shapes' },
+    { tool: 'move', title: 'Move', description: 'Drag or use arrow keys to move objects' },
+    { tool: 'rotateObject', title: 'Rotate Object', description: 'Drag to rotate selected object' },
+    { tool: 'resize', title: 'Resize', description: 'Drag to resize selected object' },
+    { tool: 'paint', title: 'Paint', description: 'Click to change object color' },
+    { tool: 'push', title: 'Push', description: 'Click and drag to push surface inward' },
+    { tool: 'pull', title: 'Pull', description: 'Click and drag to pull surface outward' },
+    { tool: 'delete', title: 'Delete', description: 'Click to delete objects' },
+    { tool: 'group', title: 'Group', description: 'Select multiple objects to group' }
+  ]
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
   const [cameraRelativeCoords, setCameraRelativeCoords] = useState({ x: 0, y: 0, z: 0 })
   const [cameraResetTrigger, setCameraResetTrigger] = useState(0)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportProjectName, setExportProjectName] = useState('')
+  const [showNewFileModal, setShowNewFileModal] = useState(false)
+  const [captureRequested, setCaptureRequested] = useState(false)
+  const [capturedThumbnail, setCapturedThumbnail] = useState<string | null>(null)
+  const thumbnailResolveRef = useRef<((value: string) => void) | null>(null)
   
   // Track current project
   const [currentProjectInfo, setCurrentProjectInfo] = useState<{
@@ -1689,7 +2154,6 @@ export default function AdvancedClay() {
   } | null>(null)
   const [projects, setProjects] = useState<Array<{ id: string; tags: Record<string, string> }>>([])
   const [currentFolder, setCurrentFolder] = useState('')
-  const [irysUploader, setIrysUploader] = useState<any>(null)
   const [chunkUploadProgress, setChunkUploadProgress] = useState<ChunkProgressType & { isOpen: boolean; projectName: string }>({
     currentChunk: 0,
     totalChunks: 0,
@@ -1698,20 +2162,244 @@ export default function AdvancedClay() {
     projectName: ''
   })
   
+  const [chunkDownloadProgress, setChunkDownloadProgress] = useState<ChunkProgressType & { isOpen: boolean; projectName: string }>({
+    currentChunk: 0,
+    totalChunks: 0,
+    percentage: 0,
+    isOpen: false,
+    projectName: ''
+  })
+  
+  // Profile states
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  
+  // Auto-save state
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null)
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showProfileMenu) {
+        const target = e.target as HTMLElement
+        if (!target.closest('.profile-menu-container')) {
+          setShowProfileMenu(false)
+        }
+      }
+    }
+    
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [showProfileMenu])
+  
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
-  const controlsRef = useRef<any>(null)
+  const folderStructureRef = useRef<FolderStructureHandle>(null)
   
-  // Mark project as dirty when clay objects change
+  // Warn before leaving page with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (currentProjectInfo?.isDirty || (clayObjects.length > 0 && !currentProjectInfo)) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [currentProjectInfo, clayObjects])
+  
+  // Mark project as dirty when clay objects change and auto-save
   useEffect(() => {
     if (currentProjectInfo && clayObjects.length > 0) {
       markProjectDirty(true);
       setCurrentProjectInfo(prev => prev ? {...prev, isDirty: true} : null);
     }
-  }, [clayObjects, backgroundColor])
+    
+    // Auto-save to localStorage
+    if (clayObjects.length > 0) {
+      // Clear existing timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current)
+      }
+      
+      // Set new timeout for auto-save (after 2 seconds of no changes)
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        try {
+          const autoSaveData = {
+            clayObjects: clayObjects.map(clay => ({
+              id: clay.id,
+              position: clay.position,
+              rotation: clay.rotation,
+              scale: clay.scale instanceof THREE.Vector3 ? clay.scale.x : (clay.scale || 1),
+              color: clay.color,
+              shape: clay.shape,
+              size: clay.size,
+              thickness: clay.thickness,
+              detail: clay.detail,
+              controlPoints: clay.controlPoints,
+              groupId: clay.groupId,
+              // For push/pull deformed geometries, save vertex data
+              vertices: clay.geometry.userData?.deformed ? 
+                Array.from(clay.geometry.attributes.position.array) : undefined,
+              // Don't save the actual geometry to keep localStorage small
+              hasGeometry: true
+            })),
+            clayGroups: clayGroups.map(group => ({
+              id: group.id,
+              name: group.name,
+              objectIds: group.objectIds,
+              mainObjectId: group.mainObjectId,
+              position: group.position,
+              rotation: group.rotation,
+              scale: group.scale
+            })),
+            backgroundColor,
+            selectedShape,
+            detail,
+            currentProjectInfo,
+            timestamp: new Date().toISOString()
+          }
+          
+          localStorage.setItem('clayAutoSave', JSON.stringify(autoSaveData))
+          setLastAutoSave(new Date())
+          console.log('Auto-saved to localStorage')
+        } catch (error) {
+          console.error('Failed to auto-save:', error)
+        }
+      }, 2000) // 2 seconds delay
+    }
+    
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current)
+      }
+    }
+  }, [clayObjects, clayGroups, backgroundColor, selectedShape, detail, currentProjectInfo])
   
-  // Initialize with one clay
+  // Initialize with one clay or continue from SimpleClay
   useEffect(() => {
+    // First check for auto-saved data
+    const autoSaveData = localStorage.getItem('clayAutoSave');
+    if (autoSaveData && clayObjects.length === 0) {
+      try {
+        const saved = JSON.parse(autoSaveData);
+        const timeDiff = new Date().getTime() - new Date(saved.timestamp).getTime();
+        const hoursDiff = timeDiff / (1000 * 60 * 60);
+        
+        // Only restore if less than 24 hours old
+        if (hoursDiff < 24) {
+          const restoredObjects = saved.clayObjects.map((clayData: any) => {
+            // Recreate geometry based on shape
+            let geometry: THREE.BufferGeometry;
+            
+            switch (clayData.shape) {
+              case 'cube':
+                geometry = createDetailedGeometry('cube', clayData.size || 2, clayData.thickness || 1);
+                break;
+              case 'sphere':
+              default:
+                geometry = new THREE.SphereGeometry(clayData.size || 2, clayData.detail || detail, clayData.detail || detail);
+                break;
+            }
+            
+            // Restore deformed vertices if available
+            if (clayData.vertices && clayData.vertices.length > 0) {
+              const positions = new Float32Array(clayData.vertices);
+              geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+              geometry.computeVertexNormals();
+              geometry.userData = { deformed: true, originalShape: clayData.shape || 'sphere' };
+            } else {
+              geometry.userData = { deformed: false, originalShape: clayData.shape || 'sphere' };
+            }
+            
+            return {
+              ...clayData,
+              geometry,
+              position: new THREE.Vector3(clayData.position.x, clayData.position.y, clayData.position.z),
+              rotation: clayData.rotation ? new THREE.Euler(clayData.rotation.x, clayData.rotation.y, clayData.rotation.z) : new THREE.Euler(),
+              scale: typeof clayData.scale === 'object' ? (clayData.scale.x || 1) : (clayData.scale || 1)
+            };
+          });
+          
+          setClayObjects(restoredObjects);
+          setBackgroundColor(saved.backgroundColor || '#f0f0f0');
+          setSelectedShape(saved.selectedShape || 'sphere');
+          setDetail(saved.detail || 48);
+          
+          // Restore groups if available
+          if (saved.clayGroups && saved.clayGroups.length > 0) {
+            const restoredGroups = saved.clayGroups.map((groupData: any) => ({
+              ...groupData,
+              position: new THREE.Vector3(groupData.position.x, groupData.position.y, groupData.position.z),
+              rotation: new THREE.Euler(groupData.rotation.x, groupData.rotation.y, groupData.rotation.z),
+              scale: new THREE.Vector3(groupData.scale.x, groupData.scale.y, groupData.scale.z)
+            }));
+            setClayGroups(restoredGroups);
+          }
+          
+          if (saved.currentProjectInfo) {
+            setCurrentProjectInfo(saved.currentProjectInfo);
+          }
+          
+          showPopup('Auto-saved project restored', 'info');
+          addToHistory(restoredObjects);
+          return; // Don't check for continued data if auto-save was restored
+        }
+        } catch (error) {
+          console.error('Failed to restore auto-save:', error);
+          localStorage.removeItem('clayAutoSave');
+          showPopup('Failed to restore auto-saved data. Starting fresh.', 'error');
+        }
+    }
+    
+    // Check if there's continued clay data
+    const continuedData = sessionStorage.getItem('continueClayData');
+    
+    if (continuedData) {
+      try {
+        const clayData = JSON.parse(continuedData);
+        sessionStorage.removeItem('continueClayData'); // Clear after use
+        
+        // Create geometry and apply vertex positions
+        const geometry = new THREE.SphereGeometry(2, 48, 48);
+        
+        if (clayData.positions && clayData.positions.length > 0) {
+          const positionAttribute = geometry.getAttribute('position');
+          const positions = new Float32Array(clayData.positions);
+          
+          // Only apply if the vertex count matches
+          if (positions.length === positionAttribute.array.length) {
+            positionAttribute.array.set(positions);
+            positionAttribute.needsUpdate = true;
+            geometry.computeVertexNormals();
+            geometry.userData = { deformed: true };
+          }
+        }
+        
+        const continuedClay: ClayObject = {
+          id: 'clay-1',
+          geometry: geometry,
+          position: new THREE.Vector3(clayData.position.x, clayData.position.y, clayData.position.z),
+          color: currentColor,
+          shape: clayData.shape || 'sphere',
+          scale: clayData.scale || 1,
+          size: 2,
+          detail: detail
+        }
+        setClayObjects([continuedClay])
+        addToHistory([continuedClay])
+        return;
+      } catch (error) {
+        console.error('Failed to load continued clay data:', error);
+      }
+    }
+    
+    // Default initialization
     const geometry = new THREE.SphereGeometry(2, detail, detail)
     // Ensure clean userData
     geometry.userData = { deformed: false };
@@ -1722,7 +2410,7 @@ export default function AdvancedClay() {
       position: new THREE.Vector3(0, 2, 0), // Start at y=2 so sphere sits on ground
       color: currentColor,
       shape: 'sphere',
-      scale: new THREE.Vector3(1, 1, 1),
+      scale: 1,
       size: 2,
       detail: detail
     }
@@ -1730,33 +2418,80 @@ export default function AdvancedClay() {
     addToHistory([initialClay])
   }, [])
 
-  // Initialize Irys when wallet is connected
-  useEffect(() => {
-    async function initIrys() {
-      if (walletAddress) {
-        try {
-          const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
-          if (provider) {
-            const uploader = await createIrysUploader(provider)
-            setIrysUploader(uploader)
+  
+  const updateClay = useCallback((updatedClay: ClayObject & { _batchUpdates?: ClayObject[] }) => {
+    // Handle batch updates for group rotation
+    if (updatedClay._batchUpdates) {
+      setClayObjects(prev => {
+        const newClays = [...prev]
+        updatedClay._batchUpdates!.forEach(update => {
+          const index = newClays.findIndex(c => c.id === update.id)
+          if (index !== -1) {
+            newClays[index] = update
           }
-        } catch (error) {
-          console.error('Failed to initialize Irys:', error)
+        })
+        addToHistory(newClays)
+        return newClays
+      })
+      return
+    }
+    
+    setClayObjects(prev => {
+      // Check if the updated clay is part of a group
+      if (updatedClay.groupId) {
+        const group = clayGroups.find(g => g.id === updatedClay.groupId)
+        if (group) {
+          const oldClay = prev.find(c => c.id === updatedClay.id)
+          if (oldClay) {
+            // Handle position changes
+            const positionDelta = updatedClay.position.clone().sub(oldClay.position)
+            
+            // Handle scale changes
+            const oldScale = oldClay.scale instanceof THREE.Vector3 ? oldClay.scale.x : (oldClay.scale || 1)
+            const newScale = updatedClay.scale instanceof THREE.Vector3 ? updatedClay.scale.x : (updatedClay.scale || 1)
+            const scaleRatio = newScale / oldScale
+            
+            // Apply changes to all objects in the group
+            const newClays = prev.map(clay => {
+              if (clay.groupId === updatedClay.groupId) {
+                if (clay.id === updatedClay.id) {
+                  return updatedClay
+                } else {
+                  // Apply position delta
+                  const newPosition = clay.position.clone().add(positionDelta)
+                  
+                  // Apply scale ratio
+                  let newScale: number | THREE.Vector3
+                  if (clay.scale instanceof THREE.Vector3) {
+                    newScale = clay.scale.clone().multiplyScalar(scaleRatio)
+                  } else {
+                    newScale = (clay.scale || 1) * scaleRatio
+                  }
+                  
+                  return {
+                    ...clay,
+                    position: newPosition,
+                    scale: newScale
+                  }
+                }
+              }
+              return clay
+            })
+            
+            addToHistory(newClays)
+            return newClays
+          }
         }
       }
-    }
-    initIrys()
-  }, [walletAddress])
-  
-  const updateClay = useCallback((updatedClay: ClayObject) => {
-    setClayObjects(prev => {
+      
+      // Normal update for non-grouped objects
       const newClays = prev.map(clay => 
         clay.id === updatedClay.id ? updatedClay : clay
       )
       addToHistory(newClays)
       return newClays
     })
-  }, [addToHistory])
+  }, [addToHistory, clayGroups])
   
   const removeClay = useCallback((clayId: string) => {
     setClayObjects(prev => {
@@ -1768,6 +2503,91 @@ export default function AdvancedClay() {
       setSelectedClayId(null)
     }
   }, [addToHistory, selectedClayId])
+  
+  // Group-related functions
+  const createGroup = useCallback((name: string) => {
+    if (selectedForGrouping.length < 2) {
+      showPopup('Please select at least 2 objects to group', 'error')
+      return
+    }
+    
+    if (!mainObjectForGroup) {
+      showPopup('Please select a main object for the group', 'error')
+      return
+    }
+    
+    const groupId = `group-${Date.now()}`
+    const newGroup: ClayGroup = {
+      id: groupId,
+      name: name || `Group ${clayGroups.length + 1}`,
+      objectIds: [...selectedForGrouping],
+      mainObjectId: mainObjectForGroup,
+      position: new THREE.Vector3(0, 0, 0),
+      rotation: new THREE.Euler(0, 0, 0),
+      scale: new THREE.Vector3(1, 1, 1)
+    }
+    
+    // Update clay objects to reference the group
+    setClayObjects(prev => {
+      const newClays = prev.map(clay => 
+        selectedForGrouping.includes(clay.id) 
+          ? { ...clay, groupId } 
+          : clay
+      )
+      addToHistory(newClays)
+      return newClays
+    })
+    
+    setClayGroups(prev => [...prev, newGroup])
+    setSelectedForGrouping([])
+    setMainObjectForGroup(null)
+    setShowGroupingPanel(false)
+    showPopup(`Created group: ${newGroup.name}`, 'success')
+  }, [selectedForGrouping, mainObjectForGroup, clayGroups, addToHistory, showPopup])
+  
+  const ungroupObjects = useCallback((groupId: string) => {
+    // Remove group reference from objects
+    setClayObjects(prev => {
+      const newClays = prev.map(clay => 
+        clay.groupId === groupId 
+          ? { ...clay, groupId: undefined } 
+          : clay
+      )
+      addToHistory(newClays)
+      return newClays
+    })
+    
+    // Remove the group
+    setClayGroups(prev => prev.filter(g => g.id !== groupId))
+    showPopup('Group dissolved', 'success')
+  }, [addToHistory, showPopup])
+  
+  const updateGroup = useCallback((groupId: string, updates: Partial<ClayGroup>) => {
+    setClayGroups(prev => prev.map(group => 
+      group.id === groupId 
+        ? { ...group, ...updates } 
+        : group
+    ))
+  }, [])
+  
+  const toggleObjectForGrouping = useCallback((clayId: string) => {
+    setSelectedForGrouping(prev => {
+      const newSelection = prev.includes(clayId) 
+        ? prev.filter(id => id !== clayId)
+        : [...prev, clayId]
+      
+      // If this is the first object selected, make it the main object
+      if (newSelection.length === 1 && !prev.includes(clayId)) {
+        setMainObjectForGroup(clayId)
+      }
+      // If we're removing the main object, clear it
+      else if (mainObjectForGroup === clayId && prev.includes(clayId)) {
+        setMainObjectForGroup(newSelection.length > 0 ? newSelection[0] : null)
+      }
+      
+      return newSelection
+    })
+  }, [mainObjectForGroup])
   
   const addNewClay = useCallback((position: THREE.Vector3, size: number = 2, thickness: number = 1, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => {
     let geometry: THREE.BufferGeometry
@@ -1802,10 +2622,24 @@ export default function AdvancedClay() {
         }
         break
       
-      case 'tetrahedron':
-        // Create a detailed tetrahedron-like shape with many vertices
-        geometry = createDetailedGeometry('tetrahedron', size, thickness)
+      case 'freehand':
+        if (controlPoints && controlPoints.length > 1) {
+          // Create a path from freehand points
+          const relativeCurves: THREE.Curve<THREE.Vector3>[] = []
+          for (let i = 0; i < controlPoints.length - 1; i++) {
+            const relativeP1 = controlPoints[i].clone().sub(position)
+            const relativeP2 = controlPoints[i + 1].clone().sub(position)
+            relativeCurves.push(new THREE.LineCurve3(relativeP1, relativeP2))
+          }
+          const path = new THREE.CurvePath<THREE.Vector3>()
+          relativeCurves.forEach(curve => path.add(curve))
+          geometry = new THREE.TubeGeometry(path, controlPoints.length * 2, thickness, 8, false)
+        } else {
+          // Fallback to a simple line
+          geometry = new THREE.CylinderGeometry(thickness, thickness, size, 8)
+        }
         break
+      
       case 'cube':
         // Create a detailed cube with actual dimensions
         if (controlPoints && controlPoints.length > 0) {
@@ -1836,22 +2670,6 @@ export default function AdvancedClay() {
         }
         break
       
-      case 'triangle':
-        if (controlPoints && controlPoints.length === 2) {
-          // Use the size passed from AddClayHelper which uses getScreenConsistentSize
-          const aspect = Math.abs(controlPoints[1].x - controlPoints[0].x) / Math.abs(controlPoints[1].y - controlPoints[0].y)
-          geometry = createDetailedGeometry('triangle', size)
-          // Scale to match aspect ratio
-          if (aspect > 1) {
-            geometry.scale(1, 1 / aspect, 1)
-          } else {
-            geometry.scale(aspect, 1, 1)
-          }
-        } else {
-          geometry = createDetailedGeometry('triangle', size)
-        }
-        break
-      
       case 'circle':
         // Create a detailed circle
         if (controlPoints && controlPoints.length === 2) {
@@ -1870,7 +2688,10 @@ export default function AdvancedClay() {
     }
     
     // Ensure clean userData for new geometries
-    geometry.userData = { deformed: false };
+    geometry.userData = { 
+      deformed: false,
+      originalShape: selectedShape || 'sphere'
+    };
     
     const newClay: ClayObject = {
       id: `clay-${Date.now()}`,
@@ -1879,7 +2700,7 @@ export default function AdvancedClay() {
       color: currentColor,
       shape: selectedShape,
       rotation: rotation,
-      scale: new THREE.Vector3(1, 1, 1),
+      scale: 1,
       controlPoints: controlPoints,
       size: size,
       thickness: thickness,
@@ -1920,35 +2741,21 @@ export default function AdvancedClay() {
     addToHistory([initialClay])
   }
 
-  const handleSaveProject = async (projectName: string, saveAs: boolean = false) => {
+  const handleSaveProject = async (projectName: string, saveAs: boolean = false, onProgress?: (status: string) => void) => {
     if (!walletAddress) {
-      alert('Please connect your wallet first')
+      showPopup('Please connect your wallet first', 'warning')
       return
     }
     
-    // Ensure Irys uploader is initialized
-    let uploader = irysUploader
-    if (!uploader) {
-      try {
-        console.log('Irys uploader not ready, initializing...')
-        const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
-        if (!provider) {
-          alert('No wallet provider found')
-          return
-        }
-        uploader = await createIrysUploader(provider)
-        setIrysUploader(uploader)
-      } catch (error) {
-        console.error('Failed to initialize Irys uploader:', error)
-        alert('Failed to initialize Irys uploader. Please try again.')
-        return
-      }
-    }
 
+    console.log('[Save] Entering handleSaveProject function')
+    
     try {
+      console.log('[Save] Inside try block')
       console.log('Saving project:', projectName, 'saveAs:', saveAs)
       console.log('Clay objects:', clayObjects)
       console.log('First clay object structure:', clayObjects[0])
+      console.log('[Save] Step 1: Starting save process...')
       
       let projectId: string;
       let rootTxId: string | undefined;
@@ -1966,101 +2773,194 @@ export default function AdvancedClay() {
         console.log('Creating new project:', projectId);
       }
       
-      // Step 1: Serialize the clay objects
-      const serialized = serializeClayProject(
-        clayObjects,
+      console.log('[Save] Step 2: Starting serialization...')
+      console.log('[Save] About to call serializeClayProject with:', {
+        clayObjectsCount: clayObjects.length,
         projectName,
-        '', // description
         walletAddress,
-        [], // tags
         backgroundColor
-      )
+      })
+      
+      // Step 1: Serialize the clay objects
+      let serialized;
+      try {
+        serialized = serializeClayProject(
+          clayObjects,
+          projectName,
+          '', // description
+          walletAddress,
+          [], // tags
+          backgroundColor,
+          clayGroups
+        )
+        console.log('[Save] serializeClayProject returned successfully')
+      } catch (serializeError) {
+        console.error('[Save] ERROR in serializeClayProject:', serializeError)
+        showPopup('Failed to serialize project data', 'error')
+        return
+      }
+      
       serialized.id = projectId; // Ensure project has the correct ID
+      
+      let projectSize = 0;
+      try {
+        console.log('[Save] Attempting to stringify serialized project...')
+        const projectString = JSON.stringify(serialized);
+        projectSize = projectString.length;
+        console.log('[Save] Step 3: Serialization complete, project size:', projectSize, 'bytes')
+      } catch (stringifyError) {
+        console.error('[Save] ERROR stringifying project:', stringifyError)
+        showPopup('Failed to convert project to JSON', 'error')
+        return
+      }
+      
+      // Capture thumbnail
+      let thumbnailId: string | undefined = undefined;
+      
+      // Step 1: Capture thumbnail first
+      console.log('[Save] Step 4: Capturing thumbnail...')
+      onProgress?.('Capturing thumbnail...')
+      
+      // Reset previous thumbnail
+      setCapturedThumbnail(null);
+      
+      // Request thumbnail capture and wait for it
+      const thumbnailDataUrl = await new Promise<string>((resolve) => {
+        // Store the resolve function
+        thumbnailResolveRef.current = resolve;
+        
+        // Request capture
+        setCaptureRequested(true);
+        
+        // Set up timeout
+        setTimeout(() => {
+          if (thumbnailResolveRef.current === resolve) {
+            console.warn('[Save] Thumbnail capture timeout after 10 seconds');
+            thumbnailResolveRef.current = null;
+            setCaptureRequested(false);
+            resolve('');
+          }
+        }, 10000);
+      });
+      
+      // Step 2: Upload thumbnail if captured successfully
+      if (thumbnailDataUrl && thumbnailDataUrl !== '') {
+        try {
+          console.log('[Save] Step 5: Uploading thumbnail...');
+          console.log('[Save] Thumbnail data URL length:', thumbnailDataUrl.length);
+          onProgress?.('Uploading thumbnail...')
+          const result = await uploadProjectThumbnail(
+            thumbnailDataUrl,
+            projectId
+          );
+          thumbnailId = result || undefined;
+          console.log('[Save] Step 6: Thumbnail uploaded:', thumbnailId);
+        } catch (error) {
+          console.error('[Save] Failed to upload thumbnail:', error);
+          // Continue without thumbnail
+        }
+      } else {
+        console.log('[Save] Step 5: No thumbnail captured - dataUrl is empty or null')
+        console.log('[Save] thumbnailDataUrl value:', thumbnailDataUrl)
+      }
       
       // Check project size
       const jsonString = JSON.stringify(serialized);
       const sizeInKB = Buffer.from(jsonString).byteLength / 1024;
       console.log(`Project size: ${sizeInKB.toFixed(2)} KB`);
       
-      if (sizeInKB >= 90) {
-        alert(`Your project is ${sizeInKB.toFixed(2)} KB, which exceeds the 90KB free tier.\nIt will be split into multiple chunks for upload.`);
-      }
 
-      // Step 2: Pay service fee via smart contract first (like IrysDune)
-      try {
-        // Get wallet provider (like IrysDune)
-        let provider = null;
-        if (typeof (window as any).ethereum !== 'undefined') {
-          provider = (window as any).ethereum;
-        } else if (typeof (window as any).okxwallet !== 'undefined') {
-          provider = (window as any).okxwallet;
-        } else if (typeof (window as any).web3 !== 'undefined' && (window as any).web3.currentProvider) {
-          provider = (window as any).web3.currentProvider;
-        }
-        
-        if (!provider) {
-          alert('No wallet provider found. Please install MetaMask, OKX Wallet, or another Ethereum wallet.');
-          return;
-        }
-        
-        console.log('[AdvancedClay] Found wallet provider:', provider);
-        
-        // Request wallet connection if needed
+      // Step 2: Pay service fee via smart contract first (only for new projects or save as)
+      // Skip payment for projects under 90KB as they are free
+      const isNewProject = !rootTxId || saveAs;
+      const requiresPayment = isNewProject && sizeInKB >= 90;
+      
+      if (requiresPayment) {
         try {
-          const accounts = await provider.request({ method: 'eth_accounts' });
-          if (!accounts || accounts.length === 0) {
-            console.log('[AdvancedClay] No connected accounts, requesting connection...');
-            await provider.request({ method: 'eth_requestAccounts' });
+          // Get wallet provider (like IrysDune)
+          let provider = null;
+          if (typeof (window as any).ethereum !== 'undefined') {
+            provider = (window as any).ethereum;
+          } else if (typeof (window as any).okxwallet !== 'undefined') {
+            provider = (window as any).okxwallet;
+          } else if (typeof (window as any).web3 !== 'undefined' && (window as any).web3.currentProvider) {
+            provider = (window as any).web3.currentProvider;
           }
-        } catch (connectError) {
-          console.error('[AdvancedClay] Wallet connection error:', connectError);
-          alert('Failed to connect wallet. Please try again.');
-          return;
+          
+          if (!provider) {
+            throw new Error('No wallet provider found. Please install MetaMask, OKX Wallet, or another Ethereum wallet.');
+            return;
+          }
+          
+          console.log('[AdvancedClay] Found wallet provider:', provider);
+          
+          // Request wallet connection if needed
+          try {
+            const accounts = await provider.request({ method: 'eth_accounts' });
+            if (!accounts || accounts.length === 0) {
+              console.log('[AdvancedClay] No connected accounts, requesting connection...');
+              await provider.request({ method: 'eth_requestAccounts' });
+            }
+          } catch (connectError) {
+            console.error('[AdvancedClay] Wallet connection error:', connectError);
+            throw new Error('Failed to connect wallet. Please try again.');
+            return;
+          }
+          
+          console.log('Paying service fee via smart contract...')
+          onProgress?.('Paying 0.1 IRYS...')
+          const paymentTx = await payForUpload(provider)
+          console.log('Service fee payment transaction:', paymentTx)
+          onProgress?.('Payment completed!')
+        } catch (error: any) {
+          console.error('Service fee payment failed:', error)
+          if (error?.message?.includes('User rejected')) {
+            // User cancelled - just return without showing popup
+            return
+          } else if (error?.message?.includes('Not connected to Irys testnet')) {
+            throw new Error('Please switch to Irys testnet network in your wallet.')
+            return
+          } else if (error?.message?.includes('Insufficient funds')) {
+            throw new Error('Insufficient funds. 0.1 IRYS required.')
+            return
+          } else {
+            throw new Error('Payment failed. Need 0.1 IRYS.')
+            return
+          }
         }
-        
-        console.log('Paying service fee via smart contract...')
-        const paymentTx = await payForUpload(provider)
-        console.log('Service fee payment transaction:', paymentTx)
-        
-        alert(`Service fee paid successfully! TX: ${paymentTx}`)
-      } catch (error: any) {
-        console.error('Service fee payment failed:', error)
-        if (error?.message?.includes('User rejected')) {
-          alert('Transaction cancelled by user')
-          return
-        } else if (error?.message?.includes('Not connected to Irys testnet')) {
-          alert('Please switch to Irys testnet network in your wallet.')
-          return
-        } else if (error?.message?.includes('Insufficient funds')) {
-          alert(error.message)
-          return
-        } else {
-          alert('Service fee payment failed. Please ensure you have enough balance for the 0.1 IRYS service fee.')
-          return
-        }
+      } else {
+        console.log('Updating existing project - no service fee required');
       }
 
       // Step 3: Upload to Irys (no payment needed for free tier)
-      console.log('Starting Irys upload...')
+      console.log('[Save] Step 9: Starting Irys upload...')
+      onProgress?.('Uploading project to Irys...')
+      console.log('[Save] Step 10: Upload parameters:', {
+        projectId: serialized.id,
+        currentFolder,
+        rootTxId,
+        thumbnailId,
+        dataSize: JSON.stringify(serialized).length
+      })
+      
       let uploadResult;
       try {
+        console.log('[Save] Step 11: Calling uploadClayProject...')
         uploadResult = await uploadClayProject(
-          uploader,
           serialized,
           currentFolder,
           rootTxId,
           (progress: ChunkProgressType) => {
-            setChunkUploadProgress({
-              ...progress,
-              isOpen: true,
-              projectName
-            })
-          }
+            console.log('[Save] Upload progress:', progress)
+            const percent = Math.round(progress.percentage)
+            onProgress?.(`Uploading chunks... ${percent}%`)
+          },
+          thumbnailId
         )
-        console.log('Upload result:', uploadResult)
+        console.log('[Save] Step 12: Upload completed, result:', uploadResult)
       } catch (uploadError: any) {
-        console.error('Irys upload failed:', uploadError)
-        alert('Failed to upload project to Irys. Please try again.')
+        console.error('[Save] Step 12 ERROR: Irys upload failed:', uploadError)
+        throw new Error('Failed to upload project to Irys. Please try again.')
         return
       }
 
@@ -2088,25 +2988,26 @@ export default function AdvancedClay() {
       // Close progress dialog if it was open
       setChunkUploadProgress(prev => ({ ...prev, isOpen: false }))
       
-      const viewUrl = `https://gateway.irys.xyz/mutable/${result.rootTxId}`;
-      if (result.wasChunked) {
-        alert(`Large project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nUploaded in ${chunkUploadProgress.totalChunks} chunks.\nView at: ${viewUrl}`)
-      } else {
-        alert(`Project ${result.isUpdate ? 'updated' : 'saved'} successfully!\nView at: ${viewUrl}`)
-      }
+      onProgress?.('Project saved successfully!')
+      
+      // Clear auto-save data after successful save
+      localStorage.removeItem('clayAutoSave')
       
       // Clear cache to refresh projects list
       queryCache.delete(`projects-${walletAddress}`)
+      
+      // Refresh folder structure to show new project
+      folderStructureRef.current?.refreshProjects()
     } catch (error: any) {
       console.error('Failed to save project:', error)
       if (error?.message?.includes('User rejected')) {
-        alert('Transaction cancelled by user')
+        // Transaction cancelled by user
       } else if (error?.message?.includes('Insufficient balance')) {
-        alert('Insufficient balance. Your project is over 100KB and requires IRYS tokens. Please add funds to your wallet.')
+        throw new Error('Insufficient balance. Your project is over 100KB and requires IRYS tokens.')
       } else if (error?.message?.includes('over 100KB')) {
-        alert('Project size exceeds 100KB free tier. Payment is required.')
+        throw new Error('Project size exceeds 100KB free tier. Payment is required.')
       } else {
-        alert('Failed to save project. Please try again.')
+        throw new Error('Failed to save project. Please try again.')
       }
     }
   }
@@ -2115,12 +3016,22 @@ export default function AdvancedClay() {
     try {
       console.log('Loading project:', projectId)
       
-      // Show loading state
-      const loadingAlert = alert('Loading project...')
+      // Initial loading message
+      let projectName = 'Loading project...';
       
-      // Download project from Irys
-      const project = await downloadClayProject(projectId)
+      // Download project from Irys with progress callback
+      const project = await downloadClayProject(projectId, (progress) => {
+        setChunkDownloadProgress({
+          ...progress,
+          isOpen: true,
+          projectName: projectName
+        });
+      })
       console.log('Downloaded project:', project)
+      
+      // Update with actual project name
+      projectName = project.name || 'Untitled';
+      setChunkDownloadProgress(prev => ({ ...prev, projectName: `Loading ${projectName} project` }))
       
       // Get mutable reference info
       const mutableRef = getMutableReference(project.id);
@@ -2131,6 +3042,20 @@ export default function AdvancedClay() {
       
       // Clear current objects and set new ones
       setClayObjects(restoredObjects)
+      
+      // Restore groups if present
+      if (project.groups && project.groups.length > 0) {
+        const restoredGroups = project.groups.map(group => ({
+          ...group,
+          position: new THREE.Vector3(group.position.x, group.position.y, group.position.z),
+          rotation: new THREE.Euler(group.rotation.x, group.rotation.y, group.rotation.z),
+          scale: new THREE.Vector3(group.scale.x, group.scale.y, group.scale.z)
+        }))
+        setClayGroups(restoredGroups)
+        console.log('Restored groups:', restoredGroups)
+      } else {
+        setClayGroups([])
+      }
       
       // Reset history with new state
       addToHistory(restoredObjects)
@@ -2160,10 +3085,15 @@ export default function AdvancedClay() {
         isDirty: false
       });
       
-      alert(`Project "${project.name}" loaded successfully!`)
+      // Close download progress dialog
+      setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
+      
+      showPopup(`Project "${project.name}" loaded successfully!`, 'success')
     } catch (error) {
       console.error('Failed to load project:', error)
-      alert('Failed to load project. Please try again.')
+      // Close download progress dialog on error
+      setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
+      showPopup('Failed to load project. Please try again.', 'error')
     }
   }
 
@@ -2174,24 +3104,47 @@ export default function AdvancedClay() {
 
   const handleProjectDelete = async (projectId: string) => {
     try {
-      if (!irysUploader || !walletAddress) {
-        alert('Please connect your wallet first')
+      if (!walletAddress) {
+        showPopup('Please connect your wallet first', 'warning')
         return
       }
       
       console.log('Deleting project:', projectId)
       
       // Upload deletion marker
-      const deletionId = await deleteClayProject(irysUploader, projectId, walletAddress)
+      const deletionId = await deleteClayProject(projectId, walletAddress)
       console.log('Deletion marker created:', deletionId)
       
       // Clear cache to refresh list
       queryCache.delete(`projects-${walletAddress}`)
       
-      alert('Project deleted successfully!')
+      showPopup('Project deleted successfully!', 'success')
     } catch (error) {
       console.error('Failed to delete project:', error)
-      alert('Failed to delete project. Please try again.')
+      showPopup('Failed to delete project. Please try again.', 'error')
+    }
+  }
+
+  const handleProjectRename = async (projectId: string, newName: string) => {
+    try {
+      if (!walletAddress) {
+        showPopup('Please connect your wallet first', 'warning')
+        return
+      }
+      
+      console.log('Renaming project:', projectId, 'to', newName)
+      
+      // If this is the current project, update its name and save
+      if (currentProjectInfo && currentProjectInfo.projectId === projectId) {
+        await handleSaveProject(newName, false);
+        showPopup('Project renamed successfully!', 'success');
+      } else {
+        // For other projects, we need to load, rename, and save
+        showPopup('Please open the project to rename it', 'info');
+      }
+    } catch (error) {
+      console.error('Failed to rename project:', error)
+      showPopup('Failed to rename project. Please try again.', 'error')
     }
   }
 
@@ -2200,13 +3153,68 @@ export default function AdvancedClay() {
     console.log('Creating folder:', folderPath)
   }
 
-  const handleFolderDelete = (folderPath: string) => {
-    // Delete folder
-    console.log('Deleting folder:', folderPath)
+  const handleFolderDelete = async (folderPath: string) => {
+    if (!walletAddress) {
+      showPopup('Please connect your wallet first', 'warning')
+      return
+    }
+    
+    console.log('Deleting folder and its contents:', folderPath)
+    
+    try {
+      // Get all projects to find ones in this folder
+      const cachedProjects = queryCache.get(`projects-${walletAddress}`)
+      
+      if (cachedProjects && Array.isArray(cachedProjects)) {
+        const projectsToDelete: string[] = []
+        
+        // Find all projects in this folder and subfolders
+        cachedProjects.forEach((project: any) => {
+          const projectFolder = project.folderPath || '/'
+          
+          // Check if project is in this folder or any subfolder
+          if (projectFolder === folderPath || 
+              (projectFolder.startsWith(folderPath + '/') && folderPath !== '/')) {
+            // Use the actual project ID from tags, not the transaction ID
+            const actualProjectId = project.tags?.['Project-ID'] || project.projectId || project.id
+            projectsToDelete.push(actualProjectId)
+          }
+        })
+        
+        console.log(`Found ${projectsToDelete.length} projects to delete in folder ${folderPath}`)
+        
+        // Delete all projects in the folder
+        for (const projectId of projectsToDelete) {
+          try {
+            await deleteClayProject(projectId, walletAddress)
+            console.log(`Deleted project: ${projectId}`)
+          } catch (error) {
+            console.error(`Failed to delete project ${projectId}:`, error)
+          }
+        }
+        
+        // Clear cache to refresh list
+        queryCache.delete(`projects-${walletAddress}`)
+        
+        if (projectsToDelete.length > 0) {
+          showPopup(`Folder and ${projectsToDelete.length} project(s) deleted successfully!`, 'success')
+        } else {
+          showPopup('Folder deleted successfully!', 'success')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete folder contents:', error)
+      showPopup('Failed to delete folder contents. Please try again.', 'error')
+    }
   }
 
   const handleExportGLB = async () => {
-    const projectName = prompt('Enter project name for GLB export:')
+    setExportProjectName(currentProjectInfo?.name || 'clay-project')
+    setShowExportModal(true)
+  }
+  
+  const handleExportConfirm = async () => {
+    const projectName = exportProjectName.trim()
     if (!projectName) return
 
     try {
@@ -2214,18 +3222,26 @@ export default function AdvancedClay() {
         author: walletAddress || 'Anonymous',
         description: 'Created with GetClayed'
       })
+      showPopup('GLB file exported successfully', 'success')
     } catch (error) {
       console.error('Failed to export GLB:', error)
-      alert('Failed to export GLB file')
+      showPopup('Failed to export GLB file', 'error')
     }
+    
+    setShowExportModal(false)
+    setExportProjectName('')
   }
   
   const handleNewFile = () => {
-    if (currentProjectInfo?.isDirty) {
-      if (!confirm('You have unsaved changes. Create a new file anyway?')) {
-        return
-      }
+    // Always show confirmation if there are any clay objects
+    if (clayObjects.length > 0 || currentProjectInfo?.isDirty) {
+      setShowNewFileModal(true)
+      return
     }
+    createNewFile()
+  }
+  
+  const createNewFile = () => {
     
     // Reset to initial state
     const geometry = new THREE.SphereGeometry(2, detail, detail)
@@ -2237,7 +3253,7 @@ export default function AdvancedClay() {
       position: new THREE.Vector3(0, 2, 0),
       color: currentColor,
       shape: 'sphere',
-      scale: new THREE.Vector3(1, 1, 1),
+      scale: 1,
       size: 2,
       detail: detail
     }
@@ -2248,6 +3264,8 @@ export default function AdvancedClay() {
     setCurrentProject(null)
     setBackgroundColor('#f0f0f0')
     setCurrentFolder('')
+    setShowNewFileModal(false)
+    showPopup('New project created', 'success')
   }
   
   // Move selected clay with keyboard
@@ -2275,6 +3293,12 @@ export default function AdvancedClay() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle keyboard events when typing in input fields
+      const activeElement = document.activeElement
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        return
+      }
+      
       // Undo/Redo
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
@@ -2282,6 +3306,84 @@ export default function AdvancedClay() {
       } else if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
         e.preventDefault()
         handleRedo()
+      }
+      
+      // Copy/Cut/Paste objects - use separate if statements instead of else-if
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c' && selectedClayId) {
+        e.preventDefault()
+        const selectedClay = clayObjects.find(c => c.id === selectedClayId)
+        if (selectedClay) {
+          setClipboardClay(selectedClay)
+          setClipboardMode('copy')
+          showPopup('Object copied', 'success')
+          console.log('[Clipboard] Copied object:', selectedClay.id)
+        }
+        return
+      }
+      
+      if ((e.metaKey || e.ctrlKey) && e.key === 'x' && selectedClayId) {
+        e.preventDefault()
+        const selectedClay = clayObjects.find(c => c.id === selectedClayId)
+        if (selectedClay) {
+          setClipboardClay(selectedClay)
+          setClipboardMode('cut')
+          // Remove the object
+          const newClays = clayObjects.filter(c => c.id !== selectedClayId)
+          setClayObjects(newClays)
+          addToHistory(newClays)
+          setSelectedClayId(null)
+          showPopup('Object cut', 'success')
+          console.log('[Clipboard] Cut object:', selectedClay.id)
+        }
+        return
+      }
+      
+      if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+        console.log('[Clipboard] Paste key pressed, clipboardClay:', clipboardClay?.id, 'mode:', clipboardMode)
+        
+        if (clipboardClay) {
+          e.preventDefault()
+          
+          // Clone the geometry
+          const clonedGeometry = clipboardClay.geometry.clone()
+          
+          // Create a new object with the same properties but new ID and slightly offset position
+          const newClay: ClayObject = {
+            ...clipboardClay,
+            id: `clay-${Date.now()}`,
+            geometry: clonedGeometry,
+            position: new THREE.Vector3(
+              clipboardClay.position.x + 0.5,
+              clipboardClay.position.y,
+              clipboardClay.position.z + 0.5
+            ),
+            rotation: clipboardClay.rotation ? new THREE.Euler(
+              clipboardClay.rotation.x,
+              clipboardClay.rotation.y,
+              clipboardClay.rotation.z
+            ) : new THREE.Euler(),
+            scale: clipboardClay.scale instanceof THREE.Vector3 
+              ? new THREE.Vector3(clipboardClay.scale.x, clipboardClay.scale.y, clipboardClay.scale.z)
+              : clipboardClay.scale,
+            groupId: undefined // Don't copy group membership
+          }
+          
+          const newClays = [...clayObjects, newClay]
+          setClayObjects(newClays)
+          addToHistory(newClays)
+          setSelectedClayId(newClay.id)
+          showPopup('Object pasted', 'success')
+          console.log('[Clipboard] Pasted new object:', newClay.id)
+          
+          // Clear clipboard if it was cut
+          if (clipboardMode === 'cut') {
+            setClipboardClay(null)
+            setClipboardMode(null)
+          }
+        } else {
+          console.log('[Clipboard] No object in clipboard to paste')
+        }
+        return
       }
       
       // 3D movement with arrow keys and Q/E
@@ -2344,33 +3446,49 @@ export default function AdvancedClay() {
         projectName={chunkUploadProgress.projectName}
       />
       
+      {/* Chunk download progress dialog */}
+      <ChunkUploadProgress 
+        isOpen={chunkDownloadProgress.isOpen}
+        currentChunk={chunkDownloadProgress.currentChunk}
+        totalChunks={chunkDownloadProgress.totalChunks}
+        percentage={chunkDownloadProgress.percentage}
+        projectName={chunkDownloadProgress.projectName}
+        isDownload={true}
+      />
+      
       {/* Folder Structure - Only show when wallet connected */}
       {walletAddress && (
         <FolderStructure
+          ref={folderStructureRef}
           walletAddress={walletAddress}
           onProjectSelect={handleProjectSelect}
           onProjectMove={handleProjectMove}
           onProjectDelete={handleProjectDelete}
           onFolderCreate={handleFolderCreate}
           onFolderDelete={handleFolderDelete}
+          onProjectRename={handleProjectRename}
           currentFolder={currentFolder}
+          onFolderChange={(folderPath) => setCurrentFolder(folderPath)}
         />
       )}
       
-      {/* Canvas */}
-      <div className="flex-1 relative overflow-hidden">
-      <Canvas 
+      {/* Main content area with Canvas */}
+      <div className="flex-1 relative overflow-hidden" style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}>
+        <Canvas 
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
+        onContextMenu={(e) => e.preventDefault()}
       >
         <Suspense fallback={null}>
+          {/* Set scene background color */}
+          <SceneBackground color={backgroundColor} />
+          
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, 5]} intensity={0.8} />
           <directionalLight position={[-10, -10, -5]} intensity={0.3} />
           
           <TrackballControls 
-            ref={controlsRef}
             enabled={tool === 'rotate' && !isDeforming}
             rotateSpeed={1.5}
             zoomSpeed={1.5}
@@ -2395,28 +3513,44 @@ export default function AdvancedClay() {
           />
           
           {/* Clay Objects */}
-          {clayObjects.map(clay => (
-            <group key={clay.id}>
-              <Clay
-                clay={clay}
-                tool={tool}
-                brushSize={brushSize}
-                currentColor={currentColor}
-                onUpdate={updateClay}
-                onDeformingChange={setIsDeforming}
-                isSelected={selectedClayId === clay.id}
-                onSelect={() => setSelectedClayId(clay.id)}
-                onDelete={() => removeClay(clay.id)}
-                isHovered={hoveredClayId === clay.id}
-                onHover={() => setHoveredClayId(clay.id)}
-                onHoverEnd={() => {
-                  setHoveredClayId(null)
-                  setHoveredPoint(null)
-                }}
-                onBrushHover={setHoveredPoint}
-              />
-            </group>
-          ))}
+          {clayObjects.map(clay => {
+            // Check if this clay is part of a group that contains the selected clay
+            const selectedClay = clayObjects.find(c => c.id === selectedClayId)
+            const isGroupHighlighted = !!(
+              selectedClay?.groupId && 
+              clay.groupId === selectedClay.groupId &&
+              (tool === 'move' || tool === 'resize' || tool === 'rotateObject')
+            )
+            
+            return (
+              <group key={clay.id}>
+                <Clay
+                  clay={clay}
+                  tool={tool}
+                  brushSize={brushSize}
+                  currentColor={currentColor}
+                  onUpdate={updateClay}
+                  onDeformingChange={setIsDeforming}
+                  isSelected={selectedClayId === clay.id}
+                  onSelect={() => setSelectedClayId(clay.id)}
+                  onDelete={() => removeClay(clay.id)}
+                  isHovered={hoveredClayId === clay.id}
+                  onHover={() => setHoveredClayId(clay.id)}
+                  onHoverEnd={() => {
+                    setHoveredClayId(null)
+                    setHoveredPoint(null)
+                  }}
+                  onBrushHover={setHoveredPoint}
+                  selectedForGrouping={selectedForGrouping}
+                  showGroupingPanel={showGroupingPanel}
+                  toggleObjectForGrouping={toggleObjectForGrouping}
+                  isGroupHighlighted={isGroupHighlighted}
+                  clayGroups={clayGroups}
+                  clayObjects={clayObjects}
+                />
+              </group>
+            )
+          })}
           
           {/* Brush Size Guide */}
           {(tool === 'push' || tool === 'pull') && hoveredPoint && (
@@ -2433,17 +3567,32 @@ export default function AdvancedClay() {
           )}
           
           {/* Grid for reference */}
-          {(tool === 'add' || tool === 'move' || tool === 'push' || tool === 'pull') && (
+          {(tool === 'add' || tool === 'move' || tool === 'push' || tool === 'pull' || tool === 'rotate') && (
             <DynamicGridHelper 
               tool={tool}
               selectedClayId={selectedClayId}
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
               onCoordsUpdate={setCameraRelativeCoords}
+              isCapturing={captureRequested}
             />
           )}
           
           <Environment preset="studio" />
+          
+          {/* Thumbnail capture component */}
+          <ThumbnailCapture 
+            captureRequested={captureRequested}
+            onCapture={(dataUrl) => {
+              setCapturedThumbnail(dataUrl)
+              setCaptureRequested(false)
+              // Resolve the promise if waiting
+              if (thumbnailResolveRef.current) {
+                thumbnailResolveRef.current(dataUrl)
+                thumbnailResolveRef.current = null
+              }
+            }}
+          />
         </Suspense>
       </Canvas>
       
@@ -2461,49 +3610,94 @@ export default function AdvancedClay() {
       <div className="bg-white shadow-lg border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Connect Wallet */}
+          {/* Left side - Home, Profile and Connect Wallet */}
           <div className="flex items-center gap-2">
+            {/* Home Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                console.log('Home button clicked, navigating to /')
+                window.location.href = '/'
+              }}
+              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200 cursor-pointer"
+              title="Home"
+            >
+              <Home size={20} />
+            </button>
+            
+            {/* Profile Button - Only show when wallet is connected */}
+            {walletAddress && (
+              <div className="relative profile-menu-container">
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
+                  title="Profile"
+                >
+                  <User size={20} />
+                </button>
+                
+                {/* Profile Menu */}
+                {showProfileMenu && (
+                  <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 min-w-[160px]">
+                    <button
+                      onClick={async () => {
+                        setShowProfileMenu(false)
+                        // Check if user has display name
+                        const profile = await downloadUserProfile(walletAddress)
+                        if (profile?.displayName) {
+                          router.push(`/user/${profile.displayName}`)
+                        } else {
+                          router.push(`/user/${walletAddress}`)
+                        }
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded transition-colors text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <User size={16} />
+                        My Profile
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <ConnectWallet 
               onConnect={async (address) => {
                 setWalletAddress(address)
-                
-                // Initialize Irys uploader immediately after wallet connection
-                try {
-                  console.log('Initializing Irys uploader...')
-                  const provider = (window as any).ethereum || (window as any).okxwallet || ((window as any).web3 && (window as any).web3.currentProvider)
-                  if (provider) {
-                    const uploader = await createIrysUploader(provider)
-                    setIrysUploader(uploader)
-                    console.log('Irys uploader initialized successfully')
-                  }
-                } catch (error) {
-                  console.error('Failed to initialize Irys uploader:', error)
-                }
               }}
               onDisconnect={() => {
                 setWalletAddress(null)
-                setIrysUploader(null)
               }}
             />
+            
           </div>
           
           {/* Center - Main tools */}
           <div className="flex items-center justify-center gap-2">
           {/* Main Tools */}
           <div className="flex gap-2 bg-gray-100 rounded-lg p-2">
-                          <button
-                onClick={() => setTool('rotate')}
-                className={`p-3 rounded-lg transition-all ${
-                  tool === 'rotate' 
-                    ? 'bg-gray-800 text-white shadow-md' 
-                    : 'bg-white hover:bg-gray-50 text-gray-700'
-                }`}
-                title="Rotate View"
-              >
-                <SwitchCamera size={20} />
-              </button>
+            <button
+              onClick={() => {
+                setTool('rotate')
+                if (tool === 'group') setShowGroupingPanel(false)
+              }}
+              className={`p-3 rounded-lg transition-all ${
+                tool === 'rotate' 
+                  ? 'bg-gray-800 text-white shadow-md' 
+                  : 'bg-white hover:bg-gray-50 text-gray-700'
+              }`}
+              title="Rotate View"
+            >
+              <SwitchCamera size={20} />
+            </button>
               <button
-                onClick={() => setTool('rotateObject')}
+                onClick={() => {
+                  setTool('rotateObject')
+                  if (tool === 'group') setShowGroupingPanel(false)
+                }}
                 className={`p-3 rounded-lg transition-all ${
                   tool === 'rotateObject' 
                     ? 'bg-gray-800 text-white shadow-md' 
@@ -2514,7 +3708,10 @@ export default function AdvancedClay() {
                 <RotateCw size={20} />
               </button>
               <button
-                onClick={() => setTool('resize')}
+                onClick={() => {
+                  setTool('resize')
+                  if (tool === 'group') setShowGroupingPanel(false)
+                }}
                 className={`p-3 rounded-lg transition-all ${
                   tool === 'resize' 
                     ? 'bg-gray-800 text-white shadow-md' 
@@ -2525,7 +3722,10 @@ export default function AdvancedClay() {
                 <Maximize2 size={20} />
               </button>
             <button
-              onClick={() => setTool('push')}
+              onClick={() => {
+                setTool('push')
+                if (tool === 'group') setShowGroupingPanel(false)
+              }}
               className={`p-3 rounded-lg transition-all ${
                 tool === 'push' 
                   ? 'bg-gray-800 text-white shadow-md' 
@@ -2536,7 +3736,10 @@ export default function AdvancedClay() {
               <SplinePointer size={20} />
             </button>
             <button
-              onClick={() => setTool('paint')}
+              onClick={() => {
+                setTool('paint')
+                if (tool === 'group') setShowGroupingPanel(false)
+              }}
               className={`p-3 rounded-lg transition-all ${
                 tool === 'paint' 
                   ? 'bg-gray-800 text-white shadow-md' 
@@ -2547,7 +3750,10 @@ export default function AdvancedClay() {
               <PaintbrushVertical size={20} />
             </button>
             <button
-              onClick={() => setTool('add')}
+              onClick={() => {
+                setTool('add')
+                if (tool === 'group') setShowGroupingPanel(false)
+              }}
               className={`p-3 rounded-lg transition-all ${
                 tool === 'add' 
                   ? 'bg-gray-800 text-white shadow-md' 
@@ -2558,7 +3764,10 @@ export default function AdvancedClay() {
               <Plus size={20} />
             </button>
             <button
-              onClick={() => setTool('move')}
+              onClick={() => {
+                setTool('move')
+                if (tool === 'group') setShowGroupingPanel(false)
+              }}
               className={`p-3 rounded-lg transition-all ${
                 tool === 'move' 
                   ? 'bg-gray-800 text-white shadow-md' 
@@ -2567,6 +3776,33 @@ export default function AdvancedClay() {
               title="Move Clay"
             >
               <Move size={18} />
+            </button>
+            <button
+              onClick={() => {
+                if (tool === 'group') {
+                  setTool('rotate')
+                  setShowGroupingPanel(false)
+                  setSelectedForGrouping([])
+                  setMainObjectForGroup(null)
+                } else {
+                  setTool('group')
+                  setShowGroupingPanel(true)
+                }
+              }}
+              className={`p-3 rounded-lg transition-all ${
+                tool === 'group' 
+                  ? 'bg-gray-800 text-white shadow-md' 
+                  : 'bg-white hover:bg-gray-50 text-gray-700'
+              }`}
+              title="Group Objects"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <path d="M10 6.5h4M10 17.5h4M6.5 10v4M17.5 10v4" />
+              </svg>
             </button>
           </div>
           
@@ -2615,16 +3851,6 @@ export default function AdvancedClay() {
             <Eraser size={20} />
           </button>
           
-          {/* Clear All */}
-          <button
-            onClick={resetClay}
-            className="p-3 rounded-lg bg-white hover:bg-red-50 text-red-500 transition-all"
-            title="Clear All"
-          >
-            <Trash2 size={20} />
-          </button>
-          
-          <div className="w-px h-10 bg-gray-300" />
           
           {/* New File Button */}
           <button
@@ -2652,22 +3878,13 @@ export default function AdvancedClay() {
             <Download size={20} />
           </button>
         </div>
-            {/* Right side - Background Color */}
-            <div className="flex items-center gap-2 pr-4" style={{ minWidth: '200px' }}>
-              <span className="text-sm text-gray-600">Background:</span>
-              <label className="relative cursor-pointer group">
-                <input
-                  type="color"
-                  value={backgroundColor}
-                  onChange={(e) => setBackgroundColor(e.target.value)}
-                  className="sr-only"
-                />
-                <div 
-                  className="w-8 h-8 rounded-full border-2 border-gray-400 group-hover:border-gray-600 transition-all"
-                  style={{ backgroundColor }}
-                  title="Background Color"
-                />
-              </label>
+            {/* Right side - Auto-save indicator */}
+            <div className="flex items-center">
+              {lastAutoSave && (
+                <div className="text-xs text-gray-500">
+                  Saved {Math.floor((new Date().getTime() - lastAutoSave.getTime()) / 60000)}m ago
+                </div>
+              )}
             </div>
           </div>
           
@@ -2680,15 +3897,15 @@ export default function AdvancedClay() {
                   setCameraResetTrigger(prev => prev + 1)
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all"
-                title="카메라를 초기 위치로 리셋"
+                title="Reset camera to initial position"
               >
                 <RotateCcw size={16} />
-                <span className="text-sm">카메라 리셋</span>
+                <span className="text-sm">Reset Camera</span>
               </button>
             </div>
           )}
           
-          {tool === 'paint' && (
+          {tool === 'paint' && !showGroupingPanel && (
             <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-2">
               {[
                 '#ff6b6b', '#ffd93d', '#6bcf7f', '#4dabf7',
@@ -2719,10 +3936,28 @@ export default function AdvancedClay() {
                   title="Custom Color"
                 />
               </label>
+              <div className="w-px h-8 bg-gray-300 mx-1" />
+              {/* Background color button */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600">BG:</span>
+                <label className="relative cursor-pointer group">
+                  <input
+                    type="color"
+                    value={backgroundColor}
+                    onChange={(e) => setBackgroundColor(e.target.value)}
+                    className="sr-only"
+                  />
+                  <div 
+                    className="w-8 h-8 rounded-full border-2 border-gray-300 group-hover:border-gray-500 transition-all shadow-sm"
+                    style={{ backgroundColor }}
+                    title="Background Color"
+                  />
+                </label>
+              </div>
             </div>
           )}
           
-          {tool === 'add' && (
+          {tool === 'add' && !showGroupingPanel && (
             <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-4">
               {/* Shape Category Select */}
               <select
@@ -2755,17 +3990,6 @@ export default function AdvancedClay() {
                       title="Sphere"
                     >
                       <Circle size={16} />
-                    </button>
-                    <button
-                      onClick={() => setSelectedShape('tetrahedron')}
-                      className={`p-2 rounded-lg transition-all ${
-                        selectedShape === 'tetrahedron'
-                          ? 'bg-green-500 text-white shadow-md'
-                          : 'bg-white hover:bg-gray-50 text-gray-700'
-                      }`}
-                      title="Tetrahedron"
-                    >
-                      <Triangle size={16} />
                     </button>
                     <button
                       onClick={() => setSelectedShape('cube')}
@@ -2805,6 +4029,17 @@ export default function AdvancedClay() {
                     >
                       <Spline size={16} />
                     </button>
+                    <button
+                      onClick={() => setSelectedShape('freehand')}
+                      className={`p-2 rounded-lg transition-all ${
+                        selectedShape === 'freehand'
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-white hover:bg-gray-50 text-gray-700'
+                      }`}
+                      title="Freehand Draw"
+                    >
+                      <PenTool size={16} />
+                    </button>
                   </>
                 )}
                 
@@ -2822,17 +4057,6 @@ export default function AdvancedClay() {
                       <Square size={16} />
                     </button>
                     <button
-                      onClick={() => setSelectedShape('triangle')}
-                      className={`p-2 rounded-lg transition-all ${
-                        selectedShape === 'triangle'
-                          ? 'bg-green-500 text-white shadow-md'
-                          : 'bg-white hover:bg-gray-50 text-gray-700'
-                      }`}
-                      title="Triangle"
-                    >
-                      <Triangle size={16} />
-                    </button>
-                    <button
                       onClick={() => setSelectedShape('circle')}
                       className={`p-2 rounded-lg transition-all ${
                         selectedShape === 'circle'
@@ -2848,10 +4072,246 @@ export default function AdvancedClay() {
               </div>
             </div>
           )}
+          
+          {/* Move Tool Panel */}
+          {tool === 'move' && selectedClayId && !showGroupingPanel && (
+            <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-4">
+              <span className="text-sm text-gray-600">Position:</span>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1">
+                  <span className="text-xs text-gray-500 w-4">X:</span>
+                  <input
+                    type="number"
+                    value={clayObjects.find(c => c.id === selectedClayId)?.position.x.toFixed(2) || 0}
+                    onChange={(e) => {
+                      const clay = clayObjects.find(c => c.id === selectedClayId)
+                      if (clay) {
+                        const newPosition = clay.position.clone()
+                        newPosition.x = parseFloat(e.target.value) || 0
+                        updateClay({ ...clay, position: newPosition })
+                      }
+                    }}
+                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    step="0.1"
+                  />
+                </label>
+                <label className="flex items-center gap-1">
+                  <span className="text-xs text-gray-500 w-4">Y:</span>
+                  <input
+                    type="number"
+                    value={clayObjects.find(c => c.id === selectedClayId)?.position.y.toFixed(2) || 0}
+                    onChange={(e) => {
+                      const clay = clayObjects.find(c => c.id === selectedClayId)
+                      if (clay) {
+                        const newPosition = clay.position.clone()
+                        newPosition.y = parseFloat(e.target.value) || 0
+                        updateClay({ ...clay, position: newPosition })
+                      }
+                    }}
+                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    step="0.1"
+                  />
+                </label>
+                <label className="flex items-center gap-1">
+                  <span className="text-xs text-gray-500 w-4">Z:</span>
+                  <input
+                    type="number"
+                    value={clayObjects.find(c => c.id === selectedClayId)?.position.z.toFixed(2) || 0}
+                    onChange={(e) => {
+                      const clay = clayObjects.find(c => c.id === selectedClayId)
+                      if (clay) {
+                        const newPosition = clay.position.clone()
+                        newPosition.z = parseFloat(e.target.value) || 0
+                        updateClay({ ...clay, position: newPosition })
+                      }
+                    }}
+                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    step="0.1"
+                  />
+                </label>
+              </div>
+              <div className="w-px h-8 bg-gray-300" />
+              <span className="text-xs text-gray-500">Use arrow keys or drag in 3D view</span>
+            </div>
+          )}
+          
+          {/* Grouping Panel */}
+          {showGroupingPanel && (
+            <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-center gap-6">
+              {/* Shape selection - minimal design */}
+              <div className="flex items-center gap-3">
+                {clayObjects.filter(clay => !clay.groupId).map((clay, index) => {
+                  const isSelected = selectedForGrouping.includes(clay.id)
+                  const isMainObject = mainObjectForGroup === clay.id
+                  return (
+                    <div
+                      key={clay.id}
+                      className="flex flex-col items-center gap-2"
+                    >
+                      <button
+                        onClick={() => toggleObjectForGrouping(clay.id)}
+                        className={`relative transition-all ${
+                          isSelected ? 'scale-110' : 'hover:scale-105'
+                        }`}
+                        title={`Select object ${index + 1}`}
+                      >
+                        <div 
+                          className={`w-10 h-10 rounded-full border-2 transition-all ${
+                            isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-300'
+                          }`}
+                          style={{ 
+                            backgroundColor: clay.color,
+                          }}
+                        />
+                        {isSelected && (
+                          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />
+                        )}
+                      </button>
+                      {isSelected && (
+                        <label className="flex items-center gap-1 text-xs text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={isMainObject}
+                            onChange={() => {
+                              if (!isMainObject) {
+                                setMainObjectForGroup(clay.id)
+                              }
+                            }}
+                            className="w-3 h-3"
+                          />
+                          <span>Main</span>
+                        </label>
+                      )}
+                    </div>
+                  )
+                })}
+                {clayObjects.filter(clay => !clay.groupId).length === 0 && (
+                  <span className="text-sm text-gray-400">No ungrouped objects</span>
+                )}
+              </div>
+              
+              {/* Group controls */}
+              {selectedForGrouping.length >= 2 && mainObjectForGroup && (
+                <>
+                  <div className="w-px h-10 bg-gray-200" />
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      placeholder="Group name (optional)"
+                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          createGroup((e.target as HTMLInputElement).value)
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => createGroup('')}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-all"
+                    >
+                      Create Group
+                    </button>
+                  </div>
+                </>
+              )}
+              
+              {/* Existing groups */}
+              {clayGroups.length > 0 && (
+                <>
+                  <div className="w-px h-10 bg-gray-200" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">Groups:</span>
+                    {clayGroups.map((group, index) => (
+                      <button
+                        key={group.id}
+                        onClick={() => ungroupObjects(group.id)}
+                        className="group flex items-center gap-1 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-all"
+                        title="Click to ungroup"
+                      >
+                        <span className="text-gray-700">{group.name || `Group ${index + 1}`}</span>
+                        <span className="text-gray-400 group-hover:text-gray-600 text-xs">×</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
       
       {/* Coordinate Display Overlay - moved inside Canvas container */}
+      
+      {/* Export GLB Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
+            <h3 className="text-lg font-semibold mb-4">Export as GLB</h3>
+            <input
+              type="text"
+              value={exportProjectName}
+              onChange={(e) => setExportProjectName(e.target.value)}
+              placeholder="Enter project name"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && exportProjectName.trim()) {
+                  handleExportConfirm();
+                } else if (e.key === 'Escape') {
+                  setShowExportModal(false);
+                  setExportProjectName('');
+                }
+              }}
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setExportProjectName('');
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExportConfirm}
+                disabled={!exportProjectName.trim()}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Export
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* New File Confirmation Modal */}
+      {showNewFileModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
+            <h3 className="text-lg font-semibold mb-4">Create New Project?</h3>
+            <p className="text-gray-600 mb-6">
+              Creating a new project will reset all current work. Are you sure you want to continue?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowNewFileModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createNewFile}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                Create New
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      
     </div>
   )
 }
