@@ -877,7 +877,7 @@ function Clay({
           shininess={50}
           side={THREE.DoubleSide}
           emissive={
-            isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize' || tool === 'rotate')
+            isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize')
               ? '#0099ff' 
               : '#000000'
           }
