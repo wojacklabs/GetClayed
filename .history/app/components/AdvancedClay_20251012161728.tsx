@@ -3702,7 +3702,7 @@ export default function AdvancedClay() {
           {/* Main Tools */}
           <div className="flex gap-2 bg-gray-100 rounded-lg p-2">
             <button
-              ref={(el) => { toolButtonsRef.current['rotate'] = el }}
+              ref={(el) => toolButtonsRef.current['rotate'] = el}
               onClick={() => {
                 setTool('rotate')
                 if (tool === 'group') setShowGroupingPanel(false)
