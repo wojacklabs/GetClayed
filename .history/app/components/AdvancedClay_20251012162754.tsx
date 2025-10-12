@@ -2126,14 +2126,15 @@ export default function AdvancedClay() {
   // Tool guide data
   const toolGuides = [
     { tool: 'rotate', title: 'Camera Angle', description: 'Drag to rotate camera view' },
-    { tool: 'rotateObject', title: 'Rotate Object', description: 'Drag to rotate selected object' },
-    { tool: 'resize', title: 'Resize', description: 'Drag to resize selected object' },
-    { tool: 'push', title: 'Push/Pull', description: 'Click and drag to deform surface' },
-    { tool: 'paint', title: 'Paint', description: 'Click to change object color' },
     { tool: 'add', title: 'Add Shape', description: 'Click to add new shapes' },
     { tool: 'move', title: 'Move', description: 'Drag or use arrow keys to move objects' },
-    { tool: 'group', title: 'Group', description: 'Select multiple objects to group' },
-    { tool: 'delete', title: 'Delete', description: 'Click to delete objects' }
+    { tool: 'rotateObject', title: 'Rotate Object', description: 'Drag to rotate selected object' },
+    { tool: 'resize', title: 'Resize', description: 'Drag to resize selected object' },
+    { tool: 'paint', title: 'Paint', description: 'Click to change object color' },
+    { tool: 'push', title: 'Push', description: 'Click and drag to push surface inward' },
+    { tool: 'pull', title: 'Pull', description: 'Click and drag to pull surface outward' },
+    { tool: 'delete', title: 'Delete', description: 'Click to delete objects' },
+    { tool: 'group', title: 'Group', description: 'Select multiple objects to group' }
   ]
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
@@ -3806,7 +3807,6 @@ export default function AdvancedClay() {
               <Move size={18} />
             </button>
             <button
-              ref={(el) => { toolButtonsRef.current['group'] = el }}
               onClick={() => {
                 if (tool === 'group') {
                   setTool('rotate')
@@ -3869,7 +3869,6 @@ export default function AdvancedClay() {
           
           {/* Delete Tool */}
           <button
-            ref={(el) => { toolButtonsRef.current['delete'] = el }}
             onClick={() => setTool('delete')}
             className={`p-3 rounded-lg transition-all ${
               tool === 'delete' 
