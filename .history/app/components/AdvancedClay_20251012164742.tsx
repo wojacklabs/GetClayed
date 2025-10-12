@@ -203,8 +203,7 @@ function Clay({
   toggleObjectForGrouping,
   isGroupHighlighted,
   clayGroups,
-  clayObjects,
-  onContextMenu
+  clayObjects
 }: {
   clay: ClayObject
   tool: string
@@ -216,7 +215,6 @@ function Clay({
   onSelect: () => void
   onDelete?: () => void
   isHovered: boolean
-  onContextMenu?: (e: React.MouseEvent, clayId: string) => void
   onHover: () => void
   onHoverEnd: () => void
   onBrushHover?: (point: THREE.Vector3 | null) => void
@@ -779,13 +777,6 @@ function Clay({
         onPointerMove={(e) => {
           if ((tool === 'push' || tool === 'pull') && onBrushHover) {
             onBrushHover(e.point)
-          }
-        }}
-        onContextMenu={(e) => {
-          e.stopPropagation()
-          if (onContextMenu) {
-            const mouseEvent = e.nativeEvent as any
-            onContextMenu(mouseEvent, clay.id)
           }
         }}
         onPointerDown={(e) => {
@@ -2133,7 +2124,6 @@ export default function AdvancedClay() {
   })
   const [showGuide, setShowGuide] = useState(false)
   const [guideStep, setGuideStep] = useState(0)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; clayId: string | null } | null>(null)
   
   // Tool guide data
   const toolGuides = [
@@ -2204,15 +2194,6 @@ export default function AdvancedClay() {
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [showProfileMenu])
-  
-  // Close context menu when clicking outside
-  useEffect(() => {
-    const handleClick = () => setContextMenu(null)
-    if (contextMenu) {
-      window.addEventListener('click', handleClick)
-      return () => window.removeEventListener('click', handleClick)
-    }
-  }, [contextMenu])
   
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
@@ -3588,12 +3569,7 @@ export default function AdvancedClay() {
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
-        onContextMenu={(e) => {
-          const event = e as any
-          if (event.clientX && event.clientY) {
-            setContextMenu({ x: event.clientX, y: event.clientY, clayId: null })
-          }
-        }}
+        onContextMenu={(e) => e.preventDefault()}
       >
         <Suspense fallback={null}>
           {/* Set scene background color */}
@@ -3665,11 +3641,6 @@ export default function AdvancedClay() {
                     }
                   }}
                   onDelete={() => removeClay(clay.id)}
-                  onContextMenu={(e: React.MouseEvent, clayId: string) => {
-                    e.preventDefault()
-                    setContextMenu({ x: e.clientX, y: e.clientY, clayId })
-                    setSelectedClayId(clayId)
-                  }}
                   isHovered={hoveredClayId === clay.id}
                   onHover={() => setHoveredClayId(clay.id)}
                   onHoverEnd={() => {
@@ -4465,89 +4436,6 @@ export default function AdvancedClay() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Context Menu */}
-      {contextMenu && (
-        <div
-          className="fixed bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-[10001]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.clayId ? (
-            <>
-              <button
-                onClick={() => {
-                  const clay = clayObjects.find(c => c.id === contextMenu.clayId)
-                  if (clay) {
-                    clipboardRef.current = { clay, mode: 'copy' }
-                    showPopup('Object copied', 'success')
-                  }
-                  setContextMenu(null)
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
-              >
-                Copy
-              </button>
-              <button
-                onClick={() => {
-                  const clay = clayObjects.find(c => c.id === contextMenu.clayId)
-                  if (clay) {
-                    clipboardRef.current = { clay, mode: 'cut' }
-                    const newClays = clayObjects.filter(c => c.id !== contextMenu.clayId)
-                    setClayObjects(newClays)
-                    addToHistory(newClays)
-                    setSelectedClayId(null)
-                    showPopup('Object cut', 'success')
-                  }
-                  setContextMenu(null)
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
-              >
-                Cut
-              </button>
-              <div className="border-t border-gray-200 my-1" />
-              <button
-                onClick={() => {
-                  removeClay(contextMenu.clayId!)
-                  setContextMenu(null)
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm text-red-600"
-              >
-                Delete
-              </button>
-            </>
-          ) : (
-            <>
-              {clipboardRef.current.clay && (
-                <button
-                  onClick={() => {
-                    // Trigger paste
-                    const event = new KeyboardEvent('keydown', {
-                      key: 'v',
-                      metaKey: true,
-                      bubbles: true
-                    })
-                    window.dispatchEvent(event)
-                    setContextMenu(null)
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
-                >
-                  Paste
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setTool('add')
-                  setContextMenu(null)
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
-              >
-                Add Shape
-              </button>
-            </>
-          )}
         </div>
       )}
       
