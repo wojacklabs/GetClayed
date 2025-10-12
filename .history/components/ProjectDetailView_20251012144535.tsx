@@ -242,21 +242,10 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
           <div className="absolute left-1/2 -translate-x-1/2">
             <Link
               href="/"
-              className="block hover:opacity-80 transition-opacity"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors block"
               title="Home"
             >
-              <div className="w-10 h-10">
-                <Canvas
-                  camera={{ position: [0, 0, 2], fov: 50 }}
-                  style={{ background: 'transparent' }}
-                >
-                  <Suspense fallback={null}>
-                    <ambientLight intensity={0.5} />
-                    <directionalLight position={[5, 5, 5]} intensity={0.5} />
-                    <AnimatedClayLogo />
-                  </Suspense>
-                </Canvas>
-              </div>
+              <Home size={20} className="text-gray-700" />
             </Link>
           </div>
           
