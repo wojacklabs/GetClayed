@@ -3583,18 +3583,7 @@ export default function AdvancedClay() {
       )}
       
       {/* Main content area with Canvas */}
-      <div 
-        className="flex-1 relative overflow-hidden" 
-        style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-        onContextMenu={(e) => {
-          e.preventDefault()
-          // Only show menu if not clicking on an object
-          const target = e.target as HTMLElement
-          if (target.tagName === 'CANVAS') {
-            setContextMenu({ x: e.clientX, y: e.clientY, clayId: null })
-          }
-        }}
-      >
+      <div className="flex-1 relative overflow-hidden" style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}>
         <Canvas 
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
