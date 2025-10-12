@@ -877,7 +877,7 @@ function Clay({
           shininess={50}
           side={THREE.DoubleSide}
           emissive={
-            isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize' || tool === 'rotate')
+            isSelected && (tool === 'move' || tool === 'rotateObject' || tool === 'resize')
               ? '#0099ff' 
               : '#000000'
           }
@@ -3314,28 +3314,15 @@ export default function AdvancedClay() {
         }
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'v' && clipboardClay) {
         e.preventDefault()
-        
-        // Clone the geometry
-        const clonedGeometry = clipboardClay.geometry.clone()
-        
         // Create a new object with the same properties but new ID and slightly offset position
         const newClay: ClayObject = {
           ...clipboardClay,
           id: `clay-${Date.now()}`,
-          geometry: clonedGeometry,
           position: new THREE.Vector3(
             clipboardClay.position.x + 0.5,
             clipboardClay.position.y,
             clipboardClay.position.z + 0.5
           ),
-          rotation: clipboardClay.rotation ? new THREE.Euler(
-            clipboardClay.rotation.x,
-            clipboardClay.rotation.y,
-            clipboardClay.rotation.z
-          ) : new THREE.Euler(),
-          scale: clipboardClay.scale instanceof THREE.Vector3 
-            ? new THREE.Vector3(clipboardClay.scale.x, clipboardClay.scale.y, clipboardClay.scale.z)
-            : clipboardClay.scale,
           groupId: undefined // Don't copy group membership
         }
         
