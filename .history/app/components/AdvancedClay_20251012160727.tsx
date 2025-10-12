@@ -3290,42 +3290,39 @@ export default function AdvancedClay() {
         handleRedo()
       }
       
-      // Copy/Cut/Paste objects - use separate if statements instead of else-if
-      if ((e.metaKey || e.ctrlKey) && e.key === 'c' && selectedClayId) {
-        e.preventDefault()
-        const selectedClay = clayObjects.find(c => c.id === selectedClayId)
-        if (selectedClay) {
-          setClipboardClay(selectedClay)
-          setClipboardMode('copy')
-          showPopup('Object copied', 'success')
-          console.log('[Clipboard] Copied object:', selectedClay.id)
+      // Copy/Cut/Paste objects
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+        if (selectedClayId) {
+          e.preventDefault()
+          const selectedClay = clayObjects.find(c => c.id === selectedClayId)
+          if (selectedClay) {
+            setClipboardClay(selectedClay)
+            setClipboardMode('copy')
+            showPopup('Object copied', 'success')
+            console.log('[Clipboard] Copied object:', selectedClay.id)
+          }
         }
-        return
-      }
-      
-      if ((e.metaKey || e.ctrlKey) && e.key === 'x' && selectedClayId) {
-        e.preventDefault()
-        const selectedClay = clayObjects.find(c => c.id === selectedClayId)
-        if (selectedClay) {
-          setClipboardClay(selectedClay)
-          setClipboardMode('cut')
-          // Remove the object
-          const newClays = clayObjects.filter(c => c.id !== selectedClayId)
-          setClayObjects(newClays)
-          addToHistory(newClays)
-          setSelectedClayId(null)
-          showPopup('Object cut', 'success')
-          console.log('[Clipboard] Cut object:', selectedClay.id)
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'x') {
+        if (selectedClayId) {
+          e.preventDefault()
+          const selectedClay = clayObjects.find(c => c.id === selectedClayId)
+          if (selectedClay) {
+            setClipboardClay(selectedClay)
+            setClipboardMode('cut')
+            // Remove the object
+            const newClays = clayObjects.filter(c => c.id !== selectedClayId)
+            setClayObjects(newClays)
+            addToHistory(newClays)
+            setSelectedClayId(null)
+            showPopup('Object cut', 'success')
+            console.log('[Clipboard] Cut object:', selectedClay.id)
+          }
         }
-        return
-      }
-      
-      if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
-        console.log('[Clipboard] Paste key pressed, clipboardClay:', clipboardClay?.id, 'mode:', clipboardMode)
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+        e.preventDefault()
+        console.log('[Clipboard] Paste triggered, clipboard:', clipboardClay?.id)
         
         if (clipboardClay) {
-          e.preventDefault()
-          
           // Clone the geometry
           const clonedGeometry = clipboardClay.geometry.clone()
           
@@ -3365,7 +3362,6 @@ export default function AdvancedClay() {
         } else {
           console.log('[Clipboard] No object in clipboard to paste')
         }
-        return
       }
       
       // 3D movement with arrow keys and Q/E
