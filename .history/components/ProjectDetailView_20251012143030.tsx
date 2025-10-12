@@ -237,17 +237,6 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             </div>
           </div>
           
-          {/* Home Logo - Center */}
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <Link
-              href="/"
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors block"
-              title="Home"
-            >
-              <Home size={20} className="text-gray-700" />
-            </Link>
-          </div>
-          
           <div className="flex items-center gap-4">
             {/* Stats */}
             <div className="flex items-center gap-3 text-xs text-gray-500">

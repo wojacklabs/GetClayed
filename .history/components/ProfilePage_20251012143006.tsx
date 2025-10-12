@@ -492,17 +492,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             </div>
           </div>
           
-          {/* Home Logo - Center */}
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <button
-              onClick={() => router.push('/')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Home"
-            >
-              <Home size={20} className="text-gray-700" />
-            </button>
-          </div>
-          
           {isEditing ? (
             <div className="flex items-center gap-2">
               <button
