@@ -757,29 +757,8 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
   return (
     <div className="relative bg-gray-50 border-b border-gray-200">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-        {/* Home Logo and Breadcrumb navigation */}
-        <div className="flex items-center gap-3 text-sm text-gray-700">
-          {/* Home Logo */}
-          <button
-            onClick={() => window.location.href = '/'}
-            className="block hover:opacity-80 transition-opacity flex-shrink-0"
-            title="Home"
-          >
-            <div className="w-8 h-8">
-              <Canvas
-                camera={{ position: [0, 0, 2], fov: 50 }}
-                style={{ background: 'transparent' }}
-              >
-                <Suspense fallback={null}>
-                  <ambientLight intensity={0.5} />
-                  <directionalLight position={[5, 5, 5]} intensity={0.5} />
-                  <AnimatedClayLogo />
-                </Suspense>
-              </Canvas>
-            </div>
-          </button>
-          
-          {/* Breadcrumb */}
+        {/* Always show breadcrumb navigation */}
+        <div className="flex items-center gap-1 text-sm text-gray-700">
           <button
             onClick={() => setCurrentPath('root')}
             className={`hover:text-blue-600 cursor-pointer ${currentPath === 'root' ? 'font-medium' : ''}`}

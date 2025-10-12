@@ -203,8 +203,7 @@ function Clay({
   toggleObjectForGrouping,
   isGroupHighlighted,
   clayGroups,
-  clayObjects,
-  onContextMenu
+  clayObjects
 }: {
   clay: ClayObject
   tool: string
@@ -216,7 +215,6 @@ function Clay({
   onSelect: () => void
   onDelete?: () => void
   isHovered: boolean
-  onContextMenu?: (e: React.MouseEvent, clayId: string) => void
   onHover: () => void
   onHoverEnd: () => void
   onBrushHover?: (point: THREE.Vector3 | null) => void
@@ -779,13 +777,6 @@ function Clay({
         onPointerMove={(e) => {
           if ((tool === 'push' || tool === 'pull') && onBrushHover) {
             onBrushHover(e.point)
-          }
-        }}
-        onContextMenu={(e) => {
-          e.stopPropagation()
-          if (onContextMenu) {
-            const mouseEvent = e.nativeEvent as any
-            onContextMenu(mouseEvent, clay.id)
           }
         }}
         onPointerDown={(e) => {
@@ -2118,7 +2109,6 @@ export default function AdvancedClay() {
   const [detail, setDetail] = useState(48)
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
   const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
@@ -2133,7 +2123,6 @@ export default function AdvancedClay() {
   })
   const [showGuide, setShowGuide] = useState(false)
   const [guideStep, setGuideStep] = useState(0)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; clayId: string | null } | null>(null)
   
   // Tool guide data
   const toolGuides = [
@@ -2204,15 +2193,6 @@ export default function AdvancedClay() {
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [showProfileMenu])
-  
-  // Close context menu when clicking outside
-  useEffect(() => {
-    const handleClick = () => setContextMenu(null)
-    if (contextMenu) {
-      window.addEventListener('click', handleClick)
-      return () => window.removeEventListener('click', handleClick)
-    }
-  }, [contextMenu])
   
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
@@ -3357,15 +3337,9 @@ export default function AdvancedClay() {
         e.preventDefault()
         const selectedClay = clayObjects.find(c => c.id === selectedClayId)
         if (selectedClay) {
-          // If group is selected, copy the first object of the group (paste will copy whole group)
-          if (selectedGroupId && selectedClay.groupId === selectedGroupId) {
-            showPopup('Group copied', 'success')
-            console.log('[Clipboard] Copied group:', selectedGroupId)
-          } else {
-            showPopup('Object copied', 'success')
-            console.log('[Clipboard] Copied object:', selectedClay.id)
-          }
           clipboardRef.current = { clay: selectedClay, mode: 'copy' }
+          showPopup('Object copied', 'success')
+          console.log('[Clipboard] Copied object:', selectedClay.id)
         }
         return
       }
@@ -3375,26 +3349,13 @@ export default function AdvancedClay() {
         const selectedClay = clayObjects.find(c => c.id === selectedClayId)
         if (selectedClay) {
           clipboardRef.current = { clay: selectedClay, mode: 'cut' }
-          
-          // If group is selected, remove the entire group
-          if (selectedGroupId && selectedClay.groupId === selectedGroupId) {
-            const newClays = clayObjects.filter(c => c.groupId !== selectedGroupId)
-            setClayObjects(newClays)
-            setClayGroups(prev => prev.filter(g => g.id !== selectedGroupId))
-            addToHistory(newClays)
-            setSelectedClayId(null)
-            setSelectedGroupId(null)
-            showPopup('Group cut', 'success')
-            console.log('[Clipboard] Cut group:', selectedGroupId)
-          } else {
-            // Remove single object
-            const newClays = clayObjects.filter(c => c.id !== selectedClayId)
-            setClayObjects(newClays)
-            addToHistory(newClays)
-            setSelectedClayId(null)
-            showPopup('Object cut', 'success')
-            console.log('[Clipboard] Cut object:', selectedClay.id)
-          }
+          // Remove the object
+          const newClays = clayObjects.filter(c => c.id !== selectedClayId)
+          setClayObjects(newClays)
+          addToHistory(newClays)
+          setSelectedClayId(null)
+          showPopup('Object cut', 'success')
+          console.log('[Clipboard] Cut object:', selectedClay.id)
         }
         return
       }
@@ -3588,12 +3549,7 @@ export default function AdvancedClay() {
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ touchAction: 'none', backgroundColor: backgroundColor }}
         className="w-full h-full"
-        onContextMenu={(e) => {
-          const event = e as any
-          if (event.clientX && event.clientY) {
-            setContextMenu({ x: event.clientX, y: event.clientY, clayId: null })
-          }
-        }}
+        onContextMenu={(e) => e.preventDefault()}
       >
         <Suspense fallback={null}>
           {/* Set scene background color */}
@@ -3647,29 +3603,8 @@ export default function AdvancedClay() {
                   onUpdate={updateClay}
                   onDeformingChange={setIsDeforming}
                   isSelected={selectedClayId === clay.id}
-                  onSelect={() => {
-                    // Group-first selection mechanism
-                    if (clay.groupId) {
-                      // If group is not selected, select the group first
-                      if (selectedGroupId !== clay.groupId) {
-                        setSelectedGroupId(clay.groupId)
-                        setSelectedClayId(clay.id) // Also set clay ID for operations
-                      } else {
-                        // Group already selected, now select individual object
-                        setSelectedClayId(clay.id)
-                      }
-                    } else {
-                      // No group, just select the object
-                      setSelectedGroupId(null)
-                      setSelectedClayId(clay.id)
-                    }
-                  }}
+                  onSelect={() => setSelectedClayId(clay.id)}
                   onDelete={() => removeClay(clay.id)}
-                  onContextMenu={(e: React.MouseEvent, clayId: string) => {
-                    e.preventDefault()
-                    setContextMenu({ x: e.clientX, y: e.clientY, clayId })
-                    setSelectedClayId(clayId)
-                  }}
                   isHovered={hoveredClayId === clay.id}
                   onHover={() => setHoveredClayId(clay.id)}
                   onHoverEnd={() => {
@@ -4060,17 +3995,7 @@ export default function AdvancedClay() {
               ].map((color) => (
                 <button
                   key={color}
-                  onClick={() => {
-                    setCurrentColor(color)
-                    // If an object is selected, apply color immediately
-                    if (selectedClayId) {
-                      const selectedClay = clayObjects.find(c => c.id === selectedClayId)
-                      if (selectedClay) {
-                        updateClay({ ...selectedClay, color })
-                        showPopup('Color applied', 'success')
-                      }
-                    }
-                  }}
+                  onClick={() => setCurrentColor(color)}
                   className={`w-8 h-8 rounded-full transition-all ${
                     currentColor === color ? 'ring-2 ring-gray-800 scale-110' : ''
                   }`}
@@ -4465,89 +4390,6 @@ export default function AdvancedClay() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Context Menu */}
-      {contextMenu && (
-        <div
-          className="fixed bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-[10001]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.clayId ? (
-            <>
-              <button
-                onClick={() => {
-                  const clay = clayObjects.find(c => c.id === contextMenu.clayId)
-                  if (clay) {
-                    clipboardRef.current = { clay, mode: 'copy' }
-                    showPopup('Object copied', 'success')
-                  }
-                  setContextMenu(null)
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
-              >
-                Copy
-              </button>
-              <button
-                onClick={() => {
-                  const clay = clayObjects.find(c => c.id === contextMenu.clayId)
-                  if (clay) {
-                    clipboardRef.current = { clay, mode: 'cut' }
-                    const newClays = clayObjects.filter(c => c.id !== contextMenu.clayId)
-                    setClayObjects(newClays)
-                    addToHistory(newClays)
-                    setSelectedClayId(null)
-                    showPopup('Object cut', 'success')
-                  }
-                  setContextMenu(null)
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
-              >
-                Cut
-              </button>
-              <div className="border-t border-gray-200 my-1" />
-              <button
-                onClick={() => {
-                  removeClay(contextMenu.clayId!)
-                  setContextMenu(null)
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm text-red-600"
-              >
-                Delete
-              </button>
-            </>
-          ) : (
-            <>
-              {clipboardRef.current.clay && (
-                <button
-                  onClick={() => {
-                    // Trigger paste
-                    const event = new KeyboardEvent('keydown', {
-                      key: 'v',
-                      metaKey: true,
-                      bubbles: true
-                    })
-                    window.dispatchEvent(event)
-                    setContextMenu(null)
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
-                >
-                  Paste
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setTool('add')
-                  setContextMenu(null)
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
-              >
-                Add Shape
-              </button>
-            </>
-          )}
         </div>
       )}
       
