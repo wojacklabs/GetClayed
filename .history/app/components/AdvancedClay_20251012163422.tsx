@@ -34,7 +34,6 @@ import {
 import SaveButton from '../../components/SaveButton'
 import FolderStructure, { FolderStructureHandle } from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
-import { AnimatedClayLogo } from '../../components/AnimatedClayLogo'
 import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject, uploadProjectThumbnail, downloadProjectThumbnail } from '../../lib/clayStorageService'
 import { captureSceneThumbnail, compressImageDataUrl } from '../../lib/thumbnailService'
 import { getUploadPrice, payForUpload } from '../../lib/contractService'
@@ -3508,30 +3507,6 @@ export default function AdvancedClay() {
   
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
-      {/* Simple Header with Home Logo */}
-      <div className="bg-white border-b border-gray-200 relative">
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-          <button
-            onClick={() => window.location.href = '/'}
-            className="block hover:opacity-80 transition-opacity"
-            title="Home"
-          >
-            <div className="w-10 h-10">
-              <Canvas
-                camera={{ position: [0, 0, 2], fov: 50 }}
-                style={{ background: 'transparent' }}
-              >
-                <Suspense fallback={null}>
-                  <ambientLight intensity={0.5} />
-                  <directionalLight position={[5, 5, 5]} intensity={0.5} />
-                  <AnimatedClayLogo />
-                </Suspense>
-              </Canvas>
-            </div>
-          </button>
-        </div>
-      </div>
-      
       {/* Chunk upload progress dialog */}
       <ChunkUploadProgress 
         isOpen={chunkUploadProgress.isOpen}
@@ -3705,8 +3680,23 @@ export default function AdvancedClay() {
       <div className="bg-white shadow-lg border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Profile and Connect Wallet */}
+          {/* Left side - Home, Profile and Connect Wallet */}
           <div className="flex items-center gap-2">
+            {/* Home Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                console.log('Home button clicked, navigating to /')
+                window.location.href = '/'
+              }}
+              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200 cursor-pointer"
+              title="Home"
+            >
+              <Home size={20} />
+            </button>
+            
             {/* Profile Button - Only show when wallet is connected */}
             {walletAddress && (
               <div className="relative profile-menu-container">

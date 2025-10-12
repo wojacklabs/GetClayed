@@ -3705,8 +3705,23 @@ export default function AdvancedClay() {
       <div className="bg-white shadow-lg border-t border-gray-200">
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4">
-          {/* Left side - Profile and Connect Wallet */}
+          {/* Left side - Home, Profile and Connect Wallet */}
           <div className="flex items-center gap-2">
+            {/* Home Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                console.log('Home button clicked, navigating to /')
+                window.location.href = '/'
+              }}
+              className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200 cursor-pointer"
+              title="Home"
+            >
+              <Home size={20} />
+            </button>
+            
             {/* Profile Button - Only show when wallet is connected */}
             {walletAddress && (
               <div className="relative profile-menu-container">
