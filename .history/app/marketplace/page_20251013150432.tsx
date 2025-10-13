@@ -309,9 +309,9 @@ export default function MarketplacePage() {
                       {listing.assetName || 'Unnamed Asset'}
                     </h3>
                     <p className="text-xs text-gray-500 mb-2">{formatTimeAgo(listing.listedAt)}</p>
-                    <p className="text-lg font-bold text-gray-900">{listing.price}</p>
+                    <p className="text-lg font-bold text-gray-900">{listing.price} IRYS</p>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

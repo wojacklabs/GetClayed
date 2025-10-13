@@ -270,6 +270,9 @@ export default function LibraryPage() {
                         <div className="text-2xl font-bold text-gray-300">3D</div>
                       </div>
                     )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <Eye size={24} className="text-white drop-shadow-lg" />
+                    </div>
                   </div>
                   
                   {/* Content */}
@@ -285,8 +288,14 @@ export default function LibraryPage() {
                         {parseFloat(asset.priceUSDC || '0') > 0 && <div>{asset.priceUSDC} USDC</div>}
                       </div>
                     </div>
+                    <button
+                      onClick={() => handlePreview(asset)}
+                      className="w-full px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs rounded transition-colors"
+                    >
+                      View & Buy
+                    </button>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

@@ -64,8 +64,7 @@ export function serializeClayProject(
   author: string,
   tags: string[] = [],
   backgroundColor?: string,
-  groups?: any[],
-  usedLibraries?: UsedLibrary[]
+  groups?: any[]
 ): ClayProject {
   const serializedClays: ClayData[] = clays.map((clay) => {
     // Extract only essential data for recreation
@@ -205,8 +204,7 @@ export function serializeClayProject(
     clays: serializedClays,
     groups: serializedGroups,
     tags,
-    backgroundColor,
-    usedLibraries: usedLibraries && usedLibraries.length > 0 ? usedLibraries : undefined
+    backgroundColor
   };
   
   return project;

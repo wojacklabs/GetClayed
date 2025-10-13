@@ -208,13 +208,7 @@ contract ClayLibrary is Ownable, ReentrancyGuard {
         require(asset.isActive, "Asset not available");
         require(asset.priceUSDC > 0, "USDC payment not accepted for this asset");
         
-        // Get royalty amounts
-        uint256 royaltyUSDC = 0;
-        if (address(royaltyContract) != address(0)) {
-            (, royaltyUSDC) = royaltyContract.getTotalRoyalties(projectId);
-        }
-        
-        // Calculate platform fee from asset price
+        // Calculate platform fee
         uint256 platformFee = (asset.priceUSDC * platformFeePercentage) / FEE_DENOMINATOR;
         uint256 ownerPayment = asset.priceUSDC - platformFee;
         
@@ -229,21 +223,6 @@ contract ClayLibrary is Ownable, ReentrancyGuard {
             usdcToken.transferFrom(msg.sender, address(this), platformFee),
             "Platform fee transfer failed"
         );
-        
-        // Distribute royalties
-        if (royaltyUSDC > 0) {
-            // First transfer royalties to this contract
-            require(
-                usdcToken.transferFrom(msg.sender, address(this), royaltyUSDC),
-                "Royalty transfer to contract failed"
-            );
-            
-            // Approve royalty contract to spend
-            require(usdcToken.approve(address(royaltyContract), royaltyUSDC), "Approval failed");
-            
-            // Distribute via royalty contract
-            royaltyContract.distributeRoyalties(projectId, 1); // 1 = USDC
-        }
         
         // Update asset statistics
         asset.totalRevenueUSDC += asset.priceUSDC;

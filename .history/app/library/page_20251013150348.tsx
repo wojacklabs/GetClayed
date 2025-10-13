@@ -285,8 +285,14 @@ export default function LibraryPage() {
                         {parseFloat(asset.priceUSDC || '0') > 0 && <div>{asset.priceUSDC} USDC</div>}
                       </div>
                     </div>
+                    <button
+                      onClick={() => handlePreview(asset)}
+                      className="w-full px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs rounded transition-colors"
+                    >
+                      View & Buy
+                    </button>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
