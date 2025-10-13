@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { TrackballControls } from '@react-three/drei'
 import * as THREE from 'three'
-import { queryLibraryAssets, LibraryAsset } from '@/lib/libraryService'
+import { queryLibraryAssets, purchaseLibraryAssetWithETH, purchaseLibraryAssetWithUSDC, LibraryAsset } from '@/lib/libraryService'
 import { downloadClayProject, restoreClayObjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
@@ -75,6 +75,30 @@ export default function LibraryDetailPage() {
     }
   }
   
+  const handlePurchase = async (paymentToken: 'ETH' | 'USDC') => {
+    if (!walletAddress || !asset) {
+      showPopup('Please connect wallet', 'warning')
+      return
+    }
+    
+    try {
+      let result;
+      if (paymentToken === 'ETH') {
+        result = await purchaseLibraryAssetWithETH(asset.projectId, parseFloat(asset.priceETH))
+      } else {
+        result = await purchaseLibraryAssetWithUSDC(asset.projectId, parseFloat(asset.priceUSDC))
+      }
+      
+      if (result.success) {
+        showPopup('Purchase successful!', 'success')
+        loadAssetDetail()
+      } else {
+        showPopup(result.error || 'Purchase failed', 'error')
+      }
+    } catch (error: any) {
+      showPopup(error.message || 'Purchase failed', 'error')
+    }
+  }
   
   if (loading) {
     return (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, TrendingUp, ShoppingCart } from 'lucide-react'
+import { Search, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { queryLibraryAssets, LibraryAsset } from '@/lib/libraryService'

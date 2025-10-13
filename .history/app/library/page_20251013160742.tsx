@@ -2,14 +2,33 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, TrendingUp, ShoppingCart } from 'lucide-react'
+import { Search, ShoppingCart, Eye, TrendingUp, DollarSign, User, X } from 'lucide-react'
 import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
-import { queryLibraryAssets, LibraryAsset } from '@/lib/libraryService'
-import { downloadProjectThumbnail } from '@/lib/clayStorageService'
+import { queryLibraryAssets, purchaseLibraryAssetWithETH, purchaseLibraryAssetWithUSDC, LibraryAsset } from '@/lib/libraryService'
+import { downloadClayProject, restoreClayObjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
+import { TrackballControls } from '@react-three/drei'
+import * as THREE from 'three'
+
+// Simple clay renderer for preview
+function PreviewClay({ clay }: { clay: any }) {
+  return (
+    <mesh
+      geometry={clay.geometry}
+      position={clay.position}
+      rotation={clay.rotation}
+      scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x, clay.scale.y, clay.scale.z] : clay.scale || 1}
+    >
+      <meshPhongMaterial 
+        color={clay.color}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  )
+}
 
 export default function LibraryPage() {
   const router = useRouter()

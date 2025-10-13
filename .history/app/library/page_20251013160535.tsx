@@ -2,14 +2,33 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, TrendingUp, ShoppingCart } from 'lucide-react'
+import { Search, ShoppingCart, Eye, TrendingUp, DollarSign, User, X } from 'lucide-react'
 import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
-import { queryLibraryAssets, LibraryAsset } from '@/lib/libraryService'
-import { downloadProjectThumbnail } from '@/lib/clayStorageService'
+import { queryLibraryAssets, purchaseLibraryAssetWithETH, purchaseLibraryAssetWithUSDC, LibraryAsset } from '@/lib/libraryService'
+import { downloadClayProject, restoreClayObjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
+import { TrackballControls } from '@react-three/drei'
+import * as THREE from 'three'
+
+// Simple clay renderer for preview
+function PreviewClay({ clay }: { clay: any }) {
+  return (
+    <mesh
+      geometry={clay.geometry}
+      position={clay.position}
+      rotation={clay.rotation}
+      scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x, clay.scale.y, clay.scale.z] : clay.scale || 1}
+    >
+      <meshPhongMaterial 
+        color={clay.color}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  )
+}
 
 export default function LibraryPage() {
   const router = useRouter()
@@ -88,6 +107,45 @@ export default function LibraryPage() {
     setFilteredAssets(filtered)
   }
   
+  const handlePreview = async (asset: LibraryAsset) => {
+    setPreviewAsset(asset)
+    setPreviewLoading(true)
+    try {
+      const project = await downloadClayProject(asset.projectId)
+      setPreviewProject(project)
+    } catch (error) {
+      console.error('Failed to load preview:', error)
+      showPopup('Failed to load preview', 'error')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+  
+  const handlePurchase = async (asset: LibraryAsset, paymentToken: 'ETH' | 'USDC') => {
+    if (!walletAddress) {
+      showPopup('Please connect your wallet', 'warning')
+      return
+    }
+    
+    try {
+      let result;
+      if (paymentToken === 'ETH') {
+        result = await purchaseLibraryAssetWithETH(asset.projectId, parseFloat(asset.priceETH))
+      } else {
+        result = await purchaseLibraryAssetWithUSDC(asset.projectId, parseFloat(asset.priceUSDC))
+      }
+      
+      if (result.success) {
+        showPopup('Asset purchased successfully!', 'success')
+        setPreviewAsset(null)
+        loadLibraryAssets() // Refresh
+      } else {
+        showPopup(result.error || 'Purchase failed', 'error')
+      }
+    } catch (error: any) {
+      showPopup(error.message || 'Purchase failed', 'error')
+    }
+  }
   
   return (
     <div className="min-h-screen bg-gray-100">
@@ -232,6 +290,107 @@ export default function LibraryPage() {
         </div>
       </main>
       
+      {/* Preview Modal */}
+      {previewAsset && (
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4" onClick={() => setPreviewAsset(null)}>
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{previewAsset.name}</h2>
+                <p className="text-sm text-gray-500 mt-1">{previewAsset.description}</p>
+              </div>
+              <button
+                onClick={() => setPreviewAsset(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Preview Canvas */}
+            <div className="flex-1 bg-gray-100 relative min-h-[400px]">
+              {previewLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800"></div>
+                </div>
+              ) : previewProject ? (
+                <Canvas camera={{ position: [5, 5, 5], fov: 50 }}>
+                  <Suspense fallback={null}>
+                    <ambientLight intensity={0.6} />
+                    <directionalLight position={[10, 10, 5]} intensity={0.8} />
+                    <directionalLight position={[-10, -10, -5]} intensity={0.3} />
+                    
+                    {restoreClayObjects(previewProject).map((clay, index) => (
+                      <PreviewClay key={index} clay={clay} />
+                    ))}
+                    
+                    <TrackballControls />
+                  </Suspense>
+                </Canvas>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <p className="text-gray-500">Failed to load preview</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-xs text-gray-500">Price</p>
+                  <div className="space-y-1">
+                    {parseFloat(previewAsset.priceETH || '0') > 0 && (
+                      <p className="text-lg font-bold text-gray-900">{previewAsset.priceETH} ETH</p>
+                    )}
+                    {parseFloat(previewAsset.priceUSDC || '0') > 0 && (
+                      <p className="text-lg font-bold text-gray-900">{previewAsset.priceUSDC} USDC</p>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Purchases</p>
+                  <p className="text-lg font-semibold text-gray-900">{previewAsset.purchaseCount}</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPreviewAsset(null)}
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                {parseFloat(previewAsset.priceETH || '0') > 0 && (
+                  <button
+                    onClick={() => handlePurchase(previewAsset, 'ETH')}
+                    disabled={!walletAddress}
+                    className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart size={16} />
+                    Buy with ETH
+                  </button>
+                )}
+                {parseFloat(previewAsset.priceUSDC || '0') > 0 && (
+                  <button
+                    onClick={() => handlePurchase(previewAsset, 'USDC')}
+                    disabled={!walletAddress}
+                    className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart size={16} />
+                    Buy with USDC
+                  </button>
+                )}
+              </div>
+              
+              {!walletAddress && (
+                <p className="text-xs text-gray-500 text-center mt-2">Connect wallet to purchase</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
