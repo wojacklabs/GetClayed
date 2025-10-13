@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { saveMutableReference, getMutableReference } from './mutableStorageService';
+import { saveMutableReference } from './mutableStorageService';
 
 // Marketplace contract address (to be deployed)
 export const MARKETPLACE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || '';
@@ -210,11 +210,8 @@ export async function acceptOffer(
     const receipt = await tx.wait();
     
     // Update mutable reference to new owner
-    const currentRef = getMutableReference(projectId);
-    if (currentRef) {
-      saveMutableReference(projectId, currentRef.rootTxId, currentRef.latestTxId, currentRef.projectName, buyerAddress);
-      console.log('[MarketplaceService] Updated mutable reference for new owner:', buyerAddress);
-    }
+    saveMutableReference(projectId, receipt.hash, receipt.hash, buyerAddress);
+    console.log('[MarketplaceService] Updated mutable reference for new owner:', buyerAddress);
     
     return { success: true, txHash: tx.hash };
   } catch (error: any) {

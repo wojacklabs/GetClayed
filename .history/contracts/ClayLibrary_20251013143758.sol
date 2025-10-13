@@ -122,14 +122,6 @@ contract ClayLibrary is Ownable, ReentrancyGuard {
         require(priceETH > 0 || priceUSDC > 0, "At least one price must be set");
         require(!libraryAssets[projectId].isActive, "Asset already registered");
         
-        // Validate price meets minimum requirement (royalty floor)
-        if (address(royaltyContract) != address(0)) {
-            require(
-                royaltyContract.validatePrice(projectId, priceETH, priceUSDC),
-                "Price below minimum (must cover dependency royalties)"
-            );
-        }
-        
         LibraryAsset memory newAsset = LibraryAsset({
             projectId: projectId,
             name: name,
@@ -160,22 +152,9 @@ contract ClayLibrary is Ownable, ReentrancyGuard {
         LibraryAsset storage asset = libraryAssets[projectId];
         require(asset.isActive, "Asset not available");
         require(asset.priceETH > 0, "ETH payment not accepted for this asset");
+        require(msg.value >= asset.priceETH, "Insufficient payment");
         
-        // Get royalty amounts
-        uint256 royaltyETH = 0;
-        if (address(royaltyContract) != address(0)) {
-            (royaltyETH, ) = royaltyContract.getTotalRoyalties(projectId);
-        }
-        
-        uint256 totalRequired = asset.priceETH + royaltyETH;
-        require(msg.value >= totalRequired, "Insufficient payment (price + royalties)");
-        
-        // Distribute royalties first
-        if (royaltyETH > 0) {
-            royaltyContract.distributeRoyalties{value: royaltyETH}(projectId, 0); // 0 = ETH
-        }
-        
-        // Calculate platform fee from asset price (not including royalties)
+        // Calculate platform fee
         uint256 platformFee = (asset.priceETH * platformFeePercentage) / FEE_DENOMINATOR;
         uint256 ownerPayment = asset.priceETH - platformFee;
         
@@ -191,8 +170,8 @@ contract ClayLibrary is Ownable, ReentrancyGuard {
         assetPurchasers[projectId].push(msg.sender);
         
         // Refund excess payment
-        if (msg.value > totalRequired) {
-            (bool refundSuccess, ) = msg.sender.call{value: msg.value - totalRequired}("");
+        if (msg.value > asset.priceETH) {
+            (bool refundSuccess, ) = msg.sender.call{value: msg.value - asset.priceETH}("");
             require(refundSuccess, "Refund failed");
         }
         
@@ -208,13 +187,7 @@ contract ClayLibrary is Ownable, ReentrancyGuard {
         require(asset.isActive, "Asset not available");
         require(asset.priceUSDC > 0, "USDC payment not accepted for this asset");
         
-        // Get royalty amounts
-        uint256 royaltyUSDC = 0;
-        if (address(royaltyContract) != address(0)) {
-            (, royaltyUSDC) = royaltyContract.getTotalRoyalties(projectId);
-        }
-        
-        // Calculate platform fee from asset price
+        // Calculate platform fee
         uint256 platformFee = (asset.priceUSDC * platformFeePercentage) / FEE_DENOMINATOR;
         uint256 ownerPayment = asset.priceUSDC - platformFee;
         
@@ -229,21 +202,6 @@ contract ClayLibrary is Ownable, ReentrancyGuard {
             usdcToken.transferFrom(msg.sender, address(this), platformFee),
             "Platform fee transfer failed"
         );
-        
-        // Distribute royalties
-        if (royaltyUSDC > 0) {
-            // First transfer royalties to this contract
-            require(
-                usdcToken.transferFrom(msg.sender, address(this), royaltyUSDC),
-                "Royalty transfer to contract failed"
-            );
-            
-            // Approve royalty contract to spend
-            require(usdcToken.approve(address(royaltyContract), royaltyUSDC), "Approval failed");
-            
-            // Distribute via royalty contract
-            royaltyContract.distributeRoyalties(projectId, 1); // 1 = USDC
-        }
         
         // Update asset statistics
         asset.totalRevenueUSDC += asset.priceUSDC;

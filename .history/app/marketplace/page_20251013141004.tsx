@@ -285,10 +285,10 @@ export default function MarketplacePage() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredListings.map((listing) => (
-                <Link
+                <div
                   key={listing.projectId}
-                  href={`/marketplace/${listing.projectId}`}
-                  className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-gray-200 block"
+                  className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-gray-200 cursor-pointer"
+                  onClick={() => handleViewListing(listing)}
                 >
                   <div className="aspect-square bg-gray-100 relative overflow-hidden">
                     {thumbnails.get(listing.projectId) ? (
@@ -309,9 +309,9 @@ export default function MarketplacePage() {
                       {listing.assetName || 'Unnamed Asset'}
                     </h3>
                     <p className="text-xs text-gray-500 mb-2">{formatTimeAgo(listing.listedAt)}</p>
-                    <p className="text-lg font-bold text-gray-900">{listing.price}</p>
+                    <p className="text-lg font-bold text-gray-900">{listing.price} IRYS</p>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -365,7 +365,7 @@ export default function MarketplacePage() {
                           </p>
                         </div>
                         <button
-                          onClick={() => handleAcceptOffer(offer.offerId, offer)}
+                          onClick={() => handleAcceptOffer(offer.offerId)}
                           className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors"
                         >
                           Accept

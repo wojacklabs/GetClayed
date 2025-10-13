@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { saveMutableReference, getMutableReference } from './mutableStorageService';
+import { saveMutableReference } from './mutableStorageService';
 
 // Marketplace contract address (to be deployed)
 export const MARKETPLACE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || '';
@@ -112,13 +112,9 @@ export async function buyListedAsset(
     const receipt = await tx.wait();
     
     // Update mutable reference to new owner
-    // The marketplace sale transfers ownership
-    // Note: We keep the same rootTxId but update the author
-    const currentRef = getMutableReference(projectId);
-    if (currentRef) {
-      saveMutableReference(projectId, currentRef.rootTxId, currentRef.latestTxId, currentRef.projectName, buyerAddress);
-      console.log('[MarketplaceService] Updated mutable reference for new owner:', buyerAddress);
-    }
+    // The marketplace sale creates a new "root" for this asset
+    saveMutableReference(projectId, receipt.hash, receipt.hash, buyerAddress);
+    console.log('[MarketplaceService] Updated mutable reference for new owner:', buyerAddress);
     
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
@@ -184,9 +180,7 @@ export async function makeAssetOffer(
  * Accept an offer
  */
 export async function acceptOffer(
-  offerId: number,
-  projectId: string,
-  buyerAddress: string
+  offerId: number
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
@@ -207,14 +201,7 @@ export async function acceptOffer(
     );
     
     const tx = await contract.acceptOffer(offerId);
-    const receipt = await tx.wait();
-    
-    // Update mutable reference to new owner
-    const currentRef = getMutableReference(projectId);
-    if (currentRef) {
-      saveMutableReference(projectId, currentRef.rootTxId, currentRef.latestTxId, currentRef.projectName, buyerAddress);
-      console.log('[MarketplaceService] Updated mutable reference for new owner:', buyerAddress);
-    }
+    await tx.wait();
     
     return { success: true, txHash: tx.hash };
   } catch (error: any) {

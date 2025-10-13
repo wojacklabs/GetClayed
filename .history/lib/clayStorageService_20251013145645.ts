@@ -205,8 +205,7 @@ export function serializeClayProject(
     clays: serializedClays,
     groups: serializedGroups,
     tags,
-    backgroundColor,
-    usedLibraries: usedLibraries && usedLibraries.length > 0 ? usedLibraries : undefined
+    backgroundColor
   };
   
   return project;

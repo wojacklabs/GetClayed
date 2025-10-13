@@ -2279,22 +2279,6 @@ export default function AdvancedClay() {
       return
     }
     
-    // Check if this project uses libraries and validate minimum price
-    if (usedLibraries.length > 0) {
-      const { calculateMinimumPrice } = await import('../../lib/royaltyService')
-      const { minETH, minUSDC } = await calculateMinimumPrice(usedLibraries)
-      
-      if (ethPrice > 0 && ethPrice < minETH) {
-        showPopup(`ETH price must be at least ${minETH.toFixed(4)} ETH (total royalties)`, 'error')
-        return
-      }
-      
-      if (usdcPrice > 0 && usdcPrice < minUSDC) {
-        showPopup(`USDC price must be at least ${minUSDC.toFixed(2)} USDC (total royalties)`, 'error')
-        return
-      }
-    }
-    
     try {
       const result = await registerLibraryAsset(
         libraryProjectId,
@@ -2369,34 +2353,18 @@ export default function AdvancedClay() {
       setClayGroups(prev => [...prev, newGroup])
       addToHistory(newClays)
       
-      // Track this library AND all its dependencies (recursive)
-      const librariesToAdd = [{
+      // Track this library for later payment during upload
+      setUsedLibraries(prev => [...prev, {
         projectId: asset.projectId,
         name: asset.name,
         priceETH: asset.priceETH || '0',
         priceUSDC: asset.priceUSDC || '0',
         creator: asset.originalCreator || asset.currentOwner
-      }]
+      }])
       
-      // Add nested dependencies if they exist
-      if (project.usedLibraries && project.usedLibraries.length > 0) {
-        librariesToAdd.push(...project.usedLibraries)
-      }
+      setPendingLibraryPurchases(prev => new Set(prev).add(asset.projectId))
       
-      // Avoid duplicates
-      setUsedLibraries(prev => {
-        const existing = new Set(prev.map(lib => lib.projectId))
-        const newLibs = librariesToAdd.filter(lib => !existing.has(lib.projectId))
-        return [...prev, ...newLibs]
-      })
-      
-      setPendingLibraryPurchases(prev => {
-        const newSet = new Set(prev)
-        librariesToAdd.forEach(lib => newSet.add(lib.projectId))
-        return newSet
-      })
-      
-      showPopup(`Imported with ${librariesToAdd.length} library dependency(ies). Payment on upload.`, 'success')
+      showPopup(`Library asset imported! Payment will be processed when you upload.`, 'success')
       setShowLibrarySearch(false)
     } catch (error: any) {
       showPopup(error.message || 'Import failed', 'error')
@@ -2998,8 +2966,7 @@ export default function AdvancedClay() {
           walletAddress,
           [], // tags
           backgroundColor,
-          clayGroups,
-          usedLibraries.length > 0 ? usedLibraries : undefined
+          clayGroups
         )
         console.log('[Save] serializeClayProject returned successfully')
       } catch (serializeError) {
@@ -3077,41 +3044,7 @@ export default function AdvancedClay() {
       const sizeInKB = Buffer.from(jsonString).byteLength / 1024;
       console.log(`Project size: ${sizeInKB.toFixed(2)} KB`);
 
-      // Step 2: Process library purchases and register royalties
-      if (usedLibraries.length > 0) {
-        try {
-          onProgress?.('Processing library purchases...')
-          const { processLibraryPurchasesAndRoyalties } = await import('../../lib/royaltyService')
-          
-          // TODO: Let user choose payment method
-          const result = await processLibraryPurchasesAndRoyalties(
-            serialized.id,
-            usedLibraries,
-            'ETH', // Default to ETH for now
-            walletAddress
-          )
-          
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to process library purchases')
-          }
-          
-          const purchasedCount = usedLibraries.length - result.alreadyOwned
-          if (purchasedCount > 0) {
-            showPopup(`Paid ${result.totalCost.toFixed(4)} ETH for ${purchasedCount} library assets${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 'success')
-          } else {
-            showPopup(`All ${usedLibraries.length} libraries already owned`, 'success')
-          }
-          
-          // Clear used libraries after successful payment
-          setUsedLibraries([])
-          setPendingLibraryPurchases(new Set())
-        } catch (error: any) {
-          console.error('[Save] Library purchase failed:', error)
-          throw new Error(`Library purchase failed: ${error.message}`)
-        }
-      }
-
-      // Step 3: Upload to Irys
+      // Step 2: Upload to Irys
       console.log('[Save] Step 9: Starting Irys upload...')
       onProgress?.('Uploading project to Irys...')
       console.log('[Save] Step 10: Upload parameters:', {
@@ -4686,13 +4619,24 @@ export default function AdvancedClay() {
                             </div>
                             <span className="text-xs text-gray-500">{asset.purchaseCount} uses</span>
                           </div>
-                          <button
-                            onClick={() => handleImportFromLibrary(asset)}
-                            disabled={pendingLibraryPurchases.has(asset.projectId)}
-                            className="w-full px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {pendingLibraryPurchases.has(asset.projectId) ? 'Added (Pay on upload)' : 'Add to Project'}
-                          </button>
+                          <div className="flex gap-1">
+                            {parseFloat(asset.priceETH || '0') > 0 && (
+                              <button
+                                onClick={() => handleImportFromLibrary(asset, 'ETH')}
+                                className="flex-1 px-2 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors"
+                              >
+                                ETH
+                              </button>
+                            )}
+                            {parseFloat(asset.priceUSDC || '0') > 0 && (
+                              <button
+                                onClick={() => handleImportFromLibrary(asset, 'USDC')}
+                                className="flex-1 px-2 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors"
+                              >
+                                USDC
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -4732,22 +4676,6 @@ export default function AdvancedClay() {
                 />
               </div>
               
-              {/* Show used libraries if any */}
-              {usedLibraries.length > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                  <p className="text-xs font-medium text-yellow-800 mb-2">Uses {usedLibraries.length} library asset(s):</p>
-                  <ul className="text-xs text-yellow-700 space-y-1">
-                    {usedLibraries.map((lib, idx) => (
-                      <li key={idx}>• {lib.name} ({lib.priceETH || lib.priceUSDC} {lib.priceETH ? 'ETH' : 'USDC'})</li>
-                    ))}
-                  </ul>
-                  <p className="text-xs text-yellow-800 mt-2 font-medium">
-                    Minimum price: {(usedLibraries.reduce((sum, lib) => sum + parseFloat(lib.priceETH || '0'), 0) * 0.1).toFixed(4)} ETH
-                    or {(usedLibraries.reduce((sum, lib) => sum + parseFloat(lib.priceUSDC || '0'), 0) * 0.1).toFixed(2)} USDC
-                  </p>
-                </div>
-              )}
-              
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm text-gray-700 mb-2">Price (ETH)</label>
@@ -4772,7 +4700,7 @@ export default function AdvancedClay() {
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-500 -mt-2">Set at least one price{usedLibraries.length > 0 ? ' (must meet minimum)' : ''}</p>
+              <p className="text-xs text-gray-500 -mt-2">Set at least one price</p>
               
               <div className="flex gap-3 pt-4">
                 <button

@@ -2369,34 +2369,18 @@ export default function AdvancedClay() {
       setClayGroups(prev => [...prev, newGroup])
       addToHistory(newClays)
       
-      // Track this library AND all its dependencies (recursive)
-      const librariesToAdd = [{
+      // Track this library for later payment during upload
+      setUsedLibraries(prev => [...prev, {
         projectId: asset.projectId,
         name: asset.name,
         priceETH: asset.priceETH || '0',
         priceUSDC: asset.priceUSDC || '0',
         creator: asset.originalCreator || asset.currentOwner
-      }]
+      }])
       
-      // Add nested dependencies if they exist
-      if (project.usedLibraries && project.usedLibraries.length > 0) {
-        librariesToAdd.push(...project.usedLibraries)
-      }
+      setPendingLibraryPurchases(prev => new Set(prev).add(asset.projectId))
       
-      // Avoid duplicates
-      setUsedLibraries(prev => {
-        const existing = new Set(prev.map(lib => lib.projectId))
-        const newLibs = librariesToAdd.filter(lib => !existing.has(lib.projectId))
-        return [...prev, ...newLibs]
-      })
-      
-      setPendingLibraryPurchases(prev => {
-        const newSet = new Set(prev)
-        librariesToAdd.forEach(lib => newSet.add(lib.projectId))
-        return newSet
-      })
-      
-      showPopup(`Imported with ${librariesToAdd.length} library dependency(ies). Payment on upload.`, 'success')
+      showPopup(`Library asset imported! Payment will be processed when you upload.`, 'success')
       setShowLibrarySearch(false)
     } catch (error: any) {
       showPopup(error.message || 'Import failed', 'error')
@@ -3087,20 +3071,14 @@ export default function AdvancedClay() {
           const result = await processLibraryPurchasesAndRoyalties(
             serialized.id,
             usedLibraries,
-            'ETH', // Default to ETH for now
-            walletAddress
+            'ETH' // Default to ETH for now
           )
           
           if (!result.success) {
             throw new Error(result.error || 'Failed to process library purchases')
           }
           
-          const purchasedCount = usedLibraries.length - result.alreadyOwned
-          if (purchasedCount > 0) {
-            showPopup(`Paid ${result.totalCost.toFixed(4)} ETH for ${purchasedCount} library assets${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 'success')
-          } else {
-            showPopup(`All ${usedLibraries.length} libraries already owned`, 'success')
-          }
+          showPopup(`Paid ${result.totalCost.toFixed(4)} ETH for ${usedLibraries.length} library assets`, 'success')
           
           // Clear used libraries after successful payment
           setUsedLibraries([])

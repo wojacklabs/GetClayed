@@ -3087,20 +3087,14 @@ export default function AdvancedClay() {
           const result = await processLibraryPurchasesAndRoyalties(
             serialized.id,
             usedLibraries,
-            'ETH', // Default to ETH for now
-            walletAddress
+            'ETH' // Default to ETH for now
           )
           
           if (!result.success) {
             throw new Error(result.error || 'Failed to process library purchases')
           }
           
-          const purchasedCount = usedLibraries.length - result.alreadyOwned
-          if (purchasedCount > 0) {
-            showPopup(`Paid ${result.totalCost.toFixed(4)} ETH for ${purchasedCount} library assets${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 'success')
-          } else {
-            showPopup(`All ${usedLibraries.length} libraries already owned`, 'success')
-          }
+          showPopup(`Paid ${result.totalCost.toFixed(4)} ETH for ${usedLibraries.length} library assets`, 'success')
           
           // Clear used libraries after successful payment
           setUsedLibraries([])
