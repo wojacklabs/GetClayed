@@ -72,53 +72,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
   const [totalRevenueETH, setTotalRevenueETH] = useState<number>(0)
   const [totalRevenueUSDC, setTotalRevenueUSDC] = useState<number>(0)
   
-  // Load library revenue (only for own profile)
-  useEffect(() => {
-    if (currentUserAddress?.toLowerCase() === walletAddress.toLowerCase()) {
-      loadLibraryRevenue()
-    }
-  }, [currentUserAddress, walletAddress])
-  
-  const loadLibraryRevenue = async () => {
-    try {
-      const { getUserLibraryAssets } = await import('../lib/libraryService')
-      const LIBRARY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS
-      
-      if (!LIBRARY_CONTRACT_ADDRESS || typeof window === 'undefined' || !window.ethereum) {
-        return
-      }
-      
-      const { ethers } = await import('ethers')
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const contract = new ethers.Contract(
-        LIBRARY_CONTRACT_ADDRESS,
-        [
-          "function getAsset(string projectId) external view returns (tuple(string, string, string, uint256, uint256, address, address, uint256, uint256, uint256, uint256, bool))"
-        ],
-        provider
-      )
-      
-      const assetIds = await getUserLibraryAssets(walletAddress)
-      let totalETH = 0
-      let totalUSDC = 0
-      
-      for (const assetId of assetIds) {
-        try {
-          const asset = await contract.getAsset(assetId)
-          totalETH += parseFloat(ethers.formatEther(asset[7])) // totalRevenueETH
-          totalUSDC += parseFloat(ethers.formatUnits(asset[8], 6)) // totalRevenueUSDC
-        } catch (error) {
-          console.error('Failed to load revenue for', assetId)
-        }
-      }
-      
-      setTotalRevenueETH(totalETH)
-      setTotalRevenueUSDC(totalUSDC)
-    } catch (error) {
-      console.error('Failed to load library revenue:', error)
-    }
-  }
-  
   // Generate activity data from projects and interactions
   const generateActivityData = (userProjects: any[], userLikes?: any[], userFavorites?: any[]) => {
     // Create a map of date strings to activity details
@@ -799,27 +752,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             </div>
           </div>
         </div>
-        
-        {/* Revenue Stats */}
-        {currentUserAddress?.toLowerCase() === walletAddress.toLowerCase() && (totalRevenueETH > 0 || totalRevenueUSDC > 0) && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Library Revenue</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {totalRevenueETH > 0 && (
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Total ETH</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalRevenueETH.toFixed(4)} ETH</p>
-                </div>
-              )}
-              {totalRevenueUSDC > 0 && (
-                <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Total USDC</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalRevenueUSDC.toFixed(2)} USDC</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         
         {/* Activity Chart */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">

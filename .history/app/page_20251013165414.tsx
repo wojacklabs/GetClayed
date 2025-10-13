@@ -362,6 +362,11 @@ export default function HomePage() {
                           onClick={async () => {
                             setShowProfileDropdown(false)
                             
+                            // Call ConnectWallet's disconnect method if available
+                            if (connectWalletRef.current?.disconnectWallet) {
+                              await connectWalletRef.current.disconnectWallet()
+                            }
+                            
                             // Clear local state
                             setWalletAddress(null)
                             setCurrentUserProfile(null)

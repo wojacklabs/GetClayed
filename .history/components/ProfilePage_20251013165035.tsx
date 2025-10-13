@@ -72,53 +72,6 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
   const [totalRevenueETH, setTotalRevenueETH] = useState<number>(0)
   const [totalRevenueUSDC, setTotalRevenueUSDC] = useState<number>(0)
   
-  // Load library revenue (only for own profile)
-  useEffect(() => {
-    if (currentUserAddress?.toLowerCase() === walletAddress.toLowerCase()) {
-      loadLibraryRevenue()
-    }
-  }, [currentUserAddress, walletAddress])
-  
-  const loadLibraryRevenue = async () => {
-    try {
-      const { getUserLibraryAssets } = await import('../lib/libraryService')
-      const LIBRARY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS
-      
-      if (!LIBRARY_CONTRACT_ADDRESS || typeof window === 'undefined' || !window.ethereum) {
-        return
-      }
-      
-      const { ethers } = await import('ethers')
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const contract = new ethers.Contract(
-        LIBRARY_CONTRACT_ADDRESS,
-        [
-          "function getAsset(string projectId) external view returns (tuple(string, string, string, uint256, uint256, address, address, uint256, uint256, uint256, uint256, bool))"
-        ],
-        provider
-      )
-      
-      const assetIds = await getUserLibraryAssets(walletAddress)
-      let totalETH = 0
-      let totalUSDC = 0
-      
-      for (const assetId of assetIds) {
-        try {
-          const asset = await contract.getAsset(assetId)
-          totalETH += parseFloat(ethers.formatEther(asset[7])) // totalRevenueETH
-          totalUSDC += parseFloat(ethers.formatUnits(asset[8], 6)) // totalRevenueUSDC
-        } catch (error) {
-          console.error('Failed to load revenue for', assetId)
-        }
-      }
-      
-      setTotalRevenueETH(totalETH)
-      setTotalRevenueUSDC(totalUSDC)
-    } catch (error) {
-      console.error('Failed to load library revenue:', error)
-    }
-  }
-  
   // Generate activity data from projects and interactions
   const generateActivityData = (userProjects: any[], userLikes?: any[], userFavorites?: any[]) => {
     // Create a map of date strings to activity details

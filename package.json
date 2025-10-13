@@ -15,6 +15,7 @@
     "@irys/web-upload-ethereum-ethers-v6": "^0.0.16",
     "@irys/web-upload-solana": "^0.1.8",
     "@openzeppelin/contracts": "^5.4.0",
+    "@privy-io/react-auth": "^3.3.0",
     "@react-three/drei": "^10.7.4",
     "@react-three/fiber": "^9.3.0",
     "@react-three/postprocessing": "^3.0.4",
