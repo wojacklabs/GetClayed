@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, TrendingUp, ShoppingCart } from 'lucide-react'
+import { Search, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { queryLibraryAssets, LibraryAsset } from '@/lib/libraryService'
@@ -10,7 +10,7 @@ import { downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
-
+import { TrackballControls } from '@react-three/drei'
 export default function LibraryPage() {
   const router = useRouter()
   const [assets, setAssets] = useState<LibraryAsset[]>([])

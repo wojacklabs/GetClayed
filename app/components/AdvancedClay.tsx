@@ -3076,7 +3076,7 @@ export default function AdvancedClay() {
       const jsonString = JSON.stringify(serialized);
       const sizeInKB = Buffer.from(jsonString).byteLength / 1024;
       console.log(`Project size: ${sizeInKB.toFixed(2)} KB`);
-
+      
       // Step 2: Process library purchases and register royalties
       if (usedLibraries.length > 0) {
         try {
