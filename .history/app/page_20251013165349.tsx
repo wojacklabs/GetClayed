@@ -300,6 +300,7 @@ export default function HomePage() {
               {/* Always render ConnectWallet but hide it when connected */}
               <div style={{ display: walletAddress ? 'none' : 'block' }}>
                 <ConnectWallet 
+                  ref={connectWalletRef}
                   onConnect={(address) => setWalletAddress(address)}
                   onDisconnect={() => {
                     setWalletAddress(null)
@@ -361,6 +362,11 @@ export default function HomePage() {
                         <button
                           onClick={async () => {
                             setShowProfileDropdown(false)
+                            
+                            // Call ConnectWallet's disconnect method if available
+                            if (connectWalletRef.current?.disconnectWallet) {
+                              await connectWalletRef.current.disconnectWallet()
+                            }
                             
                             // Clear local state
                             setWalletAddress(null)

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { PopupNotificationProvider } from "../components/PopupNotification";
+import { PrivyProviderWrapper } from "../components/PrivyProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,6 +25,21 @@ export const metadata: Metadata = {
     shortcut: [{ url: '/favicon.png', type: 'image/png' }],
     apple: [{ url: '/clay.png', type: 'image/png' }],
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'GetClayed',
+  },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#3b82f6',
 };
 
 export default function RootLayout({
@@ -35,7 +52,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <PrivyProviderWrapper>
+          <PopupNotificationProvider>
+            {children}
+          </PopupNotificationProvider>
+        </PrivyProviderWrapper>
       </body>
     </html>
   );
