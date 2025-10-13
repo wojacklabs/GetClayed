@@ -3879,7 +3879,6 @@ export default function AdvancedClay() {
       
       {/* Library Floating Button */}
       <button
-        ref={(el) => { toolButtonsRef.current['library'] = el }}
         onClick={handleOpenLibrarySearch}
         className="absolute bottom-4 right-4 p-4 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-all z-20 hover:scale-110"
         title="Import from Library"

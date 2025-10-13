@@ -2165,8 +2165,7 @@ export default function AdvancedClay() {
     { tool: 'add', title: 'Add Shape', description: 'Click to add new shapes' },
     { tool: 'move', title: 'Move', description: 'Drag or use arrow keys to move objects' },
     { tool: 'group', title: 'Group', description: 'Select multiple objects to group' },
-    { tool: 'delete', title: 'Delete', description: 'Click to delete objects' },
-    { tool: 'library', title: 'Library', description: 'Import reusable 3D assets (bottom-right button)' }
+    { tool: 'delete', title: 'Delete', description: 'Click to delete objects' }
   ]
   const [hoveredPoint, setHoveredPoint] = useState<THREE.Vector3 | null>(null)
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
@@ -3879,7 +3878,6 @@ export default function AdvancedClay() {
       
       {/* Library Floating Button */}
       <button
-        ref={(el) => { toolButtonsRef.current['library'] = el }}
         onClick={handleOpenLibrarySearch}
         className="absolute bottom-4 right-4 p-4 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-all z-20 hover:scale-110"
         title="Import from Library"
