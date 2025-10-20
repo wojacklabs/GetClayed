@@ -1,6 +1,23 @@
 import { ethers } from 'ethers';
 import { saveMutableReference, getMutableReference } from './mutableStorageService';
 
+async function getWalletProvider() {
+  if (typeof window === 'undefined') {
+    throw new Error('Window not available');
+  }
+  
+  const ethereum = (window as any).ethereum;
+  
+  if (!ethereum) {
+    throw new Error('No wallet connected. Please connect your wallet first.');
+  }
+  
+  const provider = new ethers.BrowserProvider(ethereum);
+  const signer = await provider.getSigner();
+  
+  return { provider, signer };
+}
+
 // Marketplace contract address (to be deployed)
 export const MARKETPLACE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || '';
 
@@ -55,12 +72,7 @@ export async function listAssetForSale(
       throw new Error('Marketplace contract not deployed');
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('No wallet provider found');
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -93,12 +105,7 @@ export async function buyListedAsset(
       throw new Error('Marketplace contract not deployed');
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('No wallet provider found');
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -140,12 +147,7 @@ export async function makeAssetOffer(
       throw new Error('Marketplace contract not deployed');
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('No wallet provider found');
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -193,12 +195,7 @@ export async function acceptOffer(
       throw new Error('Marketplace contract not deployed');
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('No wallet provider found');
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -234,12 +231,7 @@ export async function cancelListing(
       throw new Error('Marketplace contract not deployed');
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('No wallet provider found');
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,

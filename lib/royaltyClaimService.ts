@@ -1,5 +1,22 @@
 import { ethers } from 'ethers';
 
+async function getWalletProvider() {
+  if (typeof window === 'undefined') {
+    throw new Error('Window not available');
+  }
+  
+  const ethereum = (window as any).ethereum;
+  
+  if (!ethereum) {
+    throw new Error('No wallet connected. Please connect your wallet first.');
+  }
+  
+  const provider = new ethers.BrowserProvider(ethereum);
+  const signer = await provider.getSigner();
+  
+  return { provider, signer };
+}
+
 const ROYALTY_CONTRACT_ABI = [
   'function getPendingRoyalties(address account) external view returns (uint256 eth, uint256 usdc)',
   'function claimRoyaltiesETH() external',
@@ -61,12 +78,11 @@ export async function claimETHRoyalties(): Promise<string> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
     
-    if (!ROYALTY_CONTRACT_ADDRESS || typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('Contract not configured or wallet not connected');
+    if (!ROYALTY_CONTRACT_ADDRESS) {
+      throw new Error('Contract not configured');
     }
     
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, signer);
     
     const tx = await contract.claimRoyaltiesETH();
@@ -86,12 +102,11 @@ export async function claimUSDCRoyalties(): Promise<string> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
     
-    if (!ROYALTY_CONTRACT_ADDRESS || typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('Contract not configured or wallet not connected');
+    if (!ROYALTY_CONTRACT_ADDRESS) {
+      throw new Error('Contract not configured');
     }
     
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, signer);
     
     const tx = await contract.claimRoyaltiesUSDC();
