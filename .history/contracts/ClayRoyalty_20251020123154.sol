@@ -1,0 +1,268 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface IClayLibrary {
+    function getCurrentOwner(string memory projectId) external view returns (address);
+}
+
+/**
+ * @title ClayRoyalty
+ * @notice Tracks library dependencies and enforces minimum pricing with royalty distribution
+ * @dev Ensures creators can't undercut by enforcing price floor based on used libraries
+ */
+contract ClayRoyalty is Ownable, ReentrancyGuard {
+    // USDC token
+    address public constant USDC_ADDRESS = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+    IERC20 public immutable usdcToken;
+    
+    // Library contract reference
+    IClayLibrary public libraryContract;
+    
+    // Pull Pattern: Pending royalties
+    mapping(address => uint256) public pendingRoyaltiesETH;
+    mapping(address => uint256) public pendingRoyaltiesUSDC;
+    
+    enum PaymentToken { ETH, USDC }
+    
+    struct LibraryDependency {
+        string dependencyProjectId; // Dependency project ID
+        uint256 royaltyPercentage;  // Royalty percentage (1000 = 10%)
+        uint256 fixedRoyaltyETH;    // Fixed royalty in ETH (based on dependency price at registration)
+        uint256 fixedRoyaltyUSDC;   // Fixed royalty in USDC (based on dependency price at registration)
+    }
+    
+    struct ProjectRoyalties {
+        string projectId;
+        LibraryDependency[] dependencies;
+        bool hasRoyalties;
+    }
+    
+    // Mapping from projectId to its royalty info
+    mapping(string => ProjectRoyalties) public projectRoyalties;
+    
+    // Royalty percentage (10%)
+    uint256 public constant ROYALTY_PERCENTAGE = 1000; // 10%
+    uint256 public constant PERCENTAGE_DENOMINATOR = 10000;
+    
+    // Events
+    event RoyaltiesRegistered(
+        string indexed projectId,
+        uint256 dependencyCount
+    );
+    
+    event RoyaltyRecorded(
+        string indexed projectId,
+        address indexed recipient,
+        uint256 amountETH,
+        uint256 amountUSDC
+    );
+    
+    event RoyaltyClaimed(
+        address indexed claimant,
+        uint256 amountETH,
+        uint256 amountUSDC
+    );
+    
+    constructor(address _libraryContract) Ownable(msg.sender) {
+        usdcToken = IERC20(USDC_ADDRESS);
+        libraryContract = IClayLibrary(_libraryContract);
+    }
+    
+    /**
+     * @notice Update library contract address (only owner)
+     */
+    function setLibraryContract(address _libraryContract) external onlyOwner {
+        libraryContract = IClayLibrary(_libraryContract);
+    }
+    
+    /**
+     * @notice Register library dependencies for a project
+     * @param projectId The project being registered
+     * @param dependencyProjectIds Array of library project IDs used
+     * @param royaltyPercentages Array of royalty percentages (1000 = 10%)
+     */
+    function registerProjectRoyalties(
+        string memory projectId,
+        string[] memory dependencyProjectIds,
+        uint256[] memory royaltyPercentages
+    ) external {
+        require(dependencyProjectIds.length == royaltyPercentages.length, "Length mismatch");
+        require(!projectRoyalties[projectId].hasRoyalties, "Royalties already registered");
+        
+        ProjectRoyalties storage royalty = projectRoyalties[projectId];
+        royalty.projectId = projectId;
+        royalty.hasRoyalties = true;
+        
+        for (uint256 i = 0; i < dependencyProjectIds.length; i++) {
+            LibraryDependency memory dep = LibraryDependency({
+                dependencyProjectId: dependencyProjectIds[i],
+                royaltyPercentage: royaltyPercentages[i]
+            });
+            
+            royalty.dependencies.push(dep);
+        }
+        
+        emit RoyaltiesRegistered(projectId, dependencyProjectIds.length);
+    }
+    
+    /**
+     * @notice Calculate total royalties for a project based on price
+     * @param projectId The project ID
+     * @param priceETH Price in ETH
+     * @param priceUSDC Price in USDC
+     * @return totalETH Total ETH royalties
+     * @return totalUSDC Total USDC royalties
+     */
+    function calculateTotalRoyalties(
+        string memory projectId,
+        uint256 priceETH,
+        uint256 priceUSDC
+    ) public view returns (uint256 totalETH, uint256 totalUSDC) {
+        ProjectRoyalties storage royalty = projectRoyalties[projectId];
+        
+        if (!royalty.hasRoyalties) {
+            return (0, 0);
+        }
+        
+        for (uint256 i = 0; i < royalty.dependencies.length; i++) {
+            LibraryDependency memory dep = royalty.dependencies[i];
+            totalETH += (priceETH * dep.royaltyPercentage) / PERCENTAGE_DENOMINATOR;
+            totalUSDC += (priceUSDC * dep.royaltyPercentage) / PERCENTAGE_DENOMINATOR;
+        }
+        
+        return (totalETH, totalUSDC);
+    }
+    
+    /**
+     * @notice Validate that a price meets the minimum requirement
+     * @param projectId The project ID
+     * @param priceETH Proposed ETH price
+     * @param priceUSDC Proposed USDC price
+     */
+    function validatePrice(
+        string memory projectId,
+        uint256 priceETH,
+        uint256 priceUSDC
+    ) external view returns (bool) {
+        if (!projectRoyalties[projectId].hasRoyalties) {
+            return true; // No dependencies, any price is fine
+        }
+        
+        // Calculate required royalties
+        (uint256 requiredETH, uint256 requiredUSDC) = calculateTotalRoyalties(projectId, priceETH, priceUSDC);
+        
+        // At least one price must be set and cover its royalties
+        bool ethValid = priceETH > 0 && priceETH >= requiredETH;
+        bool usdcValid = priceUSDC > 0 && priceUSDC >= requiredUSDC;
+        
+        return ethValid || usdcValid;
+    }
+    
+    /**
+     * @notice Record royalties when a project is purchased (Pull Pattern)
+     * @param projectId The project being purchased
+     * @param price The price paid
+     * @param paymentToken Payment token used (0: ETH, 1: USDC)
+     */
+    function recordRoyalties(
+        string memory projectId,
+        uint256 price,
+        PaymentToken paymentToken
+    ) external payable nonReentrant {
+        ProjectRoyalties storage royalty = projectRoyalties[projectId];
+        require(royalty.hasRoyalties, "No royalties for this project");
+        
+        if (paymentToken == PaymentToken.ETH) {
+            require(msg.value > 0, "No ETH sent");
+            
+            // Record royalties for each dependency
+            for (uint256 i = 0; i < royalty.dependencies.length; i++) {
+                LibraryDependency memory dep = royalty.dependencies[i];
+                
+                // Get current owner of dependency
+                address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
+                
+                // Calculate royalty amount
+                uint256 royaltyAmount = (price * dep.royaltyPercentage) / PERCENTAGE_DENOMINATOR;
+                
+                if (royaltyAmount > 0 && owner != address(0)) {
+                    pendingRoyaltiesETH[owner] += royaltyAmount;
+                    emit RoyaltyRecorded(projectId, owner, royaltyAmount, 0);
+                }
+            }
+        } else {
+            require(msg.value == 0, "Do not send ETH for USDC royalties");
+            
+            // Record USDC royalties for each dependency
+            for (uint256 i = 0; i < royalty.dependencies.length; i++) {
+                LibraryDependency memory dep = royalty.dependencies[i];
+                
+                // Get current owner of dependency
+                address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
+                
+                // Calculate royalty amount
+                uint256 royaltyAmount = (price * dep.royaltyPercentage) / PERCENTAGE_DENOMINATOR;
+                
+                if (royaltyAmount > 0 && owner != address(0)) {
+                    pendingRoyaltiesUSDC[owner] += royaltyAmount;
+                    emit RoyaltyRecorded(projectId, owner, 0, royaltyAmount);
+                }
+            }
+        }
+    }
+    
+    /**
+     * @notice Claim pending ETH royalties (Pull Pattern)
+     */
+    function claimRoyaltiesETH() external nonReentrant {
+        uint256 pending = pendingRoyaltiesETH[msg.sender];
+        require(pending > 0, "No pending ETH royalties");
+        
+        pendingRoyaltiesETH[msg.sender] = 0;
+        
+        (bool success, ) = msg.sender.call{value: pending}("");
+        require(success, "ETH transfer failed");
+        
+        emit RoyaltyClaimed(msg.sender, pending, 0);
+    }
+    
+    /**
+     * @notice Claim pending USDC royalties (Pull Pattern)
+     */
+    function claimRoyaltiesUSDC() external nonReentrant {
+        uint256 pending = pendingRoyaltiesUSDC[msg.sender];
+        require(pending > 0, "No pending USDC royalties");
+        
+        pendingRoyaltiesUSDC[msg.sender] = 0;
+        
+        require(usdcToken.transfer(msg.sender, pending), "USDC transfer failed");
+        
+        emit RoyaltyClaimed(msg.sender, 0, pending);
+    }
+    
+    /**
+     * @notice Get pending royalties for an address
+     * @param account The account to check
+     */
+    function getPendingRoyalties(address account) external view returns (uint256 eth, uint256 usdc) {
+        return (pendingRoyaltiesETH[account], pendingRoyaltiesUSDC[account]);
+    }
+    
+    /**
+     * @notice Get all dependencies for a project
+     * @param projectId The project ID
+     */
+    function getProjectDependencies(string memory projectId) external view returns (LibraryDependency[] memory) {
+        return projectRoyalties[projectId].dependencies;
+    }
+    
+    /**
+     * @notice Fallback to receive ETH
+     */
+    receive() external payable {}
+}
+

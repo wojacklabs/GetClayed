@@ -11,25 +11,17 @@
           "type": "string"
         },
         {
-          "internalType": "uint8",
-          "name": "paymentToken",
-          "type": "uint8"
-        }
-      ],
-      "name": "distributeRoyalties",
-      "outputs": [],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [
+          "internalType": "uint256",
+          "name": "priceETH",
+          "type": "uint256"
+        },
         {
-          "internalType": "string",
-          "name": "projectId",
-          "type": "string"
+          "internalType": "uint256",
+          "name": "priceUSDC",
+          "type": "uint256"
         }
       ],
-      "name": "getTotalRoyalties",
+      "name": "calculateTotalRoyalties",
       "outputs": [
         {
           "internalType": "uint256",
@@ -43,6 +35,29 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "projectId",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "paymentToken",
+          "type": "uint8"
+        }
+      ],
+      "name": "recordRoyalties",
+      "outputs": [],
+      "stateMutability": "payable",
       "type": "function"
     },
     {
