@@ -4952,51 +4952,50 @@ export default function AdvancedClay() {
           transform: 'translateX(-50%)'
         }
         
-        let arrowStyle: React.CSSProperties = {
-          left: '50%',
-          transform: 'translateX(-50%)'
-        }
+        let arrowLeft = '50%'
+        let arrowTransform = 'translateX(-50%)'
         
         if (buttonElement) {
           const rect = buttonElement.getBoundingClientRect()
-          const tooltipWidth = 280 // min-w-[280px]
+          const tooltipWidth = 280
+          const buttonCenterX = rect.left + rect.width / 2
           
-          // Calculate if tooltip would overflow on the right
-          const centerX = rect.left + rect.width / 2
-          const wouldOverflowRight = centerX + tooltipWidth / 2 > window.innerWidth
-          const wouldOverflowLeft = centerX - tooltipWidth / 2 < 0
-          
-          let transform = 'translateX(-50%)'
-          let leftPosition = centerX
+          // Check overflow
+          const wouldOverflowRight = buttonCenterX + tooltipWidth / 2 > window.innerWidth
+          const wouldOverflowLeft = buttonCenterX - tooltipWidth / 2 < 0
           
           if (wouldOverflowRight) {
-            // Tooltip aligned to right edge of button
-            transform = 'translateX(-100%)'
-            leftPosition = rect.right - 10
-            // Arrow should be at distance from right edge = button width / 2 + 10px padding
-            arrowStyle = {
-              right: `${rect.width / 2 + 10}px`,
-              left: 'auto',
-              transform: 'none'
+            // Tooltip right-aligned
+            const tooltipRight = window.innerWidth - rect.right + 10
+            tooltipStyle = {
+              position: 'fixed',
+              right: `${tooltipRight}px`,
+              bottom: `${window.innerHeight - rect.top + 10}px`
             }
+            // Arrow from right edge: tooltip right edge is rect.right - 10, button center is rect.right - rect.width/2
+            // Distance = rect.width / 2 - 10
+            arrowLeft = `calc(100% - ${rect.width / 2 - 10}px)`
+            arrowTransform = 'translateX(50%)'
           } else if (wouldOverflowLeft) {
-            // Tooltip aligned to left edge of button
-            transform = 'translateX(0)'
-            leftPosition = rect.left + 10
-            // Arrow should be at distance from left edge = button width / 2 + 10px padding
-            arrowStyle = {
-              left: `${rect.width / 2 + 10}px`,
-              right: 'auto',
-              transform: 'none'
+            // Tooltip left-aligned
+            tooltipStyle = {
+              position: 'fixed',
+              left: `${rect.left + 10}px`,
+              bottom: `${window.innerHeight - rect.top + 10}px`
             }
-          }
-          // For center case, use default arrowStyle (left: 50%, transform: translateX(-50%))
-          
-          tooltipStyle = {
-            position: 'fixed',
-            left: `${leftPosition}px`,
-            bottom: `${window.innerHeight - rect.top + 10}px`,
-            transform
+            // Arrow from left edge: button center is at rect.width / 2 from button left, tooltip is +10px
+            arrowLeft = `${rect.width / 2}px`
+            arrowTransform = 'translateX(-50%)'
+          } else {
+            // Tooltip center-aligned
+            tooltipStyle = {
+              position: 'fixed',
+              left: `${buttonCenterX}px`,
+              bottom: `${window.innerHeight - rect.top + 10}px`,
+              transform: 'translateX(-50%)'
+            }
+            arrowLeft = '50%'
+            arrowTransform = 'translateX(-50%)'
           }
         }
         
@@ -5043,7 +5042,7 @@ export default function AdvancedClay() {
               {/* Arrow pointing to button */}
               <div 
                 className="absolute -bottom-3 w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"
-                style={arrowStyle}
+                style={{ left: arrowLeft, transform: arrowTransform }}
               ></div>
             </div>
           </div>
