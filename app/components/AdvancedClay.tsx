@@ -3881,7 +3881,7 @@ export default function AdvancedClay() {
       <button
         ref={(el) => { toolButtonsRef.current['library'] = el }}
         onClick={handleOpenLibrarySearch}
-        className="absolute bottom-4 right-4 p-4 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-all z-20 hover:scale-110"
+        className="absolute bottom-4 right-4 p-4 rounded-full bg-gray-800 hover:bg-gray-700 text-white shadow-lg transition-all z-20 hover:scale-110"
         title="Import from Library"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -4166,7 +4166,7 @@ export default function AdvancedClay() {
             }}
             className={`p-3 rounded-lg transition-all ${
               showGuide 
-                ? 'bg-blue-500 text-white' 
+                ? 'bg-gray-800 text-white' 
                 : 'bg-white hover:bg-gray-50 text-gray-700'
             }`}
             title="Tool Guide"
@@ -4472,14 +4472,14 @@ export default function AdvancedClay() {
                       >
                         <div 
                           className={`w-10 h-10 rounded-full border-2 transition-all ${
-                            isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-300'
+                            isSelected ? 'border-gray-800 shadow-lg' : 'border-gray-300'
                           }`}
                           style={{ 
                             backgroundColor: clay.color,
                           }}
                         />
                         {isSelected && (
-                          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />
+                          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-gray-800 rounded-full border-2 border-white" />
                         )}
                       </button>
                       {isSelected && (
@@ -4513,7 +4513,7 @@ export default function AdvancedClay() {
                     <input
                       type="text"
                       placeholder="Group name (optional)"
-                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm w-40 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           createGroup((e.target as HTMLInputElement).value)
@@ -4522,7 +4522,7 @@ export default function AdvancedClay() {
                     />
                     <button
                       onClick={() => createGroup('')}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-all"
+                      className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-all"
                     >
                       Create Group
                     </button>
@@ -4591,7 +4591,7 @@ export default function AdvancedClay() {
               <button
                 onClick={handleExportConfirm}
                 disabled={!exportProjectName.trim()}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 Export
               </button>
@@ -4617,7 +4617,7 @@ export default function AdvancedClay() {
               </button>
               <button
                 onClick={createNewFile}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-blue-600"
               >
                 Create New
               </button>
@@ -4691,7 +4691,7 @@ export default function AdvancedClay() {
                           <button
                             onClick={() => handleImportFromLibrary(asset)}
                             disabled={pendingLibraryPurchases.has(asset.projectId)}
-                            className="w-full px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {pendingLibraryPurchases.has(asset.projectId) ? 'Added (Pay on upload)' : 'Add to Project'}
                           </button>
@@ -4793,7 +4793,7 @@ export default function AdvancedClay() {
                 <button
                   onClick={handleLibraryUpload}
                   disabled={!libraryAssetName || (parseFloat(libraryPriceETH || '0') === 0 && parseFloat(libraryPriceUSDC || '0') === 0)}
-                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Register
                 </button>
@@ -4939,7 +4939,7 @@ export default function AdvancedClay() {
                     </span>
                     <button
                       onClick={nextGuideStep}
-                      className="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                      className="px-4 py-1.5 text-sm bg-gray-800 hover:bg-gray-700 text-white rounded transition-colors"
                     >
                       {guideStep === toolGuides.length - 1 ? 'Done' : 'Next'}
                     </button>
