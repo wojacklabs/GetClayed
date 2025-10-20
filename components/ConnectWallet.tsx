@@ -25,6 +25,12 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   }, [authenticated, walletAddress])
   
   const handleConnect = async () => {
+    // Don't call login if already authenticated
+    if (authenticated) {
+      console.log('[ConnectWallet] Already authenticated, skipping login')
+      return
+    }
+    
     try {
       await login()
     } catch (error) {
@@ -64,7 +70,7 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   return (
     <button
       onClick={handleConnect}
-      className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium"
+      className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium"
     >
       <LogIn size={18} />
       <span>Connect Wallet</span>

@@ -7,6 +7,7 @@ import { queryAllProjects, downloadProjectThumbnail } from '@/lib/clayStorageSer
 import { getProjectViewCount, getProjectLikeCount, downloadUserProfile, downloadProfileAvatar, getUserFollowing } from '@/lib/profileService'
 import { syncProjectMutableReferences } from '@/lib/mutableSyncService'
 import { ConnectWallet } from '@/components/ConnectWallet'
+import { usePrivy } from '@privy-io/react-auth'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -44,6 +45,7 @@ interface Project {
 
 export default function HomePage() {
   const router = useRouter()
+  const { logout } = usePrivy()
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
@@ -366,19 +368,22 @@ export default function HomePage() {
                           onClick={async () => {
                             setShowProfileDropdown(false)
                             
-                            // Clear local state
-                            setWalletAddress(null)
-                            setCurrentUserProfile(null)
-                            setUserLikes([])
-                            setUserFavorites([])
-                            
-                            // Clear session storage
-                            sessionStorage.clear()
-                            
-                            // Force page reload as last resort
-                            setTimeout(() => {
-                              window.location.reload()
-                            }, 100)
+                            try {
+                              // Privy logout first
+                              await logout()
+                              
+                              // Clear local state
+                              setWalletAddress(null)
+                              setCurrentUserProfile(null)
+                              setUserLikes([])
+                              setUserFavorites([])
+                              setFollowingUsers([])
+                              
+                              // Clear session storage
+                              sessionStorage.clear()
+                            } catch (error) {
+                              console.error('Disconnect error:', error)
+                            }
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors border-t border-gray-100"
                         >
