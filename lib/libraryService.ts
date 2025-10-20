@@ -50,6 +50,35 @@ export interface LibraryAsset {
 /**
  * Register a project as a library asset
  */
+async function getWalletProvider() {
+  if (typeof window === 'undefined') {
+    throw new Error('Window not available');
+  }
+  
+  console.log('[LibraryService] Checking for wallet provider...');
+  console.log('[LibraryService] window.ethereum exists:', !!(window as any).ethereum);
+  
+  // Check for injected wallet (MetaMask, etc) or Privy's embedded wallet
+  const ethereum = (window as any).ethereum;
+  
+  if (!ethereum) {
+    console.error('[LibraryService] No ethereum provider found in window');
+    console.log('[LibraryService] Available providers:', Object.keys(window as any).filter(k => k.includes('wallet') || k.includes('ethereum')));
+    throw new Error('No wallet connected. Please connect your wallet first using the Connect Wallet button.');
+  }
+  
+  console.log('[LibraryService] Creating BrowserProvider...');
+  const provider = new ethers.BrowserProvider(ethereum);
+  
+  console.log('[LibraryService] Getting signer...');
+  const signer = await provider.getSigner();
+  const signerAddress = await signer.getAddress();
+  
+  console.log('[LibraryService] Signer address:', signerAddress);
+  
+  return { provider, signer };
+}
+
 export async function registerLibraryAsset(
   projectId: string,
   name: string,
@@ -63,13 +92,7 @@ export async function registerLibraryAsset(
       throw new Error('Library contract not deployed');
     }
     
-    // Get provider from window.ethereum
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('No wallet provider found');
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     
     // Create contract instance
     const contract = new ethers.Contract(
@@ -244,12 +267,7 @@ export async function purchaseLibraryAssetWithETH(
       throw new Error('Library contract not deployed');
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('No wallet provider found');
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     
     const contract = new ethers.Contract(
       LIBRARY_CONTRACT_ADDRESS,
@@ -281,12 +299,7 @@ export async function purchaseLibraryAssetWithUSDC(
       throw new Error('Library contract not deployed');
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('No wallet provider found');
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const { signer } = await getWalletProvider();
     
     const contract = new ethers.Contract(
       LIBRARY_CONTRACT_ADDRESS,
