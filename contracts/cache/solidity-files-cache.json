@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/USER/web3/getclayed/contracts/ClayLibrary.sol": {
-      "lastModificationDate": 1760333955096,
-      "contentHash": "b7c796842b108260ba369693ceac3bde",
+      "lastModificationDate": 1760929759267,
+      "contentHash": "2a4d31b0f560e7a6db57cce117f57f52",
       "sourceName": "ClayLibrary.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -31,7 +31,7 @@
         }
       },
       "imports": [
-        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/access/Ownable2Step.sol",
         "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
         "@openzeppelin/contracts/token/ERC20/IERC20.sol"
       ],
@@ -157,8 +157,8 @@
       ]
     },
     "/Users/USER/web3/getclayed/contracts/ClayMarketplace.sol": {
-      "lastModificationDate": 1760331195204,
-      "contentHash": "78b72e8225dda398a79f8e9ba0040129",
+      "lastModificationDate": 1760929779863,
+      "contentHash": "46f5a7860267fe4275413a4be0ef9e0e",
       "sourceName": "ClayMarketplace.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -236,8 +236,8 @@
       ]
     },
     "/Users/USER/web3/getclayed/contracts/ClayRoyalty.sol": {
-      "lastModificationDate": 1760333828583,
-      "contentHash": "2e0e6a0567af72a149a9b8c952bec1aa",
+      "lastModificationDate": 1760931179446,
+      "contentHash": "eeb7dfc6d392b3f88a5e6ad45f295126",
       "sourceName": "ClayRoyalty.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -273,7 +273,47 @@
         "^0.8.20"
       ],
       "artifacts": [
-        "ClayRoyalty"
+        "ClayRoyalty",
+        "IClayLibrary"
+      ]
+    },
+    "/Users/USER/web3/getclayed/node_modules/@openzeppelin/contracts/access/Ownable2Step.sol": {
+      "lastModificationDate": 1760327989233,
+      "contentHash": "4c23c95621f1bdfb8c47bcb3795c53e8",
+      "sourceName": "@openzeppelin/contracts/access/Ownable2Step.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Ownable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Ownable2Step"
       ]
     }
   }
