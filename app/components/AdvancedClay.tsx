@@ -793,6 +793,17 @@ function Clay({
         onPointerDown={(e) => {
           e.stopPropagation()
           
+          // Check if it's right click
+          const isRightClick = e.button === 2
+          if (isRightClick) {
+            console.log('[ContextMenu] Right-click detected on object:', clay.id)
+            if (onContextMenu) {
+              const mouseEvent = e.nativeEvent as any
+              onContextMenu(mouseEvent, clay.id)
+            }
+            return
+          }
+          
           // Check if it's a touch event (button is undefined for touch)
           const isTouch = e.pointerType === 'touch'
           const isLeftClick = e.button === 0 || (isTouch && e.button === undefined)
@@ -4939,6 +4950,11 @@ export default function AdvancedClay() {
           transform: 'translateX(-50%)'
         }
         
+        let arrowStyle: React.CSSProperties = {
+          left: '50%',
+          transform: 'translateX(-50%)'
+        }
+        
         if (buttonElement) {
           const rect = buttonElement.getBoundingClientRect()
           const tooltipWidth = 280 // min-w-[280px]
@@ -4955,10 +4971,26 @@ export default function AdvancedClay() {
             // Align to right edge of button
             transform = 'translateX(-100%)'
             leftPosition = rect.right - 10
+            // Arrow should be on the right side
+            arrowStyle = {
+              right: '20px',
+              transform: 'translateX(0)'
+            }
           } else if (wouldOverflowLeft) {
             // Align to left edge of button
             transform = 'translateX(0)'
             leftPosition = rect.left + 10
+            // Arrow should be on the left side
+            arrowStyle = {
+              left: '20px',
+              transform: 'translateX(0)'
+            }
+          } else {
+            // Center aligned - arrow in center
+            arrowStyle = {
+              left: '50%',
+              transform: 'translateX(-50%)'
+            }
           }
           
           tooltipStyle = {
@@ -5010,7 +5042,10 @@ export default function AdvancedClay() {
               </div>
               
               {/* Arrow pointing to button */}
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"></div>
+              <div 
+                className="absolute -bottom-2 w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"
+                style={arrowStyle}
+              ></div>
             </div>
           </div>
         )
