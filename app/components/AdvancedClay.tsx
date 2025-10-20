@@ -4973,18 +4973,18 @@ export default function AdvancedClay() {
             // Align to right edge of button
             transform = 'translateX(-100%)'
             leftPosition = rect.right - 10
-            // Arrow should be on the right side
+            // Arrow should be on the right side, outside the tooltip
             arrowStyle = {
-              right: '20px',
+              right: '-8px',
               transform: 'translateX(0)'
             }
           } else if (wouldOverflowLeft) {
             // Align to left edge of button
             transform = 'translateX(0)'
             leftPosition = rect.left + 10
-            // Arrow should be on the left side
+            // Arrow should be on the left side, outside the tooltip
             arrowStyle = {
-              left: '20px',
+              left: '-8px',
               transform: 'translateX(0)'
             }
           } else {
