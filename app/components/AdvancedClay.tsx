@@ -5045,7 +5045,7 @@ export default function AdvancedClay() {
               
               {/* Arrow pointing to button */}
               <div 
-                className="absolute -bottom-[9px] w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"
+                className="absolute -bottom-[11px] w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"
                 style={arrowStyle}
               ></div>
             </div>
