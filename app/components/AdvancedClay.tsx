@@ -4973,19 +4973,21 @@ export default function AdvancedClay() {
             // Align to right edge of button
             transform = 'translateX(-100%)'
             leftPosition = rect.right - 10
-            // Arrow should be on the right side, outside the tooltip
+            // Arrow points to button center (distance from tooltip right edge)
+            const arrowRightPosition = rect.width / 2
             arrowStyle = {
-              right: '-8px',
-              transform: 'translateX(0)'
+              right: `${arrowRightPosition}px`,
+              transform: 'translateX(50%)'
             }
           } else if (wouldOverflowLeft) {
             // Align to left edge of button
             transform = 'translateX(0)'
             leftPosition = rect.left + 10
-            // Arrow should be on the left side, outside the tooltip
+            // Arrow points to button center (distance from tooltip left edge)
+            const arrowLeftPosition = rect.width / 2
             arrowStyle = {
-              left: '-8px',
-              transform: 'translateX(0)'
+              left: `${arrowLeftPosition}px`,
+              transform: 'translateX(-50%)'
             }
           } else {
             // Center aligned - arrow in center
