@@ -25,12 +25,25 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   }, [authenticated, walletAddress])
   
   const handleConnect = async () => {
-    // Don't call login if already authenticated
-    if (authenticated) {
-      console.log('[ConnectWallet] Already authenticated, skipping login')
+    // Check if authenticated with wallet
+    if (authenticated && walletAddress) {
+      console.log('[ConnectWallet] Already connected with wallet:', walletAddress)
       return
     }
     
+    // If authenticated but no wallet, logout first and re-login
+    if (authenticated && !walletAddress) {
+      console.log('[ConnectWallet] Authenticated but no wallet, re-authenticating...')
+      try {
+        await logout()
+        await login()
+      } catch (error) {
+        console.error('Failed to re-authenticate:', error)
+      }
+      return
+    }
+    
+    // Normal login flow
     try {
       await login()
     } catch (error) {
