@@ -2152,8 +2152,8 @@ export default function AdvancedClay() {
   const [showLibraryModal, setShowLibraryModal] = useState(false)
   const [libraryAssetName, setLibraryAssetName] = useState('')
   const [libraryDescription, setLibraryDescription] = useState('')
-  const [libraryPriceETH, setLibraryPriceETH] = useState('')
-  const [libraryPriceUSDC, setLibraryPriceUSDC] = useState('')
+  const [libraryPriceCurrency, setLibraryPriceCurrency] = useState<'ETH' | 'USDC'>('USDC')
+  const [libraryPrice, setLibraryPrice] = useState('')
   const [libraryProjectId, setLibraryProjectId] = useState<string | null>(null)
   const [showLibrarySearch, setShowLibrarySearch] = useState(false)
   const [librarySearchQuery, setLibrarySearchQuery] = useState('')
@@ -2285,13 +2285,15 @@ export default function AdvancedClay() {
       return
     }
     
-    const ethPrice = parseFloat(libraryPriceETH || '0')
-    const usdcPrice = parseFloat(libraryPriceUSDC || '0')
+    const price = parseFloat(libraryPrice || '0')
     
-    if (ethPrice === 0 && usdcPrice === 0) {
-      showPopup('Please set at least one price', 'warning')
+    if (price === 0) {
+      showPopup('Please set a price', 'warning')
       return
     }
+    
+    const ethPrice = libraryPriceCurrency === 'ETH' ? price : 0
+    const usdcPrice = libraryPriceCurrency === 'USDC' ? price : 0
     
     // Check if this project uses libraries and validate minimum price
     if (usedLibraries.length > 0) {
@@ -2324,8 +2326,8 @@ export default function AdvancedClay() {
         setShowLibraryModal(false)
         setLibraryAssetName('')
         setLibraryDescription('')
-        setLibraryPriceETH('')
-        setLibraryPriceUSDC('')
+        setLibraryPrice('')
+        setLibraryPriceCurrency('USDC')
         setLibraryProjectId(null)
       } else {
         showPopup(result.error || 'Registration failed', 'error')
@@ -4764,31 +4766,38 @@ export default function AdvancedClay() {
                 </div>
               )}
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm text-gray-700 mb-2">Price (ETH)</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={libraryPriceETH}
-                    onChange={(e) => setLibraryPriceETH(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                  />
+                  <label className="block text-sm text-gray-700 mb-2">Currency</label>
+                  <select
+                    value={libraryPriceCurrency}
+                    onChange={(e) => setLibraryPriceCurrency(e.target.value as 'ETH' | 'USDC')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800 bg-white"
+                  >
+                    <option value="USDC">USDC</option>
+                    <option value="ETH">ETH</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-700 mb-2">Price (USDC)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={libraryPriceUSDC}
-                    onChange={(e) => setLibraryPriceUSDC(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                  />
+                  <label className="block text-sm text-gray-700 mb-2">Price</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
+                      value={libraryPrice}
+                      onChange={(e) => setLibraryPrice(e.target.value)}
+                      className="w-full px-3 py-2 pr-16 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800"
+                      placeholder="0.00"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                      {libraryPriceCurrency}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 -mt-2">Set at least one price{usedLibraries.length > 0 ? ' (must meet minimum)' : ''}</p>
+              {usedLibraries.length > 0 && (
+                <p className="text-xs text-gray-500">Must meet minimum price based on dependencies</p>
+              )}
               
               <div className="flex gap-3 pt-4">
                 <button
@@ -4796,8 +4805,8 @@ export default function AdvancedClay() {
                     setShowLibraryModal(false)
                     setLibraryAssetName('')
                     setLibraryDescription('')
-                    setLibraryPriceETH('')
-                    setLibraryPriceUSDC('')
+                    setLibraryPrice('')
+                    setLibraryPriceCurrency('USDC')
                     setLibraryProjectId(null)
                   }}
                   className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors text-sm font-medium"
@@ -4806,7 +4815,7 @@ export default function AdvancedClay() {
                 </button>
                 <button
                   onClick={handleLibraryUpload}
-                  disabled={!libraryAssetName || (parseFloat(libraryPriceETH || '0') === 0 && parseFloat(libraryPriceUSDC || '0') === 0)}
+                  disabled={!libraryAssetName || parseFloat(libraryPrice || '0') === 0}
                   className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Register
