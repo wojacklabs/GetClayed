@@ -2028,8 +2028,6 @@ function RaycasterManager({
   
   useEffect(() => {
     const handlePointerClick = (event: PointerEvent) => {
-      if (tool !== 'paint' && tool !== 'delete' && tool !== 'rotateObject') return
-      
       // Prevent default touch behavior
       if (event.pointerType === 'touch') {
         event.preventDefault()
@@ -2097,6 +2095,9 @@ function RaycasterManager({
             }
           }
         }
+      } else {
+        // Clicked on background - deselect
+        setSelectedClayId(null)
       }
     }
     
@@ -4814,6 +4815,47 @@ export default function AdvancedClay() {
             <>
               <button
                 onClick={() => {
+                  setTool('move')
+                  setSelectedClayId(contextMenu.clayId)
+                  setContextMenu(null)
+                }}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
+              >
+                Move
+              </button>
+              <button
+                onClick={() => {
+                  setTool('rotateObject')
+                  setSelectedClayId(contextMenu.clayId)
+                  setContextMenu(null)
+                }}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
+              >
+                Rotate
+              </button>
+              <button
+                onClick={() => {
+                  setTool('resize')
+                  setSelectedClayId(contextMenu.clayId)
+                  setContextMenu(null)
+                }}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
+              >
+                Resize
+              </button>
+              <button
+                onClick={() => {
+                  setTool('paint')
+                  setSelectedClayId(contextMenu.clayId)
+                  setContextMenu(null)
+                }}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-sm"
+              >
+                Paint
+              </button>
+              <div className="border-t border-gray-200 my-1" />
+              <button
+                onClick={() => {
                   const clay = clayObjects.find(c => c.id === contextMenu.clayId)
                   if (clay) {
                     clipboardRef.current = { clay, mode: 'copy' }
@@ -4899,18 +4941,38 @@ export default function AdvancedClay() {
         
         if (buttonElement) {
           const rect = buttonElement.getBoundingClientRect()
+          const tooltipWidth = 280 // min-w-[280px]
+          
+          // Calculate if tooltip would overflow on the right
+          const centerX = rect.left + rect.width / 2
+          const wouldOverflowRight = centerX + tooltipWidth / 2 > window.innerWidth
+          const wouldOverflowLeft = centerX - tooltipWidth / 2 < 0
+          
+          let transform = 'translateX(-50%)'
+          let leftPosition = centerX
+          
+          if (wouldOverflowRight) {
+            // Align to right edge of button
+            transform = 'translateX(-100%)'
+            leftPosition = rect.right - 10
+          } else if (wouldOverflowLeft) {
+            // Align to left edge of button
+            transform = 'translateX(0)'
+            leftPosition = rect.left + 10
+          }
+          
           tooltipStyle = {
             position: 'fixed',
-            left: `${rect.left + rect.width / 2}px`,
+            left: `${leftPosition}px`,
             bottom: `${window.innerHeight - rect.top + 10}px`,
-            transform: 'translateX(-50%)'
+            transform
           }
         }
         
         return (
           <div className="fixed inset-0 z-[10000] pointer-events-none">
             <div style={tooltipStyle} className="absolute pointer-events-auto">
-              <div className="bg-white rounded-lg shadow-xl border-2 border-blue-500 p-4 min-w-[280px]">
+              <div className="bg-white rounded-lg shadow-xl border-2 border-gray-800 p-4 min-w-[280px]">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-semibold text-gray-900">{toolGuides[guideStep].title}</h3>
@@ -4948,7 +5010,7 @@ export default function AdvancedClay() {
               </div>
               
               {/* Arrow pointing to button */}
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-r-2 border-b-2 border-blue-500 transform rotate-45"></div>
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"></div>
             </div>
           </div>
         )
