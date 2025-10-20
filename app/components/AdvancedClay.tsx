@@ -4954,6 +4954,8 @@ export default function AdvancedClay() {
         
         let arrowLeft = '50%'
         let arrowTransform = 'translateX(-50%)'
+        let wouldOverflowRight = false
+        let wouldOverflowLeft = false
         
         if (buttonElement) {
           const rect = buttonElement.getBoundingClientRect()
@@ -4961,8 +4963,8 @@ export default function AdvancedClay() {
           const buttonCenterX = rect.left + rect.width / 2
           
           // Check overflow
-          const wouldOverflowRight = buttonCenterX + tooltipWidth / 2 > window.innerWidth
-          const wouldOverflowLeft = buttonCenterX - tooltipWidth / 2 < 0
+          wouldOverflowRight = buttonCenterX + tooltipWidth / 2 > window.innerWidth
+          wouldOverflowLeft = buttonCenterX - tooltipWidth / 2 < 0
           
           if (wouldOverflowRight) {
             // Tooltip: right-aligned to button
@@ -5041,7 +5043,7 @@ export default function AdvancedClay() {
               
               {/* Arrow pointing to button */}
               <div 
-                className="absolute -bottom-3 w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"
+                className={`absolute ${wouldOverflowRight ? '-bottom-2' : '-bottom-3'} w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45`}
                 style={{ left: arrowLeft, transform: arrowTransform }}
               ></div>
             </div>
