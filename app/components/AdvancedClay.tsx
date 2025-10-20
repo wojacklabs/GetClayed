@@ -791,11 +791,10 @@ function Clay({
           }
         }}
         onPointerDown={(e) => {
-          e.stopPropagation()
-          
-          // Check if it's right click
+          // Check if it's right click FIRST (before stopPropagation)
           const isRightClick = e.button === 2
           if (isRightClick) {
+            e.stopPropagation()
             console.log('[ContextMenu] Right-click detected on object:', clay.id)
             if (onContextMenu) {
               const mouseEvent = e.nativeEvent as any
@@ -803,6 +802,8 @@ function Clay({
             }
             return
           }
+          
+          e.stopPropagation()
           
           // Check if it's a touch event (button is undefined for touch)
           const isTouch = e.pointerType === 'touch'
@@ -3735,14 +3736,15 @@ export default function AdvancedClay() {
       <div 
         className="flex-1 relative overflow-hidden" 
         style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-        onContextMenu={(e) => {
-          e.preventDefault()
-          console.log('[ContextMenu] Div right-clicked, target:', (e.target as HTMLElement).tagName)
-          // Only show menu if not clicking on an object
-          const target = e.target as HTMLElement
-          if (target.tagName === 'CANVAS') {
-            console.log('[ContextMenu] Canvas right-clicked, showing menu')
-            setContextMenu({ x: e.clientX, y: e.clientY, clayId: null })
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerUp={(e) => {
+          // Handle background right-click via pointerup
+          if (e.button === 2) {
+            const target = e.target as HTMLElement
+            if (target.tagName === 'CANVAS') {
+              console.log('[ContextMenu] Background right-clicked')
+              setContextMenu({ x: e.clientX, y: e.clientY, clayId: null })
+            }
           }
         }}
       >
@@ -5043,7 +5045,7 @@ export default function AdvancedClay() {
               
               {/* Arrow pointing to button */}
               <div 
-                className="absolute -bottom-2 w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"
+                className="absolute -bottom-[9px] w-4 h-4 bg-white border-r-2 border-b-2 border-gray-800 transform rotate-45"
                 style={arrowStyle}
               ></div>
             </div>
