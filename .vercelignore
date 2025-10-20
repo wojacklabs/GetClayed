@@ -1,0 +1,12 @@
+contracts/
+scripts/
+*.md
+!README.md
+DEPLOY.md
+DEPLOYMENT_INFO.md
+FINAL_*.md
+COMPLETED_*.md
+NEW_*.md
+READY_*.md
+.history/
+
