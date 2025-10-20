@@ -35,6 +35,7 @@ import SaveButton from '../../components/SaveButton'
 import FolderStructure, { FolderStructureHandle } from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
 import { AnimatedClayLogo } from '../../components/AnimatedClayLogo'
+import { useWallets } from '@privy-io/react-auth'
 import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject, uploadProjectThumbnail, downloadProjectThumbnail } from '../../lib/clayStorageService'
 import { registerLibraryAsset } from '../../lib/libraryService'
 import { captureSceneThumbnail, compressImageDataUrl } from '../../lib/thumbnailService'
@@ -2124,6 +2125,7 @@ function RaycasterManager({
 
 export default function AdvancedClay() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const { wallets } = useWallets()
   const { showPopup } = usePopup()
   const router = useRouter()
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
@@ -2290,6 +2292,17 @@ export default function AdvancedClay() {
     if (price === 0) {
       showPopup('Please set a price', 'warning')
       return
+    }
+    
+    // Set window.ethereum from Privy wallet
+    if (wallets && wallets.length > 0) {
+      try {
+        const provider = await wallets[0].getEthereumProvider();
+        (window as any).ethereum = provider;
+        console.log('[AdvancedClay] Set window.ethereum from Privy wallet');
+      } catch (error) {
+        console.error('[AdvancedClay] Failed to get Privy provider:', error);
+      }
     }
     
     const ethPrice = libraryPriceCurrency === 'ETH' ? price : 0
