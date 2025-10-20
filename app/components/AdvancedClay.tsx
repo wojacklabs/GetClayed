@@ -4965,29 +4965,29 @@ export default function AdvancedClay() {
           const wouldOverflowLeft = buttonCenterX - tooltipWidth / 2 < 0
           
           if (wouldOverflowRight) {
-            // Tooltip right-aligned
-            const tooltipRight = window.innerWidth - rect.right + 10
+            // Tooltip: right-aligned to button
             tooltipStyle = {
               position: 'fixed',
-              right: `${tooltipRight}px`,
+              right: `${window.innerWidth - rect.right + 10}px`,
               bottom: `${window.innerHeight - rect.top + 10}px`
             }
-            // Arrow from right edge: tooltip right edge is rect.right - 10, button center is rect.right - rect.width/2
-            // Distance = rect.width / 2 - 10
-            arrowLeft = `calc(100% - ${rect.width / 2 - 10}px)`
-            arrowTransform = 'translateX(50%)'
+            // Arrow: distance from tooltip's right edge to button center
+            const distanceFromTooltipRight = rect.width / 2 - 10
+            arrowLeft = `calc(100% - ${distanceFromTooltipRight}px - 0.5rem)`  // 0.5rem = arrow width/2
+            arrowTransform = 'none'
           } else if (wouldOverflowLeft) {
-            // Tooltip left-aligned
+            // Tooltip: left-aligned to button
             tooltipStyle = {
               position: 'fixed',
               left: `${rect.left + 10}px`,
               bottom: `${window.innerHeight - rect.top + 10}px`
             }
-            // Arrow from left edge: button center is at rect.width / 2 from button left, tooltip is +10px
-            arrowLeft = `${rect.width / 2}px`
-            arrowTransform = 'translateX(-50%)'
+            // Arrow: distance from tooltip's left edge to button center
+            const distanceFromTooltipLeft = rect.width / 2 + 10
+            arrowLeft = `calc(${distanceFromTooltipLeft}px - 0.5rem)`
+            arrowTransform = 'none'
           } else {
-            // Tooltip center-aligned
+            // Tooltip: center-aligned to button
             tooltipStyle = {
               position: 'fixed',
               left: `${buttonCenterX}px`,
