@@ -243,9 +243,48 @@ export async function uploadProjectThumbnail(
     // Convert data URL to buffer
     const base64Data = thumbnailDataUrl.split(',')[1];
     const buffer = Buffer.from(base64Data, 'base64');
-    console.log('[ClayStorage] Thumbnail buffer size:', buffer.length, 'bytes');
+    const sizeInKB = buffer.length / 1024;
+    console.log('[ClayStorage] Thumbnail buffer size:', buffer.length, 'bytes (', sizeInKB.toFixed(2), 'KB)');
     
-    // Direct upload thumbnails (they should be compressed already)
+    // Check if thumbnail needs chunked upload (over 90KB)
+    if (sizeInKB >= 90) {
+      console.log('[ClayStorage] Thumbnail is large (', sizeInKB.toFixed(2), 'KB) - using chunked upload');
+      
+      // Use chunked upload for large thumbnails
+      const { uploadInChunks, uploadChunkManifest } = await import('./chunkUploadService');
+      
+      const { transactionIds, chunkMetadata } = await uploadInChunks(
+        base64Data,
+        `thumbnail-${projectId}`,
+        `Thumbnail for ${projectId}`,
+        projectId,
+        '',
+        undefined,
+        undefined
+      );
+      
+      const chunkSetId = chunkMetadata[0]?.chunkSetId;
+      if (!chunkSetId) {
+        throw new Error('No chunk set ID found');
+      }
+      
+      const manifestTxId = await uploadChunkManifest(
+        `thumbnail-${projectId}`,
+        `Thumbnail for ${projectId}`,
+        chunkSetId,
+        chunkMetadata.length,
+        transactionIds,
+        projectId,
+        '',
+        undefined,
+        'project-thumbnail'
+      );
+      
+      console.log('[ClayStorage] Thumbnail uploaded via chunks, manifest:', manifestTxId);
+      return manifestTxId;
+    }
+    
+    // Direct upload for small thumbnails
     const tags = [
       { name: 'Content-Type', value: 'image/jpeg' },
       { name: 'App-Name', value: 'GetClayed' },
@@ -259,6 +298,7 @@ export async function uploadProjectThumbnail(
     return receipt.id;
   } catch (error) {
     console.error('[ClayStorage] Error uploading thumbnail:', error);
+    // Don't fail the entire save - just skip thumbnail
     return null;
   }
 }
