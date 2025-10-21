@@ -95,14 +95,23 @@ export async function registerLibraryAsset(
   description: string,
   priceETH: number,
   priceUSDC: number,
-  walletAddress: string
+  walletAddress: string,
+  customProvider?: any
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!LIBRARY_CONTRACT_ADDRESS) {
       throw new Error('Library contract not deployed');
     }
     
-    const { signer } = await getWalletProvider();
+    let signer;
+    if (customProvider) {
+      console.log('[LibraryService] Using custom provider (Privy)');
+      const provider = new ethers.BrowserProvider(customProvider);
+      signer = await provider.getSigner();
+    } else {
+      const result = await getWalletProvider();
+      signer = result.signer;
+    }
     
     // Create contract instance
     const contract = new ethers.Contract(
