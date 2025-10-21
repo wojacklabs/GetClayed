@@ -3318,11 +3318,44 @@ export default function AdvancedClay() {
         return
       }
       
-      console.log('Deleting project:', projectId)
+      console.log('[Delete] Deleting project:', projectId)
       
-      // Upload deletion marker
+      // Get Privy wallet provider
+      let privyProvider = null;
+      if (wallets && wallets.length > 0) {
+        try {
+          privyProvider = await wallets[0].getEthereumProvider();
+          console.log('[Delete] Got Privy provider');
+        } catch (error) {
+          console.error('[Delete] Failed to get Privy provider:', error);
+        }
+      }
+      
+      // Step 1: Deactivate from Library (if registered)
+      try {
+        const { deactivateLibraryAsset } = await import('../../lib/libraryService')
+        const result = await deactivateLibraryAsset(projectId, privyProvider)
+        if (result.success && result.txHash) {
+          console.log('[Delete] Library asset deactivated:', result.txHash)
+        }
+      } catch (error) {
+        console.log('[Delete] Library deactivate skipped:', error)
+      }
+      
+      // Step 2: Cancel Marketplace listing (if listed)
+      try {
+        const { cancelMarketplaceListing } = await import('../../lib/marketplaceService')
+        const result = await cancelMarketplaceListing(projectId, privyProvider)
+        if (result.success && result.txHash) {
+          console.log('[Delete] Marketplace listing cancelled:', result.txHash)
+        }
+      } catch (error) {
+        console.log('[Delete] Marketplace cancel skipped:', error)
+      }
+      
+      // Step 3: Upload deletion marker to Irys
       const deletionId = await deleteClayProject(projectId, walletAddress)
-      console.log('Deletion marker created:', deletionId)
+      console.log('[Delete] Irys deletion marker created:', deletionId)
       
       // Clear cache to refresh list
       queryCache.delete(`projects-${walletAddress}`)

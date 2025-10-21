@@ -93,6 +93,62 @@ export async function listAssetForSale(
 }
 
 /**
+ * Cancel marketplace listing (for project deletion)
+ */
+export async function cancelMarketplaceListing(
+  projectId: string,
+  customProvider?: any
+): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    if (!MARKETPLACE_CONTRACT_ADDRESS) {
+      // Marketplace not deployed, skip silently
+      return { success: true };
+    }
+    
+    let signer;
+    if (customProvider) {
+      const provider = new ethers.BrowserProvider(customProvider);
+      signer = await provider.getSigner();
+    } else {
+      // Try to get wallet provider
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        return { success: true }; // Skip if no wallet
+      }
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      signer = await provider.getSigner();
+    }
+    
+    const contract = new ethers.Contract(
+      MARKETPLACE_CONTRACT_ADDRESS,
+      [...MARKETPLACE_CONTRACT_ABI, 'function cancelListing(string projectId) external'],
+      signer
+    );
+    
+    // Check if listing exists
+    try {
+      const listing = await contract.listings(projectId);
+      if (!listing.isActive) {
+        // No active listing, skip
+        return { success: true };
+      }
+    } catch (error) {
+      // Not listed, skip
+      return { success: true };
+    }
+    
+    const tx = await contract.cancelListing(projectId);
+    await tx.wait();
+    
+    console.log('[MarketplaceService] Listing cancelled:', projectId);
+    return { success: true, txHash: tx.hash };
+  } catch (error: any) {
+    console.error('[MarketplaceService] Error cancelling listing:', error);
+    // Don't fail the entire deletion if cancel fails
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Buy an asset at listed price
  */
 export async function buyListedAsset(

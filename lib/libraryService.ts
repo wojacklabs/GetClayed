@@ -161,6 +161,58 @@ export async function registerLibraryAsset(
 }
 
 /**
+ * Deactivate a library asset (for project deletion)
+ */
+export async function deactivateLibraryAsset(
+  projectId: string,
+  customProvider?: any
+): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    if (!LIBRARY_CONTRACT_ADDRESS) {
+      // Library not deployed, skip silently
+      return { success: true };
+    }
+    
+    let signer;
+    if (customProvider) {
+      const provider = new ethers.BrowserProvider(customProvider);
+      signer = await provider.getSigner();
+    } else {
+      const result = await getWalletProvider();
+      signer = result.signer;
+    }
+    
+    const contract = new ethers.Contract(
+      LIBRARY_CONTRACT_ADDRESS,
+      [...LIBRARY_CONTRACT_ABI, 'function deactivateAsset(string projectId) external'],
+      signer
+    );
+    
+    // Check if asset is registered
+    try {
+      const asset = await contract.getAsset(projectId);
+      if (!asset.isActive) {
+        // Already inactive, skip
+        return { success: true };
+      }
+    } catch (error) {
+      // Not registered in library, skip
+      return { success: true };
+    }
+    
+    const tx = await contract.deactivateAsset(projectId);
+    await tx.wait();
+    
+    console.log('[LibraryService] Asset deactivated:', projectId);
+    return { success: true, txHash: tx.hash };
+  } catch (error: any) {
+    console.error('[LibraryService] Error deactivating asset:', error);
+    // Don't fail the entire deletion if deactivate fails
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Query all library assets from blockchain
  */
 export async function queryLibraryAssets(
