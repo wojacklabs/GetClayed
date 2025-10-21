@@ -2281,6 +2281,8 @@ export default function AdvancedClay() {
     setShowLibraryModal(true)
   }
   
+  const [isRegisteringLibrary, setIsRegisteringLibrary] = useState(false)
+  
   const handleLibraryUpload = async () => {
     if (!libraryProjectId || !walletAddress || !libraryAssetName) {
       showPopup('Please fill all required fields', 'warning')
@@ -2290,9 +2292,11 @@ export default function AdvancedClay() {
     const price = parseFloat(libraryPrice || '0')
     
     if (price === 0) {
-      showPopup('Please set a price', 'warning')
+      showPopup('Please set a royalty amount', 'warning')
       return
     }
+    
+    setIsRegisteringLibrary(true)
     
     const ethPrice = libraryPriceCurrency === 'ETH' ? price : 0
     const usdcPrice = libraryPriceCurrency === 'USDC' ? price : 0
@@ -2349,6 +2353,8 @@ export default function AdvancedClay() {
     } catch (error: any) {
       const errorMsg = error.message || 'Registration failed'
       showPopup(errorMsg, 'error')
+    } finally {
+      setIsRegisteringLibrary(false)
     }
   }
   
@@ -3334,7 +3340,7 @@ export default function AdvancedClay() {
       
       // Step 1: Deactivate from Library (if registered)
       try {
-        const { deactivateLibraryAsset } = await import('../../lib/libraryService')
+          const { deactivateLibraryAsset } = await import('../../lib/libraryService')
         const result = await deactivateLibraryAsset(projectId, privyProvider)
         if (result.success && result.txHash) {
           console.log('[Delete] Library asset deactivated:', result.txHash)
@@ -4773,7 +4779,7 @@ export default function AdvancedClay() {
       {showLibraryModal && (
         <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add to Library</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Register to Library</h3>
             
             <div className="space-y-4">
               <div>
@@ -4798,25 +4804,15 @@ export default function AdvancedClay() {
                 />
               </div>
               
-              {/* Show used libraries if any */}
-              {usedLibraries.length > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                  <p className="text-xs font-medium text-yellow-800 mb-2">Uses {usedLibraries.length} library asset(s):</p>
-                  <ul className="text-xs text-yellow-700 space-y-1">
-                    {usedLibraries.map((lib, idx) => (
-                      <li key={idx}>• {lib.name} ({lib.priceETH || lib.priceUSDC} {lib.priceETH ? 'ETH' : 'USDC'})</li>
-                    ))}
-                  </ul>
-                  <p className="text-xs text-yellow-800 mt-2 font-medium">
-                    Minimum price: {(usedLibraries.reduce((sum, lib) => sum + parseFloat(lib.priceETH || '0'), 0) * 0.1).toFixed(4)} ETH
-                    or {(usedLibraries.reduce((sum, lib) => sum + parseFloat(lib.priceUSDC || '0'), 0) * 0.1).toFixed(2)} USDC
-                  </p>
-                </div>
-              )}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                <p className="text-xs text-gray-600">
+                  Set the royalty fee users will pay each time they import this library into their projects.
+                </p>
+              </div>
               
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm text-gray-700 mb-2">Currency</label>
+                  <label className="block text-sm text-gray-700 mb-2">Royalty Currency</label>
                   <select
                     value={libraryPriceCurrency}
                     onChange={(e) => setLibraryPriceCurrency(e.target.value as 'ETH' | 'USDC')}
@@ -4827,25 +4823,24 @@ export default function AdvancedClay() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-700 mb-2">Price</label>
+                  <label className="block text-sm text-gray-700 mb-2">Royalty Per Import</label>
                   <div className="relative">
                     <input
                       type="number"
                       step={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
+                      min={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
                       value={libraryPrice}
                       onChange={(e) => setLibraryPrice(e.target.value)}
                       className="w-full px-3 py-2 pr-16 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800"
-                      placeholder="0.00"
+                      placeholder={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
                       {libraryPriceCurrency}
                     </span>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">Users pay this amount each time they import your library</p>
                 </div>
               </div>
-              {usedLibraries.length > 0 && (
-                <p className="text-xs text-gray-500">Must meet minimum price based on dependencies</p>
-              )}
               
               <div className="flex gap-3 pt-4">
                 <button
@@ -4863,10 +4858,10 @@ export default function AdvancedClay() {
                 </button>
                 <button
                   onClick={handleLibraryUpload}
-                  disabled={!libraryAssetName || parseFloat(libraryPrice || '0') === 0}
+                  disabled={!libraryAssetName || parseFloat(libraryPrice || '0') === 0 || isRegisteringLibrary}
                   className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Register
+                  {isRegisteringLibrary ? 'Registering...' : 'Register'}
                 </button>
               </div>
             </div>
