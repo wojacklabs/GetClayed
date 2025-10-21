@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/USER/web3/getclayed/contracts/ClayLibrary.sol": {
-      "lastModificationDate": 1761013124643,
-      "contentHash": "bc68154a456f97e0c4605589560fba63",
+      "lastModificationDate": 1761031134294,
+      "contentHash": "3ece10d644d7faee5f25cc62ffb0de48",
       "sourceName": "ClayLibrary.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -236,8 +236,8 @@
       ]
     },
     "/Users/USER/web3/getclayed/contracts/ClayRoyalty.sol": {
-      "lastModificationDate": 1760931179446,
-      "contentHash": "eeb7dfc6d392b3f88a5e6ad45f295126",
+      "lastModificationDate": 1761031093694,
+      "contentHash": "8dc816bae5e3f1a63f55d6c1a9e39544",
       "sourceName": "ClayRoyalty.sol",
       "solcConfig": {
         "version": "0.8.20",

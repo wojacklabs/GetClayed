@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IClayLibrary {
     function getCurrentOwner(string memory projectId) external view returns (address);
+    function getRoyaltyFee(string memory projectId) external view returns (uint256 royaltyETH, uint256 royaltyUSDC);
 }
 
 /**
@@ -83,20 +84,11 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
      * @notice Register library dependencies for a project
      * @param projectId The project being registered
      * @param dependencyProjectIds Array of library project IDs used
-     * @param dependencyPricesETH Array of dependency prices in ETH
-     * @param dependencyPricesUSDC Array of dependency prices in USDC
-     * @param royaltyPercentages Array of royalty percentages (1000 = 10%)
      */
     function registerProjectRoyalties(
         string memory projectId,
-        string[] memory dependencyProjectIds,
-        uint256[] memory dependencyPricesETH,
-        uint256[] memory dependencyPricesUSDC,
-        uint256[] memory royaltyPercentages
+        string[] memory dependencyProjectIds
     ) external {
-        require(dependencyProjectIds.length == royaltyPercentages.length, "Length mismatch");
-        require(dependencyProjectIds.length == dependencyPricesETH.length, "Length mismatch");
-        require(dependencyProjectIds.length == dependencyPricesUSDC.length, "Length mismatch");
         require(!projectRoyalties[projectId].hasRoyalties, "Royalties already registered");
         
         ProjectRoyalties storage royalty = projectRoyalties[projectId];
@@ -104,15 +96,14 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
         royalty.hasRoyalties = true;
         
         for (uint256 i = 0; i < dependencyProjectIds.length; i++) {
-            // Calculate fixed royalty based on dependency price at registration time
-            uint256 fixedETH = (dependencyPricesETH[i] * royaltyPercentages[i]) / PERCENTAGE_DENOMINATOR;
-            uint256 fixedUSDC = (dependencyPricesUSDC[i] * royaltyPercentages[i]) / PERCENTAGE_DENOMINATOR;
+            // Get current royalty fee from Library at registration time
+            (uint256 feeETH, uint256 feeUSDC) = libraryContract.getRoyaltyFee(dependencyProjectIds[i]);
             
             LibraryDependency memory dep = LibraryDependency({
                 dependencyProjectId: dependencyProjectIds[i],
-                royaltyPercentage: royaltyPercentages[i],
-                fixedRoyaltyETH: fixedETH,
-                fixedRoyaltyUSDC: fixedUSDC
+                royaltyPercentage: 10000, // Not used anymore, kept for compatibility
+                fixedRoyaltyETH: feeETH,
+                fixedRoyaltyUSDC: feeUSDC
             });
             
             royalty.dependencies.push(dep);
@@ -124,23 +115,17 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
     /**
      * @notice Calculate total royalties for a project (fixed amounts)
      * @param projectId The project ID
-     * @param priceETH Price in ETH (unused, kept for interface compatibility)
-     * @param priceUSDC Price in USDC (unused, kept for interface compatibility)
      * @return totalETH Total ETH royalties
      * @return totalUSDC Total USDC royalties
      */
-    function calculateTotalRoyalties(
-        string memory projectId,
-        uint256 priceETH,
-        uint256 priceUSDC
-    ) public view returns (uint256 totalETH, uint256 totalUSDC) {
+    function calculateTotalRoyalties(string memory projectId) public view returns (uint256 totalETH, uint256 totalUSDC) {
         ProjectRoyalties storage royalty = projectRoyalties[projectId];
         
         if (!royalty.hasRoyalties) {
             return (0, 0);
         }
         
-        // Sum up fixed royalties (based on dependency prices at registration)
+        // Sum up fixed royalties
         for (uint256 i = 0; i < royalty.dependencies.length; i++) {
             LibraryDependency memory dep = royalty.dependencies[i];
             totalETH += dep.fixedRoyaltyETH;
@@ -148,31 +133,6 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
         }
         
         return (totalETH, totalUSDC);
-    }
-    
-    /**
-     * @notice Validate that a price meets the minimum requirement
-     * @param projectId The project ID
-     * @param priceETH Proposed ETH price
-     * @param priceUSDC Proposed USDC price
-     */
-    function validatePrice(
-        string memory projectId,
-        uint256 priceETH,
-        uint256 priceUSDC
-    ) external view returns (bool) {
-        if (!projectRoyalties[projectId].hasRoyalties) {
-            return true; // No dependencies, any price is fine
-        }
-        
-        // Get total fixed royalties
-        (uint256 requiredETH, uint256 requiredUSDC) = calculateTotalRoyalties(projectId, 0, 0);
-        
-        // At least one price must be set and cover its royalties
-        bool ethValid = priceETH > 0 && priceETH >= requiredETH;
-        bool usdcValid = priceUSDC > 0 && priceUSDC >= requiredUSDC;
-        
-        return ethValid || usdcValid;
     }
     
     /**

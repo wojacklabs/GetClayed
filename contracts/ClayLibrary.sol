@@ -6,9 +6,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IClayRoyalty {
-    function validatePrice(string memory projectId, uint256 priceETH, uint256 priceUSDC) external view returns (bool);
     function recordRoyalties(string memory projectId, uint256 price, uint8 paymentToken) external payable;
-    function calculateTotalRoyalties(string memory projectId, uint256 priceETH, uint256 priceUSDC) external view returns (uint256 totalETH, uint256 totalUSDC);
+    function calculateTotalRoyalties(string memory projectId) external view returns (uint256 totalETH, uint256 totalUSDC);
 }
 
 /**
@@ -34,22 +33,16 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         string projectId;           // Project ID on Irys
         string name;                // Asset name
         string description;         // Asset description
-        uint256 priceETH;           // Price in ETH (wei)
-        uint256 priceUSDC;          // Price in USDC (6 decimals)
+        uint256 royaltyPerImportETH;  // Royalty per import in ETH (wei)
+        uint256 royaltyPerImportUSDC; // Royalty per import in USDC (6 decimals)
         address currentOwner;       // Current owner (can change via marketplace)
         address originalCreator;    // Original creator (never changes)
-        uint256 totalRevenueETH;    // Total revenue in ETH
-        uint256 totalRevenueUSDC;   // Total revenue in USDC
-        uint256 purchaseCount;      // Number of times purchased
         uint256 listedAt;           // Timestamp when listed
         bool isActive;              // Whether the asset is available
     }
     
     // Mapping from projectId to LibraryAsset
     mapping(string => LibraryAsset) public libraryAssets;
-    
-    // Mapping from projectId to array of purchasers
-    mapping(string => address[]) public assetPurchasers;
     
     // Mapping from user address to their owned assets
     mapping(address => string[]) public userOwnedAssets;
@@ -69,24 +62,16 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         uint256 price
     );
     
-    event AssetPurchased(
-        string indexed projectId,
-        address indexed buyer,
-        address indexed currentOwner,
-        uint256 price,
-        uint256 platformFee
-    );
-    
     event OwnershipTransferred(
         string indexed projectId,
         address indexed previousOwner,
         address indexed newOwner
     );
     
-    event AssetPriceUpdated(
+    event RoyaltyFeeUpdated(
         string indexed projectId,
-        uint256 oldPrice,
-        uint256 newPrice
+        uint256 newRoyaltyETH,
+        uint256 newRoyaltyUSDC
     );
     
     event AssetDeactivated(
@@ -120,39 +105,28 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
      * @param projectId The Irys project ID
      * @param name Asset name
      * @param description Asset description
-     * @param priceETH Price in ETH (wei)
-     * @param priceUSDC Price in USDC (6 decimals)
+     * @param royaltyPerImportETH Royalty per import in ETH (wei)
+     * @param royaltyPerImportUSDC Royalty per import in USDC (6 decimals)
      */
     function registerAsset(
         string memory projectId,
         string memory name,
         string memory description,
-        uint256 priceETH,
-        uint256 priceUSDC
+        uint256 royaltyPerImportETH,
+        uint256 royaltyPerImportUSDC
     ) external {
         require(bytes(projectId).length > 0, "Project ID cannot be empty");
-        require(priceETH > 0 || priceUSDC > 0, "At least one price must be set");
+        require(royaltyPerImportETH > 0 || royaltyPerImportUSDC > 0, "At least one royalty must be set");
         require(!libraryAssets[projectId].isActive, "Asset already registered");
-        
-        // Validate price meets minimum requirement (royalty floor)
-        if (address(royaltyContract) != address(0)) {
-            require(
-                royaltyContract.validatePrice(projectId, priceETH, priceUSDC),
-                "Price below minimum (must cover dependency royalties)"
-            );
-        }
         
         LibraryAsset memory newAsset = LibraryAsset({
             projectId: projectId,
             name: name,
             description: description,
-            priceETH: priceETH,
-            priceUSDC: priceUSDC,
+            royaltyPerImportETH: royaltyPerImportETH,
+            royaltyPerImportUSDC: royaltyPerImportUSDC,
             currentOwner: msg.sender,
             originalCreator: msg.sender,
-            totalRevenueETH: 0,
-            totalRevenueUSDC: 0,
-            purchaseCount: 0,
             listedAt: block.timestamp,
             isActive: true
         });
@@ -161,108 +135,41 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         userOwnedAssets[msg.sender].push(projectId);
         allAssetIds.push(projectId);
         
-        emit AssetRegistered(projectId, msg.sender, name, priceETH);
+        emit AssetRegistered(projectId, msg.sender, name, royaltyPerImportETH);
     }
     
     /**
-     * @notice Purchase a library asset with ETH
-     * @param projectId The project ID to purchase
+     * @notice Update royalty fees (only by current owner)
+     * @param projectId The project ID
+     * @param newRoyaltyETH New royalty per import in ETH
+     * @param newRoyaltyUSDC New royalty per import in USDC
      */
-    function purchaseAssetWithETH(string memory projectId) external payable nonReentrant {
+    function updateRoyaltyFee(
+        string memory projectId,
+        uint256 newRoyaltyETH,
+        uint256 newRoyaltyUSDC
+    ) external {
         LibraryAsset storage asset = libraryAssets[projectId];
         require(asset.isActive, "Asset not available");
-        require(asset.priceETH > 0, "ETH payment not accepted for this asset");
+        require(msg.sender == asset.currentOwner, "Only owner can update royalty");
+        require(newRoyaltyETH > 0 || newRoyaltyUSDC > 0, "At least one royalty must be set");
         
-        // Calculate royalty amounts
-        uint256 royaltyETH = 0;
-        if (address(royaltyContract) != address(0)) {
-            (royaltyETH, ) = royaltyContract.calculateTotalRoyalties(projectId, asset.priceETH, 0);
-        }
+        asset.royaltyPerImportETH = newRoyaltyETH;
+        asset.royaltyPerImportUSDC = newRoyaltyUSDC;
         
-        uint256 totalRequired = asset.priceETH + royaltyETH;
-        require(msg.value >= totalRequired, "Insufficient payment (price + royalties)");
-        
-        // Record royalties (Pull Pattern)
-        if (royaltyETH > 0) {
-            royaltyContract.recordRoyalties{value: royaltyETH}(projectId, asset.priceETH, 0); // 0 = ETH
-        }
-        
-        // Calculate platform fee from asset price (not including royalties)
-        uint256 platformFee = (asset.priceETH * platformFeePercentage) / FEE_DENOMINATOR;
-        uint256 ownerPayment = asset.priceETH - platformFee;
-        
-        // Transfer payment to current owner
-        (bool success, ) = asset.currentOwner.call{value: ownerPayment}("");
-        require(success, "Payment to owner failed");
-        
-        // Update asset statistics
-        asset.totalRevenueETH += asset.priceETH;
-        asset.purchaseCount += 1;
-        
-        // Record purchaser
-        assetPurchasers[projectId].push(msg.sender);
-        
-        // Refund excess payment
-        if (msg.value > totalRequired) {
-            (bool refundSuccess, ) = msg.sender.call{value: msg.value - totalRequired}("");
-            require(refundSuccess, "Refund failed");
-        }
-        
-        emit AssetPurchased(projectId, msg.sender, asset.currentOwner, asset.priceETH, platformFee);
+        emit RoyaltyFeeUpdated(projectId, newRoyaltyETH, newRoyaltyUSDC);
     }
     
     /**
-     * @notice Purchase a library asset with USDC
-     * @param projectId The project ID to purchase
+     * @notice Get royalty fee for a library asset
+     * @param projectId The project ID
      */
-    function purchaseAssetWithUSDC(string memory projectId) external nonReentrant {
+    function getRoyaltyFee(string memory projectId) external view returns (uint256 royaltyETH, uint256 royaltyUSDC) {
         LibraryAsset storage asset = libraryAssets[projectId];
-        require(asset.isActive, "Asset not available");
-        require(asset.priceUSDC > 0, "USDC payment not accepted for this asset");
-        
-        // Calculate royalty amounts
-        uint256 royaltyUSDC = 0;
-        if (address(royaltyContract) != address(0)) {
-            (, royaltyUSDC) = royaltyContract.calculateTotalRoyalties(projectId, 0, asset.priceUSDC);
-        }
-        
-        // Calculate platform fee from asset price
-        uint256 platformFee = (asset.priceUSDC * platformFeePercentage) / FEE_DENOMINATOR;
-        uint256 ownerPayment = asset.priceUSDC - platformFee;
-        
-        // Transfer USDC from buyer to owner
-        require(
-            usdcToken.transferFrom(msg.sender, asset.currentOwner, ownerPayment),
-            "Payment to owner failed"
-        );
-        
-        // Transfer platform fee to contract
-        require(
-            usdcToken.transferFrom(msg.sender, address(this), platformFee),
-            "Platform fee transfer failed"
-        );
-        
-        // Record royalties (Pull Pattern)
-        if (royaltyUSDC > 0) {
-            // Transfer royalties to royalty contract
-            require(
-                usdcToken.transferFrom(msg.sender, address(royaltyContract), royaltyUSDC),
-                "Royalty transfer failed"
-            );
-            
-            // Record royalties
-            royaltyContract.recordRoyalties(projectId, asset.priceUSDC, 1); // 1 = USDC
-        }
-        
-        // Update asset statistics
-        asset.totalRevenueUSDC += asset.priceUSDC;
-        asset.purchaseCount += 1;
-        
-        // Record purchaser
-        assetPurchasers[projectId].push(msg.sender);
-        
-        emit AssetPurchased(projectId, msg.sender, asset.currentOwner, asset.priceUSDC, platformFee);
+        return (asset.royaltyPerImportETH, asset.royaltyPerImportUSDC);
     }
+    
+    // Purchase functions removed - all transactions through Marketplace only
     
     /**
      * @notice Transfer ownership of a library asset (for marketplace sales)
@@ -295,36 +202,7 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         emit OwnershipTransferred(projectId, previousOwner, newOwner);
     }
     
-    /**
-     * @notice Update asset prices (only by current owner)
-     * @param projectId The project ID
-     * @param newPriceETH New price in ETH (wei)
-     * @param newPriceUSDC New price in USDC (6 decimals)
-     */
-    function updateAssetPrice(
-        string memory projectId,
-        uint256 newPriceETH,
-        uint256 newPriceUSDC
-    ) external {
-        LibraryAsset storage asset = libraryAssets[projectId];
-        require(asset.isActive, "Asset not available");
-        require(msg.sender == asset.currentOwner, "Only owner can update price");
-        require(newPriceETH > 0 || newPriceUSDC > 0, "At least one price must be set");
-        
-        // Validate price meets minimum (royalty floor)
-        if (address(royaltyContract) != address(0)) {
-            require(
-                royaltyContract.validatePrice(projectId, newPriceETH, newPriceUSDC),
-                "Price below minimum (must cover dependency royalties)"
-            );
-        }
-        
-        uint256 oldPriceETH = asset.priceETH;
-        asset.priceETH = newPriceETH;
-        asset.priceUSDC = newPriceUSDC;
-        
-        emit AssetPriceUpdated(projectId, oldPriceETH, newPriceETH);
-    }
+    // Asset price update removed - royalty fees managed by updateRoyaltyFee instead
     
     /**
      * @notice Deactivate an asset (only by current owner)
@@ -372,13 +250,7 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         return userOwnedAssets[user];
     }
     
-    /**
-     * @notice Get purchasers of an asset
-     * @param projectId The project ID
-     */
-    function getAssetPurchasers(string memory projectId) external view returns (address[] memory) {
-        return assetPurchasers[projectId];
-    }
+    // Purchasers tracking removed - Marketplace handles all transactions
     
     /**
      * @notice Get total number of registered assets
@@ -396,35 +268,7 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         return allAssetIds[index];
     }
     
-    /**
-     * @notice Update platform fee (only owner)
-     * @param newFeePercentage New fee percentage (e.g., 250 = 2.5%)
-     */
-    function updatePlatformFee(uint256 newFeePercentage) external onlyOwner {
-        require(newFeePercentage <= 1000, "Fee too high (max 10%)");
-        platformFeePercentage = newFeePercentage;
-    }
-    
-    /**
-     * @notice Withdraw platform fees in ETH (only owner)
-     */
-    function withdrawPlatformFeesETH() external onlyOwner {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No ETH fees to withdraw");
-        
-        (bool success, ) = owner().call{value: balance}("");
-        require(success, "Withdrawal failed");
-    }
-    
-    /**
-     * @notice Withdraw platform fees in USDC (only owner)
-     */
-    function withdrawPlatformFeesUSDC() external onlyOwner {
-        uint256 balance = usdcToken.balanceOf(address(this));
-        require(balance > 0, "No USDC fees to withdraw");
-        
-        require(usdcToken.transfer(owner(), balance), "Withdrawal failed");
-    }
+    // Platform fees removed - Marketplace handles all transactions and fees
     
     /**
      * @dev Internal function to remove an asset from user's list

@@ -14,10 +14,10 @@ export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 // Library contract ABI
 export const LIBRARY_CONTRACT_ABI = [
-  "function registerAsset(string projectId, string name, string description, uint256 priceETH, uint256 priceUSDC) external",
+  "function registerAsset(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC) external",
   "function purchaseAssetWithETH(string projectId) external payable",
   "function purchaseAssetWithUSDC(string projectId) external",
-  "function getAsset(string projectId) external view returns (tuple(string projectId, string name, string description, uint256 priceETH, uint256 priceUSDC, address currentOwner, address originalCreator, uint256 totalRevenueETH, uint256 totalRevenueUSDC, uint256 purchaseCount, uint256 listedAt, bool isActive))",
+  "function getAsset(string projectId) external view returns (tuple(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool isActive))",
   "function getUserAssets(address user) external view returns (string[])",
   "function getTotalAssets() external view returns (uint256)",
   "function getAssetIdByIndex(uint256 index) external view returns (string)",
@@ -35,13 +35,10 @@ export interface LibraryAsset {
   projectId: string;
   name: string;
   description: string;
-  priceETH: string; // in ETH
-  priceUSDC: string; // in USDC
+  royaltyPerImportETH: string;
+  royaltyPerImportUSDC: string;
   currentOwner: string;
   originalCreator: string;
-  totalRevenueETH: string;
-  totalRevenueUSDC: string;
-  purchaseCount: number;
   listedAt: number;
   isActive: boolean;
   thumbnailId?: string;
@@ -94,8 +91,8 @@ export async function registerLibraryAsset(
   projectId: string,
   name: string,
   description: string,
-  priceETH: number,
-  priceUSDC: number,
+  royaltyETH: number,
+  royaltyUSDC: number,
   walletAddress: string,
   customProvider?: any
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
@@ -121,12 +118,17 @@ export async function registerLibraryAsset(
       signer
     );
     
-    // Convert prices
-    const priceETHWei = ethers.parseEther(priceETH.toString());
-    const priceUSDCUnits = ethers.parseUnits(priceUSDC.toString(), 6); // USDC has 6 decimals
+    // Convert royalty amounts
+    let royaltyETHWei, royaltyUSDCUnits;
+    try {
+      royaltyETHWei = royaltyETH > 0 ? ethers.parseEther(royaltyETH.toFixed(18)) : 0n;
+      royaltyUSDCUnits = royaltyUSDC > 0 ? ethers.parseUnits(royaltyUSDC.toFixed(6), 6) : 0n;
+    } catch (error) {
+      throw new Error('Invalid royalty format. Please enter a valid number');
+    }
     
-    // Register asset on blockchain
-    const tx = await contract.registerAsset(projectId, name, description, priceETHWei, priceUSDCUnits);
+    // Register asset on blockchain (royalty amounts, not prices!)
+    const tx = await contract.registerAsset(projectId, name, description, royaltyETHWei, royaltyUSDCUnits);
     await tx.wait();
     
     // Also tag the project on Irys as a library asset
@@ -214,6 +216,48 @@ export async function deactivateLibraryAsset(
 }
 
 /**
+ * Update royalty fee for a library asset
+ */
+export async function updateLibraryRoyaltyFee(
+  projectId: string,
+  royaltyETH: number,
+  royaltyUSDC: number,
+  customProvider?: any
+): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    if (!LIBRARY_CONTRACT_ADDRESS) {
+      throw new Error('Library contract not deployed');
+    }
+    
+    let signer;
+    if (customProvider) {
+      const provider = new ethers.BrowserProvider(customProvider);
+      signer = await provider.getSigner();
+    } else {
+      const result = await getWalletProvider();
+      signer = result.signer;
+    }
+    
+    const contract = new ethers.Contract(
+      LIBRARY_CONTRACT_ADDRESS,
+      LIBRARY_CONTRACT_ABI,
+      signer
+    );
+    
+    const royaltyETHWei = royaltyETH > 0 ? ethers.parseEther(royaltyETH.toFixed(18)) : 0n;
+    const royaltyUSDCUnits = royaltyUSDC > 0 ? ethers.parseUnits(royaltyUSDC.toFixed(6), 6) : 0n;
+    
+    const tx = await contract.updateRoyaltyFee(projectId, royaltyETHWei, royaltyUSDCUnits);
+    await tx.wait();
+    
+    return { success: true, txHash: tx.hash };
+  } catch (error: any) {
+    console.error('[LibraryService] Error updating royalty fee:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/**
  * Query all library assets from blockchain
  */
 export async function queryLibraryAssets(
@@ -292,13 +336,10 @@ export async function queryLibraryAssets(
         projectId,
         name: tags['Asset-Name'] || 'Unnamed Asset',
         description: '',
-        priceETH: tags['Asset-Price-ETH'] || '0',
-        priceUSDC: tags['Asset-Price-USDC'] || '0',
+        royaltyPerImportETH: tags['Royalty-ETH'] || '0',
+        royaltyPerImportUSDC: tags['Royalty-USDC'] || '0',
         currentOwner: tags['Registered-By'] || '',
         originalCreator: tags['Registered-By'] || '',
-        totalRevenueETH: '0',
-        totalRevenueUSDC: '0',
-        purchaseCount: 0,
         listedAt: parseInt(tags['Registered-At'] || '0'),
         isActive: true,
         thumbnailId: tags['Thumbnail-ID'],
@@ -307,13 +348,14 @@ export async function queryLibraryAssets(
       
       // Override with blockchain data if available
       if (blockchainData && blockchainData.isActive) {
-        asset.priceETH = ethers.formatEther(blockchainData.priceETH);
-        asset.priceUSDC = ethers.formatUnits(blockchainData.priceUSDC, 6);
+        asset.projectId = blockchainData.projectId;
+        asset.name = blockchainData.name;
+        asset.description = blockchainData.description;
+        asset.royaltyPerImportETH = ethers.formatEther(blockchainData.royaltyPerImportETH);
+        asset.royaltyPerImportUSDC = ethers.formatUnits(blockchainData.royaltyPerImportUSDC, 6);
         asset.currentOwner = blockchainData.currentOwner;
         asset.originalCreator = blockchainData.originalCreator;
-        asset.totalRevenueETH = ethers.formatEther(blockchainData.totalRevenueETH);
-        asset.totalRevenueUSDC = ethers.formatUnits(blockchainData.totalRevenueUSDC, 6);
-        asset.purchaseCount = Number(blockchainData.purchaseCount);
+        asset.listedAt = Number(blockchainData.listedAt);
         asset.isActive = blockchainData.isActive;
       }
       

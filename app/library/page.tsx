@@ -74,12 +74,12 @@ export default function LibraryPage() {
         filtered.sort((a, b) => b.listedAt - a.listedAt)
         break
       case 'popular':
-        filtered.sort((a, b) => b.purchaseCount - a.purchaseCount)
+        filtered.sort((a, b) => a.name.localeCompare(b.name))
         break
       case 'price':
         filtered.sort((a, b) => {
-          const priceA = parseFloat(a.priceETH || a.priceUSDC || '0')
-          const priceB = parseFloat(b.priceETH || b.priceUSDC || '0')
+          const priceA = parseFloat(a.royaltyPerImportETH || a.royaltyPerImportUSDC || '0')
+          const priceB = parseFloat(b.royaltyPerImportETH || b.royaltyPerImportUSDC || '0')
           return priceA - priceB
         })
         break
@@ -119,7 +119,7 @@ export default function LibraryPage() {
                   placeholder="Search library..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 pr-10 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-200"
+                  className="w-full px-4 py-2 pr-10 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-gray-800 border border-gray-200"
                 />
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               </div>
@@ -217,11 +217,11 @@ export default function LibraryPage() {
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
                       <span className="flex items-center gap-1">
                         <TrendingUp size={12} />
-                        {asset.purchaseCount}
+                        Royalty
                       </span>
                       <div className="text-right text-xs font-semibold text-gray-900">
-                        {parseFloat(asset.priceETH || '0') > 0 && <div>{asset.priceETH} ETH</div>}
-                        {parseFloat(asset.priceUSDC || '0') > 0 && <div>{asset.priceUSDC} USDC</div>}
+                        {parseFloat(asset.royaltyPerImportETH || '0') > 0 && <div>{asset.royaltyPerImportETH} ETH</div>}
+                        {parseFloat(asset.royaltyPerImportUSDC || '0') > 0 && <div>{asset.royaltyPerImportUSDC} USDC</div>}
                       </div>
                     </div>
                   </div>

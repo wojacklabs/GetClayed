@@ -76,6 +76,14 @@ export function getErrorMessage(error: any): string {
     return 'Network error. Please try again';
   }
   
+  // Invalid number format
+  if (
+    errorMessage.includes('invalid FixedNumber') ||
+    errorMessage.includes('INVALID_ARGUMENT')
+  ) {
+    return 'Invalid price format. Please enter a valid number';
+  }
+  
   // Generic fallback
   return 'An error occurred. Please try again';
 }

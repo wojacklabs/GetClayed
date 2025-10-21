@@ -75,6 +75,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   const cameraRef = useRef<THREE.Camera | null>(null)
   const controlsRef = useRef<any>(null)
   const [authorProfile, setAuthorProfile] = useState<{ displayName?: string } | null>(null)
+  const [libraryInfo, setLibraryInfo] = useState<{ royaltyETH: string; royaltyUSDC: string; totalRevenue: number } | null>(null)
+  const [marketplaceInfo, setMarketplaceInfo] = useState<{ price: string; currency: string } | null>(null)
+  const [showLibraryTab, setShowLibraryTab] = useState(true)
   
   useEffect(() => {
     loadProject()
