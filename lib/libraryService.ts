@@ -94,7 +94,8 @@ export async function registerLibraryAsset(
   royaltyETH: number,
   royaltyUSDC: number,
   walletAddress: string,
-  customProvider?: any
+  customProvider?: any,
+  thumbnailId?: string
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!LIBRARY_CONTRACT_ADDRESS) {
@@ -148,11 +149,15 @@ export async function registerLibraryAsset(
       { name: 'Data-Type', value: 'library-registration' },
       { name: 'Project-ID', value: projectId },
       { name: 'Asset-Name', value: name },
-      { name: 'Asset-Price-ETH', value: priceETH.toString() },
-      { name: 'Asset-Price-USDC', value: priceUSDC.toString() },
+      { name: 'Royalty-ETH', value: royaltyETH.toString() },
+      { name: 'Royalty-USDC', value: royaltyUSDC.toString() },
       { name: 'Registered-By', value: walletAddress.toLowerCase() },
       { name: 'Registered-At', value: Date.now().toString() }
     ];
+    
+    if (thumbnailId) {
+      tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
+    }
     
     await fixedKeyUploader.upload(data, tags);
     
