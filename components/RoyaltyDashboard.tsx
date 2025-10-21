@@ -56,7 +56,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
     } catch (error: any) {
       console.error('Error claiming ETH:', error)
       showPopup(
-        error.message || '로열티 수령에 실패했습니다',
+        error.message || 'Failed to claim royalties',
         'error',
         { title: 'Claim Failed' }
       )
@@ -82,7 +82,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
     } catch (error: any) {
       console.error('Error claiming USDC:', error)
       showPopup(
-        error.message || '로열티 수령에 실패했습니다',
+        error.message || 'Failed to claim royalties',
         'error',
         { title: 'Claim Failed' }
       )
