@@ -147,18 +147,18 @@ export default function LibraryDetailPage() {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <p className="text-xs text-gray-500">ETH Price</p>
-                  <p className="text-xl font-bold text-gray-900">{asset.priceETH || '0'} ETH</p>
+                  <p className="text-xl font-bold text-gray-900">{asset.royaltyPerImportETH || '0'} ETH</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">USDC Price</p>
-                  <p className="text-xl font-bold text-gray-900">{asset.priceUSDC || '0'} USDC</p>
+                  <p className="text-xl font-bold text-gray-900">{asset.royaltyPerImportUSDC || '0'} USDC</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-4 text-sm text-gray-600 mb-6">
                 <span className="flex items-center gap-1">
                   <TrendingUp size={16} />
-                  {asset.purchaseCount} purchases
+                  Royalty per import
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar size={16} />
@@ -170,16 +170,16 @@ export default function LibraryDetailPage() {
                 <p className="text-xs text-gray-500 mb-1">Creator</p>
                 <Link 
                   href={`/user/${asset.originalCreator}`}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline"
                 >
                   {asset.originalCreator.slice(0, 6)}...{asset.originalCreator.slice(-4)}
                 </Link>
               </div>
               
               {/* Info Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <p className="text-sm text-gray-700 text-center">
-                  To purchase this asset, check the <Link href="/marketplace" className="text-blue-600 hover:underline font-medium">Marketplace</Link>
+                  To purchase this asset, check the <Link href="/marketplace" className="text-gray-900 hover:underline font-medium">Marketplace</Link>
                 </p>
               </div>
             </div>
@@ -194,12 +194,12 @@ export default function LibraryDetailPage() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">{lib.name}</p>
                         <p className="text-xs text-gray-500">
-                          Royalty: {(parseFloat(lib.priceETH || lib.priceUSDC || '0') * 0.1).toFixed(4)} {lib.priceETH ? 'ETH' : 'USDC'}
+                          Royalty: {lib.royaltyPerImportETH || lib.royaltyPerImportUSDC} {lib.royaltyPerImportETH ? 'ETH' : 'USDC'}
                         </p>
                       </div>
                       <Link
                         href={`/library/${lib.projectId}`}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="text-xs text-gray-700 hover:text-gray-900 hover:underline"
                       >
                         View
                       </Link>
@@ -207,7 +207,7 @@ export default function LibraryDetailPage() {
                   ))}
                 </div>
                 <p className="text-xs text-gray-500 mt-4">
-                  Total royalties: {(project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.priceETH || '0'), 0) * 0.1).toFixed(4)} ETH
+                  Total royalties: {project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0).toFixed(4)} ETH
                 </p>
               </div>
             )}

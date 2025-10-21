@@ -2329,6 +2329,17 @@ export default function AdvancedClay() {
     }
     
     try {
+      // Get project data to find thumbnailId
+      let thumbnailId: string | undefined;
+      try {
+        const projectData = await downloadClayProject(libraryProjectId);
+        const tags = projectData.tags || {};
+        thumbnailId = tags['Thumbnail-ID'];
+        console.log('[LibraryUpload] Found thumbnail ID:', thumbnailId);
+      } catch (error) {
+        console.log('[LibraryUpload] No project data found, registering without thumbnail');
+      }
+      
       const result = await registerLibraryAsset(
         libraryProjectId,
         libraryAssetName,
@@ -2336,7 +2347,8 @@ export default function AdvancedClay() {
         ethPrice,
         usdcPrice,
         walletAddress,
-        privyProvider
+        privyProvider,
+        thumbnailId
       )
       
       if (result.success) {
