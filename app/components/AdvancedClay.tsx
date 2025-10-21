@@ -2333,8 +2333,8 @@ export default function AdvancedClay() {
       let thumbnailId: string | undefined;
       try {
         const projectData = await downloadClayProject(libraryProjectId);
-        const tags = projectData.tags || {};
-        thumbnailId = tags['Thumbnail-ID'];
+        const tags = projectData.tags as Record<string, string> | undefined;
+        thumbnailId = tags?.['Thumbnail-ID'];
         console.log('[LibraryUpload] Found thumbnail ID:', thumbnailId);
       } catch (error) {
         console.log('[LibraryUpload] No project data found, registering without thumbnail');
