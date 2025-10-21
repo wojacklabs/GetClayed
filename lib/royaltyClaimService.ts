@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { getErrorMessage } from './errorHandler';
 
 async function getWalletProvider() {
   if (typeof window === 'undefined') {
@@ -91,7 +92,8 @@ export async function claimETHRoyalties(): Promise<string> {
     return tx.hash;
   } catch (error: any) {
     console.error('[RoyaltyService] Error claiming ETH royalties:', error);
-    throw error;
+    const message = getErrorMessage(error);
+    throw new Error(message);
   }
 }
 
@@ -115,7 +117,8 @@ export async function claimUSDCRoyalties(): Promise<string> {
     return tx.hash;
   } catch (error: any) {
     console.error('[RoyaltyService] Error claiming USDC royalties:', error);
-    throw error;
+    const message = getErrorMessage(error);
+    throw new Error(message);
   }
 }
 

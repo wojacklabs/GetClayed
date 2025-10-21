@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { fixedKeyUploader } from './fixedKeyUploadService';
+import { getErrorMessage } from './errorHandler';
 import { uploadInChunks, uploadChunkManifest } from './chunkUploadService';
 import { downloadClayProject, ClayProject } from './clayStorageService';
 
@@ -156,7 +157,7 @@ export async function registerLibraryAsset(
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
     console.error('[LibraryService] Error registering asset:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -208,7 +209,7 @@ export async function deactivateLibraryAsset(
   } catch (error: any) {
     console.error('[LibraryService] Error deactivating asset:', error);
     // Don't fail the entire deletion if deactivate fails
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
