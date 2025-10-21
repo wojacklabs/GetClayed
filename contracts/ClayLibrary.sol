@@ -351,9 +351,17 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
     /**
      * @notice Get current owner of an asset
      * @param projectId The project ID
+     * @return currentOwner address, or address(0) if asset is inactive/deleted
      */
     function getCurrentOwner(string memory projectId) external view returns (address) {
-        return libraryAssets[projectId].currentOwner;
+        LibraryAsset storage asset = libraryAssets[projectId];
+        
+        // Return zero address if asset is inactive (deleted/deactivated)
+        if (!asset.isActive) {
+            return address(0);
+        }
+        
+        return asset.currentOwner;
     }
     
     /**

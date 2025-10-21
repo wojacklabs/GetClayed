@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/USER/web3/getclayed/contracts/ClayLibrary.sol": {
-      "lastModificationDate": 1760929759267,
-      "contentHash": "2a4d31b0f560e7a6db57cce117f57f52",
+      "lastModificationDate": 1761013124643,
+      "contentHash": "bc68154a456f97e0c4605589560fba63",
       "sourceName": "ClayLibrary.sol",
       "solcConfig": {
         "version": "0.8.20",
