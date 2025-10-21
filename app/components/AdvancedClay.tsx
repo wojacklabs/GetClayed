@@ -2347,7 +2347,7 @@ export default function AdvancedClay() {
         showPopup(result.error || 'Registration failed', 'error')
       }
     } catch (error: any) {
-      const errorMsg = error.message || '등록에 실패했습니다'
+      const errorMsg = error.message || 'Registration failed'
       showPopup(errorMsg, 'error')
     }
   }
