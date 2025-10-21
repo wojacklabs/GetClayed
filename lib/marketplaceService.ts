@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { saveMutableReference, getMutableReference } from './mutableStorageService';
+import { getErrorMessage } from './errorHandler';
 
 async function getWalletProvider() {
   if (typeof window === 'undefined') {
@@ -88,7 +89,7 @@ export async function listAssetForSale(
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
     console.error('[MarketplaceService] Error listing asset:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -144,7 +145,7 @@ export async function cancelMarketplaceListing(
   } catch (error: any) {
     console.error('[MarketplaceService] Error cancelling listing:', error);
     // Don't fail the entire deletion if cancel fails
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -186,7 +187,7 @@ export async function buyListedAsset(
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
     console.error('[MarketplaceService] Error buying asset:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -234,7 +235,7 @@ export async function makeAssetOffer(
     return { success: true, offerId, txHash: tx.hash };
   } catch (error: any) {
     console.error('[MarketplaceService] Error making offer:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -272,7 +273,7 @@ export async function acceptOffer(
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
     console.error('[MarketplaceService] Error accepting offer:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -301,7 +302,7 @@ export async function cancelListing(
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
     console.error('[MarketplaceService] Error cancelling listing:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
