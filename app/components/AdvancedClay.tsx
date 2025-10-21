@@ -2294,19 +2294,19 @@ export default function AdvancedClay() {
       return
     }
     
-    // Set window.ethereum from Privy wallet
+    const ethPrice = libraryPriceCurrency === 'ETH' ? price : 0
+    const usdcPrice = libraryPriceCurrency === 'USDC' ? price : 0
+    
+    // Get Privy wallet provider
+    let privyProvider = null;
     if (wallets && wallets.length > 0) {
       try {
-        const provider = await wallets[0].getEthereumProvider();
-        (window as any).ethereum = provider;
-        console.log('[AdvancedClay] Set window.ethereum from Privy wallet');
+        privyProvider = await wallets[0].getEthereumProvider();
+        console.log('[AdvancedClay] Got Privy provider');
       } catch (error) {
         console.error('[AdvancedClay] Failed to get Privy provider:', error);
       }
     }
-    
-    const ethPrice = libraryPriceCurrency === 'ETH' ? price : 0
-    const usdcPrice = libraryPriceCurrency === 'USDC' ? price : 0
     
     // Check if this project uses libraries and validate minimum price
     if (usedLibraries.length > 0) {
@@ -2331,7 +2331,8 @@ export default function AdvancedClay() {
         libraryDescription,
         ethPrice,
         usdcPrice,
-        walletAddress
+        walletAddress,
+        privyProvider
       )
       
       if (result.success) {
