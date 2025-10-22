@@ -1077,7 +1077,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                   {/* 3D Preview */}
                   <div className="relative">
                     <MiniViewer 
-                      clayObjects={(project as any).clayObjects || []}
+                      projectId={project.id}
                       className="aspect-square"
                     />
                     <div className="absolute top-2 left-2">

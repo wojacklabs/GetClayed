@@ -1,11 +1,13 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Suspense, useRef } from 'react'
+import { Suspense, useRef, useState, useEffect } from 'react'
 import * as THREE from 'three'
+import { downloadClayProject, restoreClayObjects } from '../lib/clayStorageService'
 
 interface MiniViewerProps {
-  clayObjects: any[]
+  projectId?: string
+  clayObjects?: any[]
   className?: string
 }
 
@@ -47,7 +49,39 @@ function Scene({ clayObjects }: { clayObjects: any[] }) {
   )
 }
 
-export default function MiniViewer({ clayObjects, className = '' }: MiniViewerProps) {
+export default function MiniViewer({ projectId, clayObjects: initialClayObjects, className = '' }: MiniViewerProps) {
+  const [clayObjects, setClayObjects] = useState<any[]>(initialClayObjects || [])
+  const [loading, setLoading] = useState(false)
+  
+  useEffect(() => {
+    if (!initialClayObjects && projectId) {
+      loadProjectData()
+    }
+  }, [projectId, initialClayObjects])
+  
+  const loadProjectData = async () => {
+    if (!projectId) return
+    
+    setLoading(true)
+    try {
+      const projectData = await downloadClayProject(projectId)
+      const restored = restoreClayObjects(projectData)
+      setClayObjects(restored)
+    } catch (error) {
+      console.error('[MiniViewer] Failed to load project:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  if (loading) {
+    return (
+      <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+      </div>
+    )
+  }
+  
   if (!clayObjects || clayObjects.length === 0) {
     return (
       <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
@@ -60,7 +94,7 @@ export default function MiniViewer({ clayObjects, className = '' }: MiniViewerPr
     <div className={className}>
       <Canvas
         camera={{ position: [5, 5, 5], fov: 50 }}
-        style={{ background: '#f0f0f0' }}
+        style={{ background: '#f0f0f0', pointerEvents: 'none' }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.6} />

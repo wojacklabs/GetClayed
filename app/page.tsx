@@ -572,7 +572,7 @@ export default function HomePage() {
                 >
                   {/* 3D Preview */}
                   <MiniViewer 
-                    clayObjects={project.clayObjects || []}
+                    projectId={project.id}
                     className="aspect-square"
                   />
 
