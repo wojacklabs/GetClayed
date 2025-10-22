@@ -178,21 +178,35 @@ export default function LibraryDetailPage() {
               {/* Owner Actions */}
               {walletAddress && asset.currentOwner.toLowerCase() === walletAddress.toLowerCase() && (
                 <button
-                  onClick={async () => {
-                    if (confirm('Deactivate this library asset? Users will no longer pay royalties.')) {
-                      try {
-                        const { deactivateLibraryAsset } = await import('@/lib/libraryService');
-                        const result = await deactivateLibraryAsset(assetId);
-                        if (result.success) {
-                          alert('Library asset deactivated');
-                          window.location.reload();
-                        } else {
-                          alert(result.error || 'Failed to deactivate');
+                  onClick={() => {
+                    showPopup('Deactivate this library asset? Users will no longer pay royalties.', 'warning', {
+                      autoClose: false,
+                      confirmButton: {
+                        text: 'Deactivate',
+                        onConfirm: async () => {
+                          try {
+                            const { deactivateLibraryAsset } = await import('@/lib/libraryService');
+                            const result = await deactivateLibraryAsset(assetId);
+                            if (result.success) {
+                              showPopup('Library asset deactivated', 'success');
+                              setTimeout(() => {
+                                window.location.reload();
+                              }, 1500);
+                            } else {
+                              showPopup(result.error || 'Failed to deactivate', 'error');
+                            }
+                          } catch (error: any) {
+                            showPopup(error.message || 'Failed to deactivate', 'error');
+                          }
                         }
-                      } catch (error: any) {
-                        alert(error.message || 'Failed to deactivate');
+                      },
+                      cancelButton: {
+                        text: 'Cancel',
+                        onCancel: () => {
+                          // Do nothing, just close
+                        }
                       }
-                    }
+                    });
                   }}
                   className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium mb-4"
                 >

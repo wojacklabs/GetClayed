@@ -2257,27 +2257,46 @@ export default function AdvancedClay() {
   }
   
   const handleRemoveFromLibrary = async (projectId: string) => {
-    if (!walletAddress) return;
-    
-    if (confirm('Remove this project from Library? Users will no longer pay royalties.')) {
-      try {
-        let provider = null;
-        if (wallets && wallets.length > 0) {
-          provider = await wallets[0].getEthereumProvider();
-        }
-        
-        const { deactivateLibraryAsset } = await import('../../lib/libraryService');
-        const result = await deactivateLibraryAsset(projectId, provider);
-        
-        if (result.success) {
-          showPopup('Removed from library', 'success');
-        } else {
-          showPopup(result.error || 'Failed to remove', 'error');
-        }
-      } catch (error: any) {
-        showPopup(error.message || 'Failed to remove from library', 'error');
-      }
+    if (!walletAddress) {
+      showPopup('Please connect your wallet first', 'warning');
+      return;
     }
+    
+    showPopup('Remove this project from Library? Users will no longer pay royalties.', 'warning', {
+      autoClose: false,
+      confirmButton: {
+        text: 'Remove',
+        onConfirm: async () => {
+          try {
+            let provider = null;
+            if (wallets && wallets.length > 0) {
+              try {
+                provider = await wallets[0].getEthereumProvider();
+              } catch (error) {
+                console.error('[RemoveFromLibrary] Failed to get provider:', error);
+              }
+            }
+            
+            const { deactivateLibraryAsset } = await import('../../lib/libraryService');
+            const result = await deactivateLibraryAsset(projectId, provider);
+            
+            if (result.success) {
+              showPopup('Removed from library', 'success');
+            } else {
+              showPopup(result.error || 'Failed to remove', 'error');
+            }
+          } catch (error: any) {
+            showPopup(error.message || 'Failed to remove from library', 'error');
+          }
+        }
+      },
+      cancelButton: {
+        text: 'Cancel',
+        onCancel: () => {
+          // Do nothing, just close
+        }
+      }
+    });
   }
   
   const [isRegisteringLibrary, setIsRegisteringLibrary] = useState(false)

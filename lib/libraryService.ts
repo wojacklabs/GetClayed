@@ -55,24 +55,7 @@ async function getWalletProvider() {
   
   console.log('[LibraryService] Checking for wallet provider...');
   
-  // Try to get Privy wallet first
-  try {
-    // Access Privy's wallets from global state
-    const privyWallets = (window as any).__PRIVY_WALLETS__;
-    console.log('[LibraryService] Privy wallets:', privyWallets);
-    
-    if (privyWallets && privyWallets.length > 0) {
-      const wallet = privyWallets[0];
-      console.log('[LibraryService] Using Privy wallet');
-      const provider = await wallet.getEthersProvider();
-      const signer = provider.getSigner();
-      return { provider, signer };
-    }
-  } catch (e) {
-    console.log('[LibraryService] No Privy wallet, trying window.ethereum');
-  }
-  
-  // Fallback to window.ethereum (for MetaMask, etc)
+  // Try window.ethereum first (works with both Privy and MetaMask)
   const ethereum = (window as any).ethereum;
   
   if (!ethereum) {
@@ -80,7 +63,7 @@ async function getWalletProvider() {
     throw new Error('No wallet connected. Please connect your wallet first using the Connect Wallet button.');
   }
   
-  console.log('[LibraryService] Using window.ethereum');
+  console.log('[LibraryService] Using window.ethereum provider');
   const provider = new ethers.BrowserProvider(ethereum);
   const signer = await provider.getSigner();
   
