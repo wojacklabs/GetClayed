@@ -122,8 +122,8 @@ export async function registerLibraryAsset(
     // Convert royalty amounts
     let royaltyETHWei, royaltyUSDCUnits;
     try {
-      royaltyETHWei = royaltyETH > 0 ? ethers.parseEther(royaltyETH.toFixed(18)) : 0n;
-      royaltyUSDCUnits = royaltyUSDC > 0 ? ethers.parseUnits(royaltyUSDC.toFixed(6), 6) : 0n;
+      royaltyETHWei = royaltyETH > 0 ? ethers.parseEther(royaltyETH.toFixed(18)) : BigInt(0);
+      royaltyUSDCUnits = royaltyUSDC > 0 ? ethers.parseUnits(royaltyUSDC.toFixed(6), 6) : BigInt(0);
     } catch (error) {
       throw new Error('Invalid royalty format. Please enter a valid number');
     }
@@ -137,8 +137,8 @@ export async function registerLibraryAsset(
       projectId,
       name,
       description,
-      priceETH,
-      priceUSDC,
+      royaltyETH,
+      royaltyUSDC,
       registeredBy: walletAddress,
       registeredAt: Date.now()
     };
@@ -249,8 +249,8 @@ export async function updateLibraryRoyaltyFee(
       signer
     );
     
-    const royaltyETHWei = royaltyETH > 0 ? ethers.parseEther(royaltyETH.toFixed(18)) : 0n;
-    const royaltyUSDCUnits = royaltyUSDC > 0 ? ethers.parseUnits(royaltyUSDC.toFixed(6), 6) : 0n;
+    const royaltyETHWei = royaltyETH > 0 ? ethers.parseEther(royaltyETH.toFixed(18)) : BigInt(0);
+    const royaltyUSDCUnits = royaltyUSDC > 0 ? ethers.parseUnits(royaltyUSDC.toFixed(6), 6) : BigInt(0);
     
     const tx = await contract.updateRoyaltyFee(projectId, royaltyETHWei, royaltyUSDCUnits);
     await tx.wait();
