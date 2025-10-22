@@ -12,6 +12,7 @@ import { downloadClayProject, restoreClayObjects, downloadProjectThumbnail } fro
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
+import { useWallets } from '@privy-io/react-auth'
 
 function PreviewClay({ clay }: { clay: any }) {
   return (
@@ -30,6 +31,7 @@ export default function LibraryDetailPage() {
   const router = useRouter()
   const params = useParams()
   const assetId = params.id as string
+  const { wallets } = useWallets()
   
   const [asset, setAsset] = useState<LibraryAsset | null>(null)
   const [project, setProject] = useState<any>(null)
@@ -185,8 +187,19 @@ export default function LibraryDetailPage() {
                         text: 'Deactivate',
                         onConfirm: async () => {
                           try {
+                            // Get Privy provider
+                            let provider = null;
+                            if (wallets && wallets.length > 0) {
+                              try {
+                                provider = await wallets[0].getEthereumProvider();
+                                console.log('[LibraryDetail] Got Privy provider');
+                              } catch (error) {
+                                console.error('[LibraryDetail] Failed to get provider:', error);
+                              }
+                            }
+                            
                             const { deactivateLibraryAsset } = await import('@/lib/libraryService');
-                            const result = await deactivateLibraryAsset(assetId);
+                            const result = await deactivateLibraryAsset(assetId, provider);
                             if (result.success) {
                               showPopup('Library asset deactivated', 'success');
                               setTimeout(() => {
