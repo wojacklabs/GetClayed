@@ -11,6 +11,7 @@ import { downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
+import MiniViewer from '@/components/MiniViewer'
 
 export default function MarketplacePage() {
   const router = useRouter()
@@ -290,19 +291,10 @@ export default function MarketplacePage() {
                   href={`/marketplace/${listing.projectId}`}
                   className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-gray-200 block"
                 >
-                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                    {thumbnails.get(listing.projectId) ? (
-                      <img
-                        src={thumbnails.get(listing.projectId)}
-                        alt={listing.assetName || 'Asset'}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-2xl font-bold text-gray-300">3D</div>
-                      </div>
-                    )}
-                  </div>
+                  <MiniViewer 
+                    projectId={listing.projectId}
+                    className="aspect-square"
+                  />
                   
                   <div className="p-3">
                     <h3 className="text-sm font-medium text-gray-900 truncate mb-1">
