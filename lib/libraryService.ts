@@ -360,7 +360,7 @@ export async function queryLibraryAssets(
       };
       
       // Override with blockchain data if available
-      if (blockchainData && blockchainData.isActive) {
+      if (blockchainData) {
         asset.projectId = blockchainData.projectId;
         asset.name = blockchainData.name;
         asset.description = blockchainData.description;
@@ -372,7 +372,12 @@ export async function queryLibraryAssets(
         asset.isActive = blockchainData.isActive;
       }
       
-      assets.push(asset);
+      // Only add active assets to the list
+      if (asset.isActive) {
+        assets.push(asset);
+      } else {
+        console.log('[LibraryService] Skipping inactive asset:', projectId);
+      }
     }
     
     return assets;
