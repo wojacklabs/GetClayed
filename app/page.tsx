@@ -14,6 +14,8 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
 import RoyaltyNotifications from '@/components/RoyaltyNotifications'
+import MiniViewer from '@/components/MiniViewer'
+import { restoreClayObjects } from '@/lib/clayStorageService'
 
 const SimpleClay = dynamic(() => import('@/components/SimpleClay'), { 
   ssr: false,
@@ -38,6 +40,7 @@ interface Project {
   author: string
   timestamp: number
   thumbnail?: string
+  clayObjects?: any[]
   likes: number
   views: number
   favorites: number
@@ -567,20 +570,11 @@ export default function HomePage() {
                   href={`/project/${project.id}`}
                   className="block"
                 >
-                  {/* Thumbnail */}
-                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                    {project.thumbnail ? (
-                      <img 
-                        src={project.thumbnail} 
-                        alt={project.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-2xl font-bold text-gray-300">3D</div>
-                      </div>
-                    )}
-                  </div>
+                  {/* 3D Preview */}
+                  <MiniViewer 
+                    clayObjects={project.clayObjects || []}
+                    className="aspect-square"
+                  />
 
                   {/* Content */}
                   <div className="p-3">

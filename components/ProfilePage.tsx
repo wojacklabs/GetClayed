@@ -11,6 +11,7 @@ import { ChunkUploadProgress } from './ChunkUploadProgress'
 import { ConnectWallet } from './ConnectWallet'
 import { AnimatedClayLogo } from './AnimatedClayLogo'
 import RoyaltyDashboard from './RoyaltyDashboard'
+import MiniViewer from './MiniViewer'
 import Link from 'next/link'
 
 interface ProfilePageProps {
@@ -1073,27 +1074,12 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                   className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
-                  {/* Thumbnail */}
-                  <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden relative">
-                    {projectThumbnails.has(project.id) ? (
-                      <img 
-                        src={projectThumbnails.get(project.id)} 
-                        alt={project.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-gray-300 flex items-center justify-center h-full">
-                        {loadingThumbnails.has(project.id) ? (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                            <div className="w-8 h-8 border-3 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                          </div>
-                        ) : (
-                          <div className="text-2xl font-bold">3D</div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Ownership Badge */}
+                  {/* 3D Preview */}
+                  <div className="relative">
+                    <MiniViewer 
+                      clayObjects={(project as any).clayObjects || []}
+                      className="aspect-square"
+                    />
                     <div className="absolute top-2 left-2">
                       <span className="text-xs px-2 py-1 bg-gray-800 bg-opacity-90 text-white rounded">
                         Created
