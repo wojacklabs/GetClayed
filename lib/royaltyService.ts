@@ -28,8 +28,7 @@ export interface LibraryDependency {
 export async function processLibraryPurchasesAndRoyalties(
   projectId: string,
   usedLibraries: LibraryDependency[],
-  paymentToken: 'ETH' | 'USDC' = 'ETH',
-  walletAddress?: string
+  customProvider?: any
 ): Promise<{ success: boolean; totalCost: number; alreadyOwned: number; error?: string }> {
   try {
     if (usedLibraries.length === 0) {
@@ -37,75 +36,70 @@ export async function processLibraryPurchasesAndRoyalties(
     }
     
     let totalCost = 0;
-    let alreadyOwned = 0;
     
-    // Check which libraries are already purchased
-    const purchasedLibraries = new Set<string>();
+    // Calculate total royalties (both ETH and USDC)
+    let totalRoyaltyETH = 0;
+    let totalRoyaltyUSDC = 0;
     
-    // Get user's owned library assets if wallet is available
-    if (walletAddress && typeof window !== 'undefined' && window.ethereum) {
-      try {
-        const { getUserLibraryAssets } = await import('./libraryService');
-        const ownedAssets = await getUserLibraryAssets(walletAddress);
-        ownedAssets.forEach(id => purchasedLibraries.add(id));
-      } catch (error) {
-        console.warn('[RoyaltyService] Could not fetch owned assets');
-      }
-    }
-    
-    // Purchase each library asset (skip if already owned)
     for (const library of usedLibraries) {
-      if (purchasedLibraries.has(library.projectId)) {
-        console.log('[RoyaltyService] Skipping already owned library:', library.name);
-        alreadyOwned++;
-        continue;
-      }
-      
-      const price = paymentToken === 'ETH' 
-        ? parseFloat(library.royaltyPerImportETH) 
-        : parseFloat(library.royaltyPerImportUSDC);
-      
-      if (price > 0) {
-        let result;
-        if (paymentToken === 'ETH') {
-          result = await purchaseLibraryAssetWithETH(library.projectId, price);
-        } else {
-          result = await purchaseLibraryAssetWithUSDC(library.projectId, price);
-        }
-        
-        if (!result.success) {
-          throw new Error(`Failed to purchase ${library.name}: ${result.error}`);
-        }
-        
-        totalCost += price;
-      }
+      totalRoyaltyETH += parseFloat(library.royaltyPerImportETH || '0');
+      totalRoyaltyUSDC += parseFloat(library.royaltyPerImportUSDC || '0');
     }
     
-    // Register royalties on blockchain
-    if (ROYALTY_CONTRACT_ADDRESS && typeof window !== 'undefined' && window.ethereum) {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+    console.log('[RoyaltyService] Total royalties - ETH:', totalRoyaltyETH, 'USDC:', totalRoyaltyUSDC);
+    
+    // Pay royalties via ClayRoyalty contract
+    if (ROYALTY_CONTRACT_ADDRESS) {
+      let provider, signer;
+      if (customProvider) {
+        provider = new ethers.BrowserProvider(customProvider);
+        signer = await provider.getSigner();
+      } else {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+      }
       
       const contract = new ethers.Contract(
         ROYALTY_CONTRACT_ADDRESS,
-        ROYALTY_CONTRACT_ABI,
+        [
+          'function recordRoyalties(string projectId, uint256 price, uint8 paymentToken) external payable',
+          'function registerProjectRoyalties(string projectId, string[] dependencyIds) external'
+        ],
         signer
       );
       
-    const dependencyIds = usedLibraries.map(lib => lib.projectId);
+      // Pay ETH royalties
+      if (totalRoyaltyETH > 0) {
+        const royaltyWei = ethers.parseEther(totalRoyaltyETH.toFixed(18));
+        const tx = await contract.recordRoyalties(projectId, 0, 0, { value: royaltyWei });
+        await tx.wait();
+        console.log('[RoyaltyService] Paid', totalRoyaltyETH, 'ETH in royalties');
+        totalCost += totalRoyaltyETH;
+      }
       
-    const tx = await contract.registerProjectRoyalties(
-      projectId,
-      dependencyIds
-    );
-      await tx.wait();
+      // Pay USDC royalties
+      if (totalRoyaltyUSDC > 0) {
+        const royaltyUnits = ethers.parseUnits(totalRoyaltyUSDC.toFixed(6), 6);
+        const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+        
+        const approveTx = await usdcContract.approve(ROYALTY_CONTRACT_ADDRESS, royaltyUnits);
+        await approveTx.wait();
+        
+        const tx = await contract.recordRoyalties(projectId, 0, 1);
+        await tx.wait();
+        console.log('[RoyaltyService] Paid', totalRoyaltyUSDC, 'USDC');
+        totalCost += totalRoyaltyUSDC;
+      }
       
-      console.log('[RoyaltyService] Registered royalties for', usedLibraries.length, 'dependencies');
+      // Register dependencies
+      const dependencyIds = usedLibraries.map(lib => lib.projectId);
+      const regTx = await contract.registerProjectRoyalties(projectId, dependencyIds);
+      await regTx.wait();
     }
     
-    return { success: true, totalCost, alreadyOwned };
+    return { success: true, totalCost, alreadyOwned: 0 };
   } catch (error: any) {
-    console.error('[RoyaltyService] Error processing libraries:', error);
+    console.error('[RoyaltyService] Error:', error);
     return { success: false, totalCost: 0, alreadyOwned: 0, error: error.message };
   }
 }

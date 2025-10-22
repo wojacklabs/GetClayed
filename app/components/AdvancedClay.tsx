@@ -3064,15 +3064,19 @@ export default function AdvancedClay() {
       // Step 2: Process library purchases and register royalties
       if (usedLibraries.length > 0) {
         try {
-          onProgress?.('Processing library purchases...')
-          const { processLibraryPurchasesAndRoyalties } = await import('../../lib/royaltyService')
+          onProgress?.('Processing library royalties...')
           
-          // TODO: Let user choose payment method
+          // Get Privy provider
+          let provider = null;
+          if (wallets && wallets.length > 0) {
+            provider = await wallets[0].getEthereumProvider();
+          }
+          
+          const { processLibraryPurchasesAndRoyalties } = await import('../../lib/royaltyService')
           const result = await processLibraryPurchasesAndRoyalties(
             serialized.id,
             usedLibraries,
-            'ETH', // Default to ETH for now
-            walletAddress
+            provider
           )
           
           if (!result.success) {
