@@ -87,12 +87,17 @@ export async function registerLibraryAsset(
     
     let signer;
     if (customProvider) {
-      console.log('[LibraryService] Using custom provider (Privy)');
+      console.log('[LibraryService] Using custom provider (Privy) for register');
       const provider = new ethers.BrowserProvider(customProvider);
       signer = await provider.getSigner();
+      const signerAddress = await signer.getAddress();
+      console.log('[LibraryService] Signer address:', signerAddress);
     } else {
+      console.log('[LibraryService] Using getWalletProvider for register');
       const result = await getWalletProvider();
       signer = result.signer;
+      const signerAddress = await signer.getAddress();
+      console.log('[LibraryService] Signer address:', signerAddress);
     }
     
     // Create contract instance
@@ -111,9 +116,13 @@ export async function registerLibraryAsset(
       throw new Error('Invalid royalty format. Please enter a valid number');
     }
     
+    console.log('[LibraryService] Calling registerAsset contract method...');
     // Register asset on blockchain (royalty amounts, not prices!)
     const tx = await contract.registerAsset(projectId, name, description, royaltyETHWei, royaltyUSDCUnits);
+    console.log('[LibraryService] Transaction sent, hash:', tx.hash);
+    console.log('[LibraryService] Waiting for confirmation...');
     await tx.wait();
+    console.log('[LibraryService] Transaction confirmed!');
     
     // Also tag the project on Irys as a library asset
     const libraryMetadata = {
@@ -164,13 +173,21 @@ export async function deactivateLibraryAsset(
       return { success: true };
     }
     
+    console.log('[LibraryService] Deactivating asset, customProvider:', !!customProvider);
+    
     let signer;
     if (customProvider) {
+      console.log('[LibraryService] Using custom provider (Privy) for deactivate');
       const provider = new ethers.BrowserProvider(customProvider);
       signer = await provider.getSigner();
+      const signerAddress = await signer.getAddress();
+      console.log('[LibraryService] Signer address:', signerAddress);
     } else {
+      console.log('[LibraryService] Using getWalletProvider for deactivate');
       const result = await getWalletProvider();
       signer = result.signer;
+      const signerAddress = await signer.getAddress();
+      console.log('[LibraryService] Signer address:', signerAddress);
     }
     
     const contract = new ethers.Contract(
@@ -181,18 +198,26 @@ export async function deactivateLibraryAsset(
     
     // Check if asset is registered
     try {
+      console.log('[LibraryService] Checking if asset is registered...');
       const asset = await contract.getAsset(projectId);
+      console.log('[LibraryService] Asset found, isActive:', asset.isActive);
       if (!asset.isActive) {
         // Already inactive, skip
+        console.log('[LibraryService] Asset already inactive, skipping');
         return { success: true };
       }
     } catch (error) {
       // Not registered in library, skip
+      console.log('[LibraryService] Asset not registered in library, skipping');
       return { success: true };
     }
     
+    console.log('[LibraryService] Calling deactivateAsset contract method...');
     const tx = await contract.deactivateAsset(projectId);
+    console.log('[LibraryService] Transaction sent, hash:', tx.hash);
+    console.log('[LibraryService] Waiting for confirmation...');
     await tx.wait();
+    console.log('[LibraryService] Transaction confirmed!');
     
     console.log('[LibraryService] Asset deactivated:', projectId);
     return { success: true, txHash: tx.hash };

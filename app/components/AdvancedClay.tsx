@@ -2269,15 +2269,18 @@ export default function AdvancedClay() {
         onConfirm: async () => {
           try {
             let provider = null;
+            console.log('[RemoveFromLibrary] Wallets available:', wallets?.length || 0);
             if (wallets && wallets.length > 0) {
               try {
                 provider = await wallets[0].getEthereumProvider();
+                console.log('[RemoveFromLibrary] Got Privy provider:', !!provider);
               } catch (error) {
                 console.error('[RemoveFromLibrary] Failed to get provider:', error);
               }
             }
             
             const { deactivateLibraryAsset } = await import('../../lib/libraryService');
+            console.log('[RemoveFromLibrary] Calling deactivateLibraryAsset with provider:', !!provider);
             const result = await deactivateLibraryAsset(projectId, provider);
             
             if (result.success) {
