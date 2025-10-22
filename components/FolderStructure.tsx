@@ -27,6 +27,7 @@ interface FolderStructureProps {
   onFolderDelete: (folderPath: string) => Promise<void>;
   onProjectRename: (projectId: string, newName: string) => void;
   onAddToLibrary?: (projectId: string) => void;
+  onRemoveFromLibrary?: (projectId: string) => void;
   currentFolder: string;
   onFolderChange?: (folderPath: string) => void;
 }
@@ -44,6 +45,7 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
   onFolderDelete,
   onProjectRename,
   onAddToLibrary,
+  onRemoveFromLibrary,
   currentFolder,
   onFolderChange
 }, ref) => {
