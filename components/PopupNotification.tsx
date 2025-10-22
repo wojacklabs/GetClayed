@@ -14,6 +14,14 @@ export interface PopupConfig {
   autoClose?: boolean
   autoCloseDelay?: number
   showCloseButton?: boolean
+  confirmButton?: {
+    text: string
+    onConfirm: () => void
+  }
+  cancelButton?: {
+    text: string
+    onCancel: () => void
+  }
 }
 
 interface PopupNotificationProps extends PopupConfig {}
@@ -26,7 +34,9 @@ export function PopupNotification({
   onClose,
   autoClose = true,
   autoCloseDelay = 5000,
-  showCloseButton = true
+  showCloseButton = true,
+  confirmButton,
+  cancelButton
 }: PopupNotificationProps) {
   const [isVisible, setIsVisible] = useState(false)
 
@@ -35,7 +45,8 @@ export function PopupNotification({
       // Delay to trigger animation
       setTimeout(() => setIsVisible(true), 10)
       
-      if (autoClose && autoCloseDelay > 0) {
+      // Don't auto-close if there are confirm/cancel buttons
+      if (autoClose && autoCloseDelay > 0 && !confirmButton && !cancelButton) {
         const timer = setTimeout(() => {
           handleClose()
         }, autoCloseDelay)
@@ -44,13 +55,29 @@ export function PopupNotification({
     } else {
       setIsVisible(false)
     }
-  }, [isOpen, autoClose, autoCloseDelay])
+  }, [isOpen, autoClose, autoCloseDelay, confirmButton, cancelButton])
 
   const handleClose = () => {
     setIsVisible(false)
     setTimeout(() => {
       onClose?.()
     }, 300) // Wait for animation to complete
+  }
+
+  const handleConfirm = () => {
+    setIsVisible(false)
+    setTimeout(() => {
+      confirmButton?.onConfirm()
+      onClose?.()
+    }, 300)
+  }
+
+  const handleCancel = () => {
+    setIsVisible(false)
+    setTimeout(() => {
+      cancelButton?.onCancel()
+      onClose?.()
+    }, 300)
   }
 
   if (!isOpen) return null
@@ -88,7 +115,27 @@ export function PopupNotification({
             {message}
           </div>
         </div>
-        {showCloseButton && (
+        {/* Show confirm/cancel buttons if provided, otherwise show close button */}
+        {confirmButton || cancelButton ? (
+          <div className="flex justify-end gap-2">
+            {cancelButton && (
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg transition-all text-sm font-medium"
+              >
+                {cancelButton.text}
+              </button>
+            )}
+            {confirmButton && (
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all text-sm font-medium"
+              >
+                {confirmButton.text}
+              </button>
+            )}
+          </div>
+        ) : showCloseButton ? (
           <div className="flex justify-end">
             <button
               onClick={handleClose}
@@ -97,7 +144,7 @@ export function PopupNotification({
               OK
             </button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
