@@ -36,6 +36,7 @@ import FolderStructure, { FolderStructureHandle } from '../../components/FolderS
 import { ConnectWallet } from '../../components/ConnectWallet'
 import { AnimatedClayLogo } from '../../components/AnimatedClayLogo'
 import { useWallets } from '@privy-io/react-auth'
+import MiniViewer from '../../components/MiniViewer'
 import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject, uploadProjectThumbnail, downloadProjectThumbnail } from '../../lib/clayStorageService'
 import { registerLibraryAsset } from '../../lib/libraryService'
 import { captureSceneThumbnail, compressImageDataUrl } from '../../lib/thumbnailService'
@@ -4753,22 +4754,21 @@ export default function AdvancedClay() {
                     )
                     .map((asset) => (
                       <div key={asset.projectId} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                        <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                          <div className="text-2xl font-bold text-gray-300">3D</div>
-                        </div>
+                        <MiniViewer 
+                          projectId={asset.projectId}
+                          className="aspect-square"
+                        />
                         <div className="p-3">
                           <h4 className="text-sm font-medium text-gray-900 truncate mb-1">{asset.name}</h4>
                           <p className="text-xs text-gray-500 mb-2 truncate">{asset.description}</p>
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="text-xs">
-                              {parseFloat(asset.priceETH || '0') > 0 && (
-                                <div className="font-bold text-gray-900">{asset.priceETH} ETH</div>
-                              )}
-                              {parseFloat(asset.priceUSDC || '0') > 0 && (
-                                <div className="font-bold text-gray-900">{asset.priceUSDC} USDC</div>
-                              )}
-                            </div>
-                            <span className="text-xs text-gray-500">{asset.purchaseCount} uses</span>
+                          <div className="text-xs mb-2">
+                            {parseFloat(asset.royaltyPerImportETH || '0') > 0 && (
+                              <div className="font-bold text-gray-900">{asset.royaltyPerImportETH} ETH</div>
+                            )}
+                            {parseFloat(asset.royaltyPerImportUSDC || '0') > 0 && (
+                              <div className="font-bold text-gray-900">{asset.royaltyPerImportUSDC} USDC</div>
+                            )}
+                            <div className="text-gray-500">per import</div>
                           </div>
                           <button
                             onClick={() => handleImportFromLibrary(asset)}

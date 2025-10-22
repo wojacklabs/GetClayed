@@ -10,6 +10,7 @@ import { downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
+import MiniViewer from '@/components/MiniViewer'
 
 export default function LibraryPage() {
   const router = useRouter()
@@ -196,20 +197,11 @@ export default function LibraryPage() {
                   href={`/library/${asset.projectId}`}
                   className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-gray-200 group block"
                 >
-                  {/* Thumbnail */}
-                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                    {thumbnails.get(asset.projectId) ? (
-                      <img
-                        src={thumbnails.get(asset.projectId)}
-                        alt={asset.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-2xl font-bold text-gray-300">3D</div>
-                      </div>
-                    )}
-                  </div>
+                  {/* 3D Preview */}
+                  <MiniViewer 
+                    projectId={asset.projectId}
+                    className="aspect-square"
+                  />
                   
                   {/* Content */}
                   <div className="p-3">
