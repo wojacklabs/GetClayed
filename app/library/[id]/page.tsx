@@ -144,15 +144,14 @@ export default function LibraryDetailPage() {
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{asset.name}</h1>
               <p className="text-gray-600 mb-4">{asset.description || 'No description'}</p>
               
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <p className="text-xs text-gray-500">ETH Price</p>
-                  <p className="text-xl font-bold text-gray-900">{asset.royaltyPerImportETH || '0'} ETH</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">USDC Price</p>
-                  <p className="text-xl font-bold text-gray-900">{asset.royaltyPerImportUSDC || '0'} USDC</p>
-                </div>
+              <div className="mb-6">
+                <p className="text-xs text-gray-500 mb-2">Royalty Per Import</p>
+                {parseFloat(asset.royaltyPerImportETH || '0') > 0 && (
+                  <p className="text-xl font-bold text-gray-900">{asset.royaltyPerImportETH} ETH</p>
+                )}
+                {parseFloat(asset.royaltyPerImportUSDC || '0') > 0 && (
+                  <p className="text-xl font-bold text-gray-900">{asset.royaltyPerImportUSDC} USDC</p>
+                )}
               </div>
               
               <div className="flex items-center gap-4 text-sm text-gray-600 mb-6">

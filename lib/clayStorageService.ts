@@ -34,9 +34,9 @@ export interface ClayGroup {
 export interface UsedLibrary {
   projectId: string;
   name: string;
-  priceETH: string;
-  priceUSDC: string;
-  creator: string;
+  royaltyPerImportETH: string;
+  royaltyPerImportUSDC: string;
+  creator?: string;
 }
 
 export interface ClayProject {
