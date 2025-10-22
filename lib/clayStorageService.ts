@@ -662,7 +662,7 @@ export async function deleteClayProject(
     { name: 'App-Name', value: 'GetClayed' },
     { name: 'Data-Type', value: 'project-deletion' },
     { name: 'Project-ID', value: projectId },
-    { name: 'Deleted-By', value: walletAddress },
+    { name: 'Deleted-By', value: walletAddress.toLowerCase() },
     { name: 'Deleted-At', value: Date.now().toString() }
   ];
   
