@@ -4,7 +4,7 @@ import { USDC_ADDRESS, USDC_ABI, purchaseLibraryAssetWithETH, purchaseLibraryAss
 export const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS || '';
 
 export const ROYALTY_CONTRACT_ABI = [
-  "function registerProjectRoyalties(string projectId, string[] dependencyIds, address[] dependencyCreators, uint256[] dependencyPricesETH, uint256[] dependencyPricesUSDC) external",
+  "function registerProjectRoyalties(string projectId, string[] dependencyIds) external",
   "function validatePrice(string projectId, uint256 priceETH, uint256 priceUSDC) external view returns (bool)",
   "function getTotalRoyalties(string projectId) external view returns (uint256 totalETH, uint256 totalUSDC)",
   "function getProjectDependencies(string projectId) external view returns (tuple(string projectId, address creator, uint256 royaltyETH, uint256 royaltyUSDC)[])"
@@ -13,9 +13,9 @@ export const ROYALTY_CONTRACT_ABI = [
 export interface LibraryDependency {
   projectId: string;
   name: string;
-  priceETH: string;
-  priceUSDC: string;
-  creator: string;
+  royaltyPerImportETH: string;
+  royaltyPerImportUSDC: string;
+  creator?: string;
 }
 
 /**
@@ -62,8 +62,8 @@ export async function processLibraryPurchasesAndRoyalties(
       }
       
       const price = paymentToken === 'ETH' 
-        ? parseFloat(library.priceETH) 
-        : parseFloat(library.priceUSDC);
+        ? parseFloat(library.royaltyPerImportETH) 
+        : parseFloat(library.royaltyPerImportUSDC);
       
       if (price > 0) {
         let result;
@@ -92,22 +92,12 @@ export async function processLibraryPurchasesAndRoyalties(
         signer
       );
       
-      const dependencyIds = usedLibraries.map(lib => lib.projectId);
-      const dependencyCreators = usedLibraries.map(lib => lib.creator);
-      const dependencyPricesETH = usedLibraries.map(lib => 
-        ethers.parseEther(lib.priceETH || '0')
-      );
-      const dependencyPricesUSDC = usedLibraries.map(lib => 
-        ethers.parseUnits(lib.priceUSDC || '0', 6)
-      );
+    const dependencyIds = usedLibraries.map(lib => lib.projectId);
       
-      const tx = await contract.registerProjectRoyalties(
-        projectId,
-        dependencyIds,
-        dependencyCreators,
-        dependencyPricesETH,
-        dependencyPricesUSDC
-      );
+    const tx = await contract.registerProjectRoyalties(
+      projectId,
+      dependencyIds
+    );
       await tx.wait();
       
       console.log('[RoyaltyService] Registered royalties for', usedLibraries.length, 'dependencies');
@@ -130,13 +120,13 @@ export async function calculateMinimumPrice(
     return { minETH: 0, minUSDC: 0 };
   }
   
-  // Calculate 10% of each library's price
+  // Sum up direct royalty amounts
   const minETH = usedLibraries.reduce((sum, lib) => {
-    return sum + (parseFloat(lib.priceETH || '0') * 0.1);
+    return sum + parseFloat(lib.royaltyPerImportETH || '0');
   }, 0);
   
   const minUSDC = usedLibraries.reduce((sum, lib) => {
-    return sum + (parseFloat(lib.priceUSDC || '0') * 0.1);
+    return sum + parseFloat(lib.royaltyPerImportUSDC || '0');
   }, 0);
   
   return { minETH, minUSDC };

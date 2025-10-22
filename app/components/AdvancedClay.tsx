@@ -159,32 +159,7 @@ function SceneBackground({ color }: { color: string }) {
 }
 
 // Individual Clay Component
-// Thumbnail capture component
-function ThumbnailCapture({ captureRequested, onCapture }: { captureRequested: boolean, onCapture: (dataUrl: string) => void }) {
-  const { gl, scene, camera } = useThree()
-  
-  useEffect(() => {
-    if (captureRequested) {
-      const capture = async () => {
-        try {
-          console.log('[ThumbnailCapture] Starting thumbnail capture...')
-          const thumbnail = await captureSceneThumbnail(gl, scene, camera, 2560, 1920)
-          console.log('[ThumbnailCapture] Raw thumbnail captured, size:', thumbnail.length)
-          const compressed = await compressImageDataUrl(thumbnail, 1200, 0.92)
-          console.log('[ThumbnailCapture] Compressed thumbnail, size:', compressed.length)
-          onCapture(compressed)
-        } catch (error) {
-          console.error('[ThumbnailCapture] Failed to capture thumbnail:', error)
-          onCapture('')
-        }
-      }
-      // Add a small delay to ensure the scene is properly rendered
-      setTimeout(capture, 100)
-    }
-  }, [captureRequested, gl, scene, camera, onCapture])
-  
-  return null
-}
+// Thumbnail capture removed - using MiniViewer instead
 
 function Clay({ 
   clay, 
@@ -2165,9 +2140,9 @@ export default function AdvancedClay() {
   const [usedLibraries, setUsedLibraries] = useState<Array<{
     projectId: string;
     name: string;
-    priceETH: string;
-    priceUSDC: string;
-    creator: string;
+    royaltyPerImportETH: string;
+    royaltyPerImportUSDC: string;
+    creator?: string;
   }>>([])
   const [pendingLibraryPurchases, setPendingLibraryPurchases] = useState<Set<string>>(new Set())
   
@@ -2191,8 +2166,7 @@ export default function AdvancedClay() {
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportProjectName, setExportProjectName] = useState('')
   const [showNewFileModal, setShowNewFileModal] = useState(false)
-  const [captureRequested, setCaptureRequested] = useState(false)
-  const [capturedThumbnail, setCapturedThumbnail] = useState<string | null>(null)
+  // Thumbnail capture removed - using MiniViewer instead
   const thumbnailResolveRef = useRef<((value: string) => void) | null>(null)
   
   // Track current project
@@ -2423,14 +2397,21 @@ export default function AdvancedClay() {
       const librariesToAdd = [{
         projectId: asset.projectId,
         name: asset.name,
-        priceETH: asset.priceETH || '0',
-        priceUSDC: asset.priceUSDC || '0',
+        royaltyPerImportETH: asset.royaltyPerImportETH || '0',
+        royaltyPerImportUSDC: asset.royaltyPerImportUSDC || '0',
         creator: asset.originalCreator || asset.currentOwner
       }]
       
-      // Add nested dependencies if they exist
+      // Add nested dependencies if they exist (convert old format to new)
       if (project.usedLibraries && project.usedLibraries.length > 0) {
-        librariesToAdd.push(...project.usedLibraries)
+        const converted = project.usedLibraries.map((lib: any) => ({
+          projectId: lib.projectId,
+          name: lib.name,
+          royaltyPerImportETH: lib.royaltyPerImportETH || lib.priceETH || '0',
+          royaltyPerImportUSDC: lib.royaltyPerImportUSDC || lib.priceUSDC || '0',
+          creator: lib.creator
+        }));
+        librariesToAdd.push(...converted);
       }
       
       // Avoid duplicates
@@ -3072,55 +3053,8 @@ export default function AdvancedClay() {
         return
       }
       
-      // Capture thumbnail
-      let thumbnailId: string | undefined = undefined;
-      
-      // Step 1: Capture thumbnail first
-      console.log('[Save] Step 4: Capturing thumbnail...')
-      onProgress?.('Capturing thumbnail...')
-      
-      // Reset previous thumbnail
-      setCapturedThumbnail(null);
-      
-      // Request thumbnail capture and wait for it
-      const thumbnailDataUrl = await new Promise<string>((resolve) => {
-        // Store the resolve function
-        thumbnailResolveRef.current = resolve;
-        
-        // Request capture
-        setCaptureRequested(true);
-        
-        // Set up timeout
-        setTimeout(() => {
-          if (thumbnailResolveRef.current === resolve) {
-            console.warn('[Save] Thumbnail capture timeout after 10 seconds');
-            thumbnailResolveRef.current = null;
-            setCaptureRequested(false);
-            resolve('');
-          }
-        }, 10000);
-      });
-      
-      // Step 2: Upload thumbnail if captured successfully
-      if (thumbnailDataUrl && thumbnailDataUrl !== '') {
-        try {
-          console.log('[Save] Step 5: Uploading thumbnail...');
-          console.log('[Save] Thumbnail data URL length:', thumbnailDataUrl.length);
-          onProgress?.('Uploading thumbnail...')
-          const result = await uploadProjectThumbnail(
-            thumbnailDataUrl,
-            projectId
-          );
-          thumbnailId = result || undefined;
-          console.log('[Save] Step 6: Thumbnail uploaded:', thumbnailId);
-        } catch (error) {
-          console.error('[Save] Failed to upload thumbnail:', error);
-          // Continue without thumbnail
-        }
-      } else {
-        console.log('[Save] Step 5: No thumbnail captured - dataUrl is empty or null')
-        console.log('[Save] thumbnailDataUrl value:', thumbnailDataUrl)
-      }
+      // Thumbnail removed - using 3D MiniViewer instead
+      console.log('[Save] Step 4: Skipping thumbnail (using MiniViewer)');
       
       // Check project size
       const jsonString = JSON.stringify(serialized);
@@ -3168,7 +3102,7 @@ export default function AdvancedClay() {
         projectId: serialized.id,
         currentFolder,
         rootTxId,
-        thumbnailId,
+        undefined, // thumbnailId removed
         dataSize: JSON.stringify(serialized).length
       })
       
@@ -3184,7 +3118,7 @@ export default function AdvancedClay() {
             const percent = Math.round(progress.percentage)
             onProgress?.(`Uploading chunks... ${percent}%`)
           },
-          thumbnailId
+          undefined // thumbnailId removed
         )
         console.log('[Save] Step 12: Upload completed, result:', uploadResult)
       } catch (uploadError: any) {
@@ -3938,25 +3872,12 @@ export default function AdvancedClay() {
               clayObjects={clayObjects}
               hoveredPoint={hoveredPoint}
               onCoordsUpdate={setCameraRelativeCoords}
-              isCapturing={captureRequested}
+              isCapturing={false}
             />
           )}
           
           <Environment preset="studio" />
           
-          {/* Thumbnail capture component */}
-          <ThumbnailCapture 
-            captureRequested={captureRequested}
-            onCapture={(dataUrl) => {
-              setCapturedThumbnail(dataUrl)
-              setCaptureRequested(false)
-              // Resolve the promise if waiting
-              if (thumbnailResolveRef.current) {
-                thumbnailResolveRef.current(dataUrl)
-                thumbnailResolveRef.current = null
-              }
-            }}
-          />
         </Suspense>
       </Canvas>
       
