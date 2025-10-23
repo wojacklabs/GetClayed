@@ -2023,7 +2023,8 @@ function RaycasterManager({
   updateClay,
   setSelectedClayId,
   removeClay,
-  setIsDraggingFromClay
+  setIsDraggingFromClay,
+  controlsRef
 }: {
   tool: string
   currentColor: string
@@ -2032,6 +2033,7 @@ function RaycasterManager({
   setSelectedClayId: (id: string | null) => void
   removeClay: (id: string) => void
   setIsDraggingFromClay: (dragging: boolean) => void
+  controlsRef: React.RefObject<any>
 }) {
   const { camera, raycaster, gl, scene } = useThree()
   
@@ -2048,7 +2050,7 @@ function RaycasterManager({
       // Check if clicking on a clay object
       let hitClay = false
       scene.traverse((child) => {
-        if (child instanceof THREE.Mesh && child.userData.clayId) {
+        if (child instanceof THREE.Mesh && child.userData.clayId && !child.userData.isOutline) {
           const intersects = raycaster.intersectObject(child, false)
           if (intersects.length > 0) {
             hitClay = true
@@ -2057,12 +2059,31 @@ function RaycasterManager({
       })
       
       // Set dragging state - if started on clay, prevent camera rotation
-      setIsDraggingFromClay(hitClay)
+      if (hitClay) {
+        setIsDraggingFromClay(true)
+        // Immediately disable controls
+        if (controlsRef.current) {
+          controlsRef.current.enabled = false
+        }
+        console.log('[RaycasterManager] Pointer down on clay - disabling camera rotation')
+      } else {
+        setIsDraggingFromClay(false)
+        // Enable controls for background drag
+        if (controlsRef.current) {
+          controlsRef.current.enabled = true
+        }
+        console.log('[RaycasterManager] Pointer down on background - enabling camera rotation')
+      }
     }
     
     const handlePointerUp = () => {
       // Reset dragging state
+      console.log('[RaycasterManager] Pointer up - resetting drag state')
       setIsDraggingFromClay(false)
+      // Re-enable controls after drag ends
+      if (controlsRef.current) {
+        controlsRef.current.enabled = true
+      }
     }
     
     const handlePointerClick = (event: PointerEvent) => {
@@ -2130,15 +2151,16 @@ function RaycasterManager({
       }
     }
     
-    gl.domElement.addEventListener('pointerdown', handlePointerDown)
-    gl.domElement.addEventListener('pointerup', handlePointerUp)
+    // Use capture phase to handle events before TrackballControls
+    gl.domElement.addEventListener('pointerdown', handlePointerDown, true)
+    gl.domElement.addEventListener('pointerup', handlePointerUp, true)
     gl.domElement.addEventListener('click', handlePointerClick)
     return () => {
-      gl.domElement.removeEventListener('pointerdown', handlePointerDown)
-      gl.domElement.removeEventListener('pointerup', handlePointerUp)
+      gl.domElement.removeEventListener('pointerdown', handlePointerDown, true)
+      gl.domElement.removeEventListener('pointerup', handlePointerUp, true)
       gl.domElement.removeEventListener('click', handlePointerClick)
     }
-  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, setIsDraggingFromClay, camera, raycaster, gl, scene])
+  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, setIsDraggingFromClay, controlsRef, camera, raycaster, gl, scene])
   
   return null
 }
@@ -2158,6 +2180,7 @@ export default function AdvancedClay() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [copiedClay, setCopiedClay] = useState<ClayObject | null>(null)
   const [isDraggingFromClay, setIsDraggingFromClay] = useState(false)
+  const controlsRef = useRef<any>(null)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
   const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
@@ -3978,7 +4001,9 @@ export default function AdvancedClay() {
           <directionalLight position={[-10, -10, -5]} intensity={0.3} />
           
           <TrackballControls 
-            enabled={!isDeforming && !selectedClayId && !isDraggingFromClay}
+            ref={controlsRef}
+            enabled={!isDeforming}
+            makeDefault={false}
             rotateSpeed={1.5}
             zoomSpeed={1.5}
             noPan={true}
@@ -4003,6 +4028,7 @@ export default function AdvancedClay() {
             setSelectedClayId={setSelectedClayId}
             removeClay={removeClay}
             setIsDraggingFromClay={setIsDraggingFromClay}
+            controlsRef={controlsRef}
           />
           
           {/* Clay Objects */}
