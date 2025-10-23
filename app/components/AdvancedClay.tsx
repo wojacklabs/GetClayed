@@ -6,7 +6,6 @@ import { useRef, useState, useEffect, Suspense, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import * as THREE from 'three'
 import { 
-  SwitchCamera,
   Move, 
   Plus,
   Undo,
@@ -32,7 +31,7 @@ import {
   X,
   Copy,
   Clipboard,
-  RotateCcw as ResetCamera
+  Video
 } from 'lucide-react'
 import SaveButton from '../../components/SaveButton'
 import FolderStructure, { FolderStructureHandle } from '../../components/FolderStructure'
@@ -2023,7 +2022,8 @@ function RaycasterManager({
   clayObjects, 
   updateClay,
   setSelectedClayId,
-  removeClay
+  removeClay,
+  setIsDraggingFromClay
 }: {
   tool: string
   currentColor: string
@@ -2031,10 +2031,40 @@ function RaycasterManager({
   updateClay: (clay: ClayObject) => void
   setSelectedClayId: (id: string | null) => void
   removeClay: (id: string) => void
+  setIsDraggingFromClay: (dragging: boolean) => void
 }) {
   const { camera, raycaster, gl, scene } = useThree()
   
   useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      // Calculate mouse position
+      const rect = gl.domElement.getBoundingClientRect()
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      const mouse = new THREE.Vector2(x, y)
+      
+      raycaster.setFromCamera(mouse, camera)
+      
+      // Check if clicking on a clay object
+      let hitClay = false
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.userData.clayId) {
+          const intersects = raycaster.intersectObject(child, false)
+          if (intersects.length > 0) {
+            hitClay = true
+          }
+        }
+      })
+      
+      // Set dragging state - if started on clay, prevent camera rotation
+      setIsDraggingFromClay(hitClay)
+    }
+    
+    const handlePointerUp = () => {
+      // Reset dragging state
+      setIsDraggingFromClay(false)
+    }
+    
     const handlePointerClick = (event: PointerEvent) => {
       // Prevent default touch behavior
       if (event.pointerType === 'touch') {
@@ -2049,15 +2079,6 @@ function RaycasterManager({
       
       // Update the picking ray with the camera and mouse position
       raycaster.setFromCamera(mouse, camera)
-      
-      // Find all intersections
-      const meshes: THREE.Mesh[] = []
-      clayObjects.forEach(clay => {
-        const mesh = gl.domElement.querySelector(`[data-clay-id="${clay.id}"]`)
-        if (mesh && mesh instanceof THREE.Mesh) {
-          meshes.push(mesh)
-        }
-      })
       
       // Get all intersections
       const allIntersects: THREE.Intersection[] = []
@@ -2109,11 +2130,15 @@ function RaycasterManager({
       }
     }
     
+    gl.domElement.addEventListener('pointerdown', handlePointerDown)
+    gl.domElement.addEventListener('pointerup', handlePointerUp)
     gl.domElement.addEventListener('click', handlePointerClick)
     return () => {
+      gl.domElement.removeEventListener('pointerdown', handlePointerDown)
+      gl.domElement.removeEventListener('pointerup', handlePointerUp)
       gl.domElement.removeEventListener('click', handlePointerClick)
     }
-  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, camera, raycaster, gl, scene])
+  }, [tool, currentColor, clayObjects, updateClay, setSelectedClayId, removeClay, setIsDraggingFromClay, camera, raycaster, gl, scene])
   
   return null
 }
@@ -2124,7 +2149,7 @@ export default function AdvancedClay() {
   const { showPopup } = usePopup()
   const router = useRouter()
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
-  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize' | 'group'>('rotate')
+  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize' | 'group'>('add')
   const [brushSize, setBrushSize] = useState(0.8)
   const [currentColor, setCurrentColor] = useState('#B8C5D6')
   const [detail, setDetail] = useState(48)
@@ -2132,6 +2157,7 @@ export default function AdvancedClay() {
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [copiedClay, setCopiedClay] = useState<ClayObject | null>(null)
+  const [isDraggingFromClay, setIsDraggingFromClay] = useState(false)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
   const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
@@ -3952,7 +3978,7 @@ export default function AdvancedClay() {
           <directionalLight position={[-10, -10, -5]} intensity={0.3} />
           
           <TrackballControls 
-            enabled={!isDeforming && !selectedClayId}
+            enabled={!isDeforming && !selectedClayId && !isDraggingFromClay}
             rotateSpeed={1.5}
             zoomSpeed={1.5}
             noPan={true}
@@ -3976,6 +4002,7 @@ export default function AdvancedClay() {
             updateClay={updateClay}
             setSelectedClayId={setSelectedClayId}
             removeClay={removeClay}
+            setIsDraggingFromClay={setIsDraggingFromClay}
           />
           
           {/* Clay Objects */}
@@ -4077,10 +4104,10 @@ export default function AdvancedClay() {
             setCameraResetTrigger(prev => prev + 1)
             setCameraHasChanged(false)
           }}
-          className="absolute bottom-24 right-4 p-3 rounded-full bg-white hover:bg-gray-50 text-gray-700 shadow-lg transition-all z-20 hover:scale-110 border border-gray-200"
+          className="absolute bottom-24 right-4 p-4 rounded-full bg-gray-800 hover:bg-gray-700 text-white shadow-lg transition-all z-20 hover:scale-110"
           title="Reset Camera Angle"
         >
-          <ResetCamera size={20} />
+          <Video size={24} />
         </button>
       )}
       
@@ -4097,9 +4124,9 @@ export default function AdvancedClay() {
         </svg>
       </button>
       
-      {/* Coordinate Display Overlay */}
+      {/* Coordinate Display Overlay - Moved to left bottom */}
       {(tool === 'move' || tool === 'add' || tool === 'push' || tool === 'pull') && (
-        <div className="absolute bottom-20 right-4 bg-black/70 text-white p-2 rounded-md font-mono text-xs z-10">
+        <div className="absolute bottom-4 left-4 bg-black/70 text-white p-2 rounded-md font-mono text-xs z-10">
           <div>X: {cameraRelativeCoords.x.toFixed(2)}</div>
           <div>Y: {cameraRelativeCoords.y.toFixed(2)}</div>
           <div>Z: {cameraRelativeCoords.z.toFixed(2)}</div>
@@ -4165,22 +4192,7 @@ export default function AdvancedClay() {
           <div className="flex items-center justify-center gap-2">
           {/* Main Tools */}
           <div className="flex gap-2 bg-gray-100 rounded-lg p-2">
-                          <button
-              ref={(el) => { toolButtonsRef.current['rotate'] = el }}
-              data-tool="rotate"
-              onClick={() => {
-                setTool('rotate')
-                if (tool === 'group') setShowGroupingPanel(false)
-              }}
-                className={`p-3 rounded-lg transition-all ${
-                  tool === 'rotate' 
-                    ? 'bg-gray-800 text-white shadow-md' 
-                    : 'bg-white hover:bg-gray-50 text-gray-700'
-                }`}
-                title="Rotate View"
-              >
-                <SwitchCamera size={20} />
-              </button>
+              {/* Camera rotation removed - now always available by dragging background */}
               <button
                 ref={(el) => { toolButtonsRef.current['rotateObject'] = el }}
                 onClick={() => {
