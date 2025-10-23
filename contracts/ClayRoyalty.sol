@@ -170,6 +170,20 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
         } else {
             require(msg.value == 0, "Do not send ETH for USDC royalties");
             
+            // Calculate total USDC needed
+            uint256 totalUSDC = 0;
+            for (uint256 i = 0; i < royalty.dependencies.length; i++) {
+                totalUSDC += royalty.dependencies[i].fixedRoyaltyUSDC;
+            }
+            
+            require(totalUSDC > 0, "No USDC royalties for this project");
+            
+            // Transfer USDC from payer to this contract
+            require(
+                usdcToken.transferFrom(msg.sender, address(this), totalUSDC),
+                "USDC transfer to contract failed"
+            );
+            
             // Record fixed USDC royalties for each dependency
             for (uint256 i = 0; i < royalty.dependencies.length; i++) {
                 LibraryDependency memory dep = royalty.dependencies[i];
