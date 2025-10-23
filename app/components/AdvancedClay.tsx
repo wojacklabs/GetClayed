@@ -29,7 +29,10 @@ import {
   Home,
   PenTool,
   HelpCircle,
-  X
+  X,
+  Copy,
+  Clipboard,
+  RotateCcw as ResetCamera
 } from 'lucide-react'
 import SaveButton from '../../components/SaveButton'
 import FolderStructure, { FolderStructureHandle } from '../../components/FolderStructure'
@@ -1067,6 +1070,22 @@ function CameraReset({ resetTrigger }: { resetTrigger: number }) {
       }
     }
   }, [resetTrigger, camera])
+  
+  return null
+}
+
+// Camera Change Detector
+function CameraChangeDetector({ onCameraChange }: { onCameraChange: (changed: boolean) => void }) {
+  const { camera } = useThree()
+  const initialPosition = new THREE.Vector3(5, 5, 5)
+  const threshold = 0.01 // Small threshold to account for floating point errors
+  
+  useFrame(() => {
+    const positionDistance = camera.position.distanceTo(initialPosition)
+    const hasChanged = positionDistance > threshold
+    
+    onCameraChange(hasChanged)
+  })
   
   return null
 }
@@ -2112,6 +2131,7 @@ export default function AdvancedClay() {
   const [isDeforming, setIsDeforming] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
+  const [copiedClay, setCopiedClay] = useState<ClayObject | null>(null)
   const [hoveredClayId, setHoveredClayId] = useState<string | null>(null)
   const [selectedShape, setSelectedShape] = useState<'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'>('sphere')
   const [moveSpeed, setMoveSpeed] = useState(0.5)
@@ -2148,7 +2168,7 @@ export default function AdvancedClay() {
   
   // Tool guide data
   const toolGuides = [
-    { tool: 'rotate', title: 'Camera Angle', description: 'Drag to rotate camera view' },
+    { tool: 'rotate', title: 'Camera Angle', description: 'Drag background to rotate camera (always available)' },
     { tool: 'rotateObject', title: 'Rotate Object', description: 'Drag to rotate selected object' },
     { tool: 'resize', title: 'Resize', description: 'Drag to resize selected object' },
     { tool: 'push', title: 'Push/Pull', description: 'Click and drag to deform surface' },
@@ -2163,6 +2183,7 @@ export default function AdvancedClay() {
   const [shapeCategory, setShapeCategory] = useState<'3d' | 'line' | '2d'>('3d')
   const [cameraRelativeCoords, setCameraRelativeCoords] = useState({ x: 0, y: 0, z: 0 })
   const [cameraResetTrigger, setCameraResetTrigger] = useState(0)
+  const [cameraHasChanged, setCameraHasChanged] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportProjectName, setExportProjectName] = useState('')
   const [showNewFileModal, setShowNewFileModal] = useState(false)
@@ -2415,24 +2436,41 @@ export default function AdvancedClay() {
       const project = await downloadClayProject(asset.projectId)
       const importedObjects = restoreClayObjects(project)
       
-      // Create a group for imported objects
+      // Calculate offset position to place imported objects next to existing ones
+      let offsetX = 0
+      if (clayObjects.length > 0) {
+        // Find the rightmost X position of existing objects
+        let maxX = -Infinity
+        clayObjects.forEach(clay => {
+          const x = clay.position.x
+          const size = clay.size || 2
+          maxX = Math.max(maxX, x + size)
+        })
+        // Place imported objects 3 units to the right of the rightmost object
+        offsetX = maxX + 3
+      }
+      
+      // Create a group for imported objects with offset position
       const groupId = `group-${Date.now()}`
       const importedIds = importedObjects.map(obj => {
         const newId = `clay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-        return { ...obj, id: newId, groupId }
+        // Apply offset to each imported object
+        const newPosition = obj.position.clone()
+        newPosition.x += offsetX
+        return { ...obj, id: newId, groupId, position: newPosition }
       })
       
       // Add to canvas
       const newClays = [...clayObjects, ...importedIds]
       setClayObjects(newClays)
       
-      // Create group
+      // Create group with offset position
       const newGroup: ClayGroup = {
         id: groupId,
         name: asset.name || 'Imported',
         objectIds: importedIds.map(obj => obj.id),
         mainObjectId: importedIds[0].id,
-        position: new THREE.Vector3(0, 0, 0),
+        position: new THREE.Vector3(offsetX, 0, 0),
         rotation: new THREE.Euler(0, 0, 0),
         scale: new THREE.Vector3(1, 1, 1)
       }
@@ -2479,6 +2517,90 @@ export default function AdvancedClay() {
       showPopup(error.message || 'Import failed', 'error')
     }
   }
+  
+  // Copy selected clay
+  const handleCopy = () => {
+    if (!selectedClayId) return
+    
+    const clayToCopy = clayObjects.find(c => c.id === selectedClayId)
+    if (clayToCopy) {
+      setCopiedClay(clayToCopy)
+      showPopup('Copied!', 'success')
+    }
+  }
+  
+  // Paste copied clay
+  const handlePaste = () => {
+    if (!copiedClay) return
+    
+    // Calculate offset position to place pasted object next to existing ones
+    let offsetX = 0
+    if (clayObjects.length > 0) {
+      // Find the rightmost X position of existing objects
+      let maxX = -Infinity
+      clayObjects.forEach(clay => {
+        const x = clay.position.x
+        const size = clay.size || 2
+        maxX = Math.max(maxX, x + size)
+      })
+      // Place pasted object 3 units to the right of the rightmost object
+      offsetX = maxX + 3
+    }
+    
+    // Create a new clay object with copied properties
+    const newId = `clay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const newPosition = copiedClay.position.clone()
+    newPosition.x += offsetX
+    
+    // Clone the geometry
+    const newGeometry = copiedClay.geometry.clone()
+    
+    const newClay: ClayObject = {
+      ...copiedClay,
+      id: newId,
+      position: newPosition,
+      geometry: newGeometry,
+      groupId: undefined // Remove group association
+    }
+    
+    const newClays = [...clayObjects, newClay]
+    setClayObjects(newClays)
+    addToHistory(newClays)
+    setSelectedClayId(newId)
+    showPopup('Pasted!', 'success')
+  }
+  
+  // Keyboard shortcuts for copy/paste
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if not typing in input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+      
+      // Ctrl+C or Cmd+C to copy
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault()
+        handleCopy()
+      }
+      
+      // Ctrl+V or Cmd+V to paste
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault()
+        handlePaste()
+      }
+      
+      // Ctrl+D or Cmd+D to duplicate (copy + paste)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault()
+        handleCopy()
+        setTimeout(() => handlePaste(), 100)
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedClayId, copiedClay, clayObjects])
   
   // Warn before leaving page with unsaved changes
   useEffect(() => {
@@ -3830,7 +3952,7 @@ export default function AdvancedClay() {
           <directionalLight position={[-10, -10, -5]} intensity={0.3} />
           
           <TrackballControls 
-            enabled={tool === 'rotate' && !isDeforming}
+            enabled={!isDeforming && !selectedClayId}
             rotateSpeed={1.5}
             zoomSpeed={1.5}
             noPan={true}
@@ -3842,6 +3964,9 @@ export default function AdvancedClay() {
           
           {/* Camera Reset Component */}
           <CameraReset resetTrigger={cameraResetTrigger} />
+          
+          {/* Camera Change Detector */}
+          <CameraChangeDetector onCameraChange={setCameraHasChanged} />
           
           {/* Raycaster Manager for global click handling */}
           <RaycasterManager 
@@ -3944,6 +4069,20 @@ export default function AdvancedClay() {
           
         </Suspense>
       </Canvas>
+      
+      {/* Camera Reset Floating Button - Shows when camera has moved */}
+      {cameraHasChanged && (
+        <button
+          onClick={() => {
+            setCameraResetTrigger(prev => prev + 1)
+            setCameraHasChanged(false)
+          }}
+          className="absolute bottom-24 right-4 p-3 rounded-full bg-white hover:bg-gray-50 text-gray-700 shadow-lg transition-all z-20 hover:scale-110 border border-gray-200"
+          title="Reset Camera Angle"
+        >
+          <ResetCamera size={20} />
+        </button>
+      )}
       
       {/* Library Floating Button */}
       <button
@@ -4208,6 +4347,35 @@ export default function AdvancedClay() {
             <Eraser size={20} />
           </button>
           
+          <div className="w-px h-10 bg-gray-300" />
+          
+          {/* Copy/Paste Tools */}
+          <button
+            onClick={handleCopy}
+            disabled={!selectedClayId}
+            className={`p-3 rounded-lg transition-all ${
+              selectedClayId
+                ? 'bg-white hover:bg-gray-50 text-gray-700'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+            title="Copy (Ctrl/Cmd+C)"
+          >
+            <Copy size={20} />
+          </button>
+          <button
+            onClick={handlePaste}
+            disabled={!copiedClay}
+            className={`p-3 rounded-lg transition-all ${
+              copiedClay
+                ? 'bg-white hover:bg-gray-50 text-gray-700'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+            title="Paste (Ctrl/Cmd+V)"
+          >
+            <Clipboard size={20} />
+          </button>
+          
+          <div className="w-px h-10 bg-gray-300" />
           
           {/* New File Button */}
           <button
