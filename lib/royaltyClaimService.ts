@@ -6,12 +6,15 @@ async function getWalletProvider() {
     throw new Error('Window not available');
   }
   
+  // Try window.ethereum first (works with Privy)
   const ethereum = (window as any).ethereum;
   
   if (!ethereum) {
-    throw new Error('No wallet connected. Please connect your wallet first.');
+    console.error('[RoyaltyClaimService] No ethereum provider found');
+    throw new Error('Please connect your wallet first.');
   }
   
+  console.log('[RoyaltyClaimService] Using window.ethereum provider');
   const provider = new ethers.BrowserProvider(ethereum);
   const signer = await provider.getSigner();
   

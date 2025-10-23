@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { USDC_ADDRESS, USDC_ABI, purchaseLibraryAssetWithETH, purchaseLibraryAssetWithUSDC } from './libraryService';
+import { fixedKeyUploader } from './fixedKeyUploadService';
 
 export const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS || '';
 
@@ -18,6 +19,28 @@ export interface LibraryDependency {
   creator?: string;
 }
 
+export interface RoyaltyReceipt {
+  projectId: string;
+  projectName: string;
+  payer: string;
+  libraries: Array<{
+    projectId: string;
+    name: string;
+    owner: string; // Owner at time of payment
+    royaltyETH: string;
+    royaltyUSDC: string;
+  }>;
+  totalPaidETH: string;
+  totalPaidUSDC: string;
+  timestamp: number;
+  txHashes: {
+    register?: string;
+    paymentETH?: string;
+    approveUSDC?: string;
+    paymentUSDC?: string;
+  };
+}
+
 /**
  * Process library purchases and register royalties
  * @param projectId The project being uploaded
@@ -30,7 +53,15 @@ export async function processLibraryPurchasesAndRoyalties(
   usedLibraries: LibraryDependency[],
   customProvider?: any,
   onProgress?: (message: string) => void
-): Promise<{ success: boolean; totalCostETH: number; totalCostUSDC: number; alreadyOwned: number; error?: string }> {
+): Promise<{ 
+  success: boolean; 
+  totalCostETH: number; 
+  totalCostUSDC: number; 
+  alreadyOwned: number; 
+  error?: string;
+  txHashes?: any;
+  librariesWithOwners?: any[];
+}> {
   try {
     if (usedLibraries.length === 0) {
       return { success: true, totalCostETH: 0, totalCostUSDC: 0, alreadyOwned: 0 };
@@ -95,6 +126,8 @@ export async function processLibraryPurchasesAndRoyalties(
       await regTx.wait();
       console.log('[RoyaltyService] Project royalties registered');
       
+      const txHashes: any = { register: regTx.hash };
+      
       // STEP 2: Pay ETH royalties
       if (totalRoyaltyETH > 0) {
         currentTransaction++;
@@ -105,10 +138,11 @@ export async function processLibraryPurchasesAndRoyalties(
         console.log('[RoyaltyService] Paying ETH royalties...');
         
         const royaltyWei = ethers.parseEther(totalRoyaltyETH.toFixed(18));
-        const tx = await contract.recordRoyalties(projectId, 0, 0, { value: royaltyWei });
+        const ethTx = await contract.recordRoyalties(projectId, 0, 0, { value: royaltyWei });
+        txHashes.paymentETH = ethTx.hash;
         
         onProgress?.(`[${currentTransaction}/${totalTransactions}] Waiting for ETH payment confirmation...`);
-        await tx.wait();
+        await ethTx.wait();
         console.log('[RoyaltyService] ✅ Paid', totalRoyaltyETH, 'ETH in royalties');
       }
       
@@ -126,6 +160,7 @@ export async function processLibraryPurchasesAndRoyalties(
         const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
         
         const approveTx = await usdcContract.approve(ROYALTY_CONTRACT_ADDRESS, royaltyUnits);
+        txHashes.approveUSDC = approveTx.hash;
         
         onProgress?.(`[${currentTransaction}/${totalTransactions}] Waiting for USDC approval confirmation...`);
         await approveTx.wait();
@@ -135,17 +170,64 @@ export async function processLibraryPurchasesAndRoyalties(
         onProgress?.(`[${currentTransaction}/${totalTransactions}] Paying ${totalRoyaltyUSDC.toFixed(2)} USDC royalty for: ${usdcLibraryNames}. Please sign...`);
         console.log('[RoyaltyService] Paying USDC royalties...');
         
-        const tx = await contract.recordRoyalties(projectId, 0, 1);
+        const usdcTx = await contract.recordRoyalties(projectId, 0, 1);
+        txHashes.paymentUSDC = usdcTx.hash;
         
         onProgress?.(`[${currentTransaction}/${totalTransactions}] Waiting for USDC payment confirmation...`);
-        await tx.wait();
+        await usdcTx.wait();
         console.log('[RoyaltyService] ✅ Paid', totalRoyaltyUSDC, 'USDC in royalties');
       }
+      
+      // Get current owners of each library
+      const libraryContract = new ethers.Contract(
+        process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS || '',
+        ['function getCurrentOwner(string projectId) external view returns (address)'],
+        provider
+      );
+      
+      const librariesWithOwners = await Promise.all(
+        usedLibraries.map(async (lib) => {
+          try {
+            const owner = await libraryContract.getCurrentOwner(lib.projectId);
+            return {
+              projectId: lib.projectId,
+              name: lib.name,
+              owner: owner,
+              royaltyETH: lib.royaltyPerImportETH,
+              royaltyUSDC: lib.royaltyPerImportUSDC
+            };
+          } catch (error) {
+            console.error('[RoyaltyService] Failed to get owner for', lib.projectId);
+            return {
+              projectId: lib.projectId,
+              name: lib.name,
+              owner: lib.creator || '',
+              royaltyETH: lib.royaltyPerImportETH,
+              royaltyUSDC: lib.royaltyPerImportUSDC
+            };
+          }
+        })
+      );
+      
+      return { 
+        success: true, 
+        totalCostETH: totalRoyaltyETH, 
+        totalCostUSDC: totalRoyaltyUSDC, 
+        alreadyOwned: 0,
+        txHashes,
+        librariesWithOwners
+      };
     }
     
     console.log('[RoyaltyService] ✅ All royalty transactions completed successfully');
     console.log('[RoyaltyService] Total paid - ETH:', totalRoyaltyETH, 'USDC:', totalRoyaltyUSDC);
-    return { success: true, totalCostETH: totalRoyaltyETH, totalCostUSDC: totalRoyaltyUSDC, alreadyOwned: 0 };
+    
+    return { 
+      success: true, 
+      totalCostETH: totalRoyaltyETH, 
+      totalCostUSDC: totalRoyaltyUSDC, 
+      alreadyOwned: 0
+    };
   } catch (error: any) {
     console.error('[RoyaltyService] Error:', error);
     return { success: false, totalCostETH: 0, totalCostUSDC: 0, alreadyOwned: 0, error: error.message };
@@ -155,6 +237,171 @@ export async function processLibraryPurchasesAndRoyalties(
 /**
  * Calculate minimum price based on royalties
  */
+/**
+ * Upload royalty payment receipt to Irys
+ */
+export async function uploadRoyaltyReceipt(receipt: RoyaltyReceipt): Promise<string | null> {
+  try {
+    console.log('[RoyaltyService] Uploading royalty receipt to Irys...');
+    
+    const receiptData = Buffer.from(JSON.stringify(receipt), 'utf-8');
+    const tags = [
+      { name: 'App-Name', value: 'GetClayed' },
+      { name: 'Data-Type', value: 'royalty-receipt' },
+      { name: 'Project-ID', value: receipt.projectId },
+      { name: 'Project-Name', value: receipt.projectName },
+      { name: 'Payer', value: receipt.payer.toLowerCase() },
+      { name: 'Total-ETH', value: receipt.totalPaidETH },
+      { name: 'Total-USDC', value: receipt.totalPaidUSDC },
+      { name: 'Library-Count', value: receipt.libraries.length.toString() },
+      { name: 'Timestamp', value: receipt.timestamp.toString() }
+    ];
+    
+    // Add library owners as tags for easy querying
+    receipt.libraries.forEach((lib, idx) => {
+      tags.push({ name: `Library-${idx}-ID`, value: lib.projectId });
+      tags.push({ name: `Library-${idx}-Owner`, value: lib.owner.toLowerCase() });
+    });
+    
+    const result = await fixedKeyUploader.upload(receiptData, tags);
+    const txId = typeof result === 'string' ? result : result.id;
+    console.log('[RoyaltyService] ✅ Receipt uploaded:', txId);
+    
+    return txId;
+  } catch (error) {
+    console.error('[RoyaltyService] Failed to upload receipt:', error);
+    return null;
+  }
+}
+
+/**
+ * Get royalty receipts for a user (as payer or library owner)
+ */
+export async function getRoyaltyReceipts(userAddress: string, limit: number = 100): Promise<RoyaltyReceipt[]> {
+  try {
+    const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
+    
+    // Query receipts where user is the payer
+    const payerQuery = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["royalty-receipt"] },
+            { name: "Payer", values: ["${userAddress.toLowerCase()}"] }
+          ],
+          first: ${limit},
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+              timestamp
+            }
+          }
+        }
+      }
+    `;
+    
+    // Query receipts where user is a library owner
+    const ownerQuery = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["royalty-receipt"] }
+          ],
+          first: ${limit * 2},
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+              timestamp
+              tags {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
+    
+    const [payerResponse, ownerResponse] = await Promise.all([
+      fetch(IRYS_GRAPHQL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: payerQuery })
+      }),
+      fetch(IRYS_GRAPHQL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: ownerQuery })
+      })
+    ]);
+    
+    const payerResult = await payerResponse.json();
+    const ownerResult = await ownerResponse.json();
+    
+    const receipts: RoyaltyReceipt[] = [];
+    const seenIds = new Set<string>();
+    
+    // Process payer receipts
+    const payerEdges = payerResult.data?.transactions?.edges || [];
+    for (const edge of payerEdges) {
+      try {
+        const dataResponse = await fetch(`https://uploader.irys.xyz/tx/${edge.node.id}/data`);
+        const receipt = await dataResponse.json();
+        receipts.push(receipt);
+        seenIds.add(edge.node.id);
+      } catch (error) {
+        console.error('[RoyaltyService] Failed to load receipt:', edge.node.id);
+      }
+    }
+    
+    // Process owner receipts (filter by library owner tags)
+    const ownerEdges = ownerResult.data?.transactions?.edges || [];
+    for (const edge of ownerEdges) {
+      if (seenIds.has(edge.node.id)) continue;
+      
+      const tags = edge.node.tags.reduce((acc: any, tag: any) => {
+        acc[tag.name] = tag.value;
+        return acc;
+      }, {});
+      
+      // Check if user is a library owner in this receipt
+      let isOwner = false;
+      for (let i = 0; i < 10; i++) { // Check up to 10 libraries
+        const ownerTag = tags[`Library-${i}-Owner`];
+        if (ownerTag && ownerTag.toLowerCase() === userAddress.toLowerCase()) {
+          isOwner = true;
+          break;
+        }
+      }
+      
+      if (isOwner) {
+        try {
+          const dataResponse = await fetch(`https://uploader.irys.xyz/tx/${edge.node.id}/data`);
+          const receipt = await dataResponse.json();
+          receipts.push(receipt);
+          seenIds.add(edge.node.id);
+        } catch (error) {
+          console.error('[RoyaltyService] Failed to load receipt:', edge.node.id);
+        }
+      }
+    }
+    
+    // Sort by timestamp (newest first)
+    receipts.sort((a, b) => b.timestamp - a.timestamp);
+    
+    return receipts.slice(0, limit);
+  } catch (error) {
+    console.error('[RoyaltyService] Error getting royalty receipts:', error);
+    return [];
+  }
+}
+
 export async function calculateMinimumPrice(
   usedLibraries: LibraryDependency[]
 ): Promise<{ minETH: number; minUSDC: number }> {

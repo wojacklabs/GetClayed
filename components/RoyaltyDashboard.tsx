@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { DollarSign, TrendingUp, X } from 'lucide-react'
-import { getPendingRoyalties, claimETHRoyalties, claimUSDCRoyalties, getRoyaltyEvents, RoyaltyEvent } from '../lib/royaltyClaimService'
+import { getPendingRoyalties, claimETHRoyalties, claimUSDCRoyalties } from '../lib/royaltyClaimService'
+import { getRoyaltyReceipts, RoyaltyReceipt } from '../lib/royaltyService'
 import { usePopup } from './PopupNotification'
 
 interface RoyaltyDashboardProps {
@@ -15,18 +16,20 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
   const [loading, setLoading] = useState(true)
   const [claiming, setClaiming] = useState<'eth' | 'usdc' | null>(null)
   const [showDetails, setShowDetails] = useState(false)
-  const [royaltyEvents, setRoyaltyEvents] = useState<RoyaltyEvent[]>([])
-  const [loadingEvents, setLoadingEvents] = useState(false)
-  const [eventsLoadProgress, setEventsLoadProgress] = useState({ loaded: 0, total: 0 })
+  const [royaltyReceipts, setRoyaltyReceipts] = useState<RoyaltyReceipt[]>([])
+  const [loadingReceipts, setLoadingReceipts] = useState(false)
   const { showPopup } = usePopup()
 
   useEffect(() => {
     loadPendingRoyalties()
-    // Start loading events in background
-    loadEventsProgressively()
+    // Start loading receipts in background
+    loadRoyaltyReceipts()
     
     // Refresh every 30 seconds
-    const interval = setInterval(loadPendingRoyalties, 30000)
+    const interval = setInterval(() => {
+      loadPendingRoyalties()
+      loadRoyaltyReceipts()
+    }, 30000)
     return () => clearInterval(interval)
   }, [walletAddress])
 
@@ -94,53 +97,25 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
     }
   }
 
-  const loadEventsProgressively = async () => {
+  const loadRoyaltyReceipts = async () => {
     try {
-      setLoadingEvents(true)
+      setLoadingReceipts(true)
+      console.log('[RoyaltyDashboard] Loading royalty receipts from Irys...')
       
-      // Load events in very small chunks (hours) to avoid RPC limits
-      // Base network: ~2 blocks/sec, so 7200 blocks = ~1 hour
-      // Keep each range under 20,000 blocks to avoid RPC errors
-      const hoursToLoad = [1, 3, 6]; // 1h (7.2k blocks), 3h (21.6k blocks), 6h (43.2k blocks)
-      const allEvents: RoyaltyEvent[] = []
+      const receipts = await getRoyaltyReceipts(walletAddress, 100)
+      console.log('[RoyaltyDashboard] Loaded', receipts.length, 'receipts')
       
-      for (let i = 0; i < hoursToLoad.length; i++) {
-        const hours = hoursToLoad[i]
-        const startHours = i > 0 ? hoursToLoad[i - 1] : 0
-        
-        setEventsLoadProgress({ loaded: i, total: hoursToLoad.length })
-        
-        try {
-          console.log(`[RoyaltyDashboard] Loading events from ${startHours}h to ${hours}h ago`)
-          const events = await getRoyaltyEvents(walletAddress, startHours, hours)
-          
-          // Append new events
-          allEvents.push(...events)
-          
-          // Update state with accumulated events (sort by newest first)
-          setRoyaltyEvents([...allEvents].sort((a, b) => b.timestamp - a.timestamp))
-          
-          // Delay between requests to prevent rate limiting
-          if (i < hoursToLoad.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-          }
-        } catch (error) {
-          console.error(`[RoyaltyDashboard] Error loading events for ${hours} hours:`, error)
-          // Continue with next range even if this one fails
-        }
-      }
-      
-      setEventsLoadProgress({ loaded: hoursToLoad.length, total: hoursToLoad.length })
+      setRoyaltyReceipts(receipts)
     } catch (error) {
-      console.error('Error loading royalty events:', error)
+      console.error('[RoyaltyDashboard] Error loading receipts:', error)
     } finally {
-      setLoadingEvents(false)
+      setLoadingReceipts(false)
     }
   }
   
   const handleShowDetails = () => {
     setShowDetails(true)
-    // Events are already loading in background
+    // Receipts are already loading in background
   }
 
   const hasPendingRoyalties = parseFloat(pendingETH) > 0 || parseFloat(pendingUSDC) > 0
@@ -224,80 +199,99 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              {loadingEvents ? (
+              {loadingReceipts && royaltyReceipts.length === 0 ? (
                 <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse"></div>
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-32 bg-gray-100 rounded-lg animate-pulse"></div>
                   ))}
                 </div>
-              ) : royaltyEvents.length === 0 && !loadingEvents ? (
+              ) : royaltyReceipts.length === 0 ? (
                 <div className="text-center py-12">
                   <TrendingUp size={32} className="text-gray-300 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">No royalty history yet</p>
+                  <p className="text-xs text-gray-400 mt-1">Payment receipts will appear here</p>
                 </div>
               ) : (
-                <>
-                  <div className="space-y-3">
-                    {royaltyEvents.map((event, idx) => (
+                <div className="space-y-4">
+                  {royaltyReceipts.map((receipt, idx) => (
                     <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{receipt.projectName}</p>
+                          <p className="text-xs text-gray-500">{new Date(receipt.timestamp).toLocaleString()}</p>
+                        </div>
                         <span className={`text-xs font-medium px-2 py-1 rounded ${
-                          event.type === 'recorded' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'
+                          receipt.payer.toLowerCase() === walletAddress.toLowerCase()
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-green-100 text-green-700'
                         }`}>
-                          {event.type === 'recorded' ? 'Earned' : 'Claimed'}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(event.timestamp).toLocaleDateString()}
+                          {receipt.payer.toLowerCase() === walletAddress.toLowerCase() ? 'Paid' : 'Earned'}
                         </span>
                       </div>
                       
-                      {event.projectId && (
-                        <p className="text-sm text-gray-700 mb-1">Project: {event.projectId.slice(0, 12)}...</p>
+                      <div className="space-y-2 mb-3">
+                        {receipt.libraries.map((lib, libIdx) => (
+                          <div key={libIdx} className="text-xs bg-white p-2 rounded border border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-700">{lib.name}</span>
+                              <span className="text-gray-900 font-medium">
+                                {parseFloat(lib.royaltyETH) > 0 && `${parseFloat(lib.royaltyETH).toFixed(6)} ETH`}
+                                {parseFloat(lib.royaltyUSDC) > 0 && `${parseFloat(lib.royaltyUSDC).toFixed(4)} USDC`}
+                              </span>
+                            </div>
+                            <div className="text-gray-500 mt-1">
+                              Owner: {lib.owner.slice(0, 6)}...{lib.owner.slice(-4)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">Total:</span>
+                        <div className="text-right">
+                          {parseFloat(receipt.totalPaidETH) > 0 && (
+                            <div className="text-sm font-bold text-gray-900">
+                              {parseFloat(receipt.totalPaidETH).toFixed(6)} ETH
+                            </div>
+                          )}
+                          {parseFloat(receipt.totalPaidUSDC) > 0 && (
+                            <div className="text-sm font-bold text-gray-900">
+                              {parseFloat(receipt.totalPaidUSDC).toFixed(4)} USDC
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {receipt.txHashes.paymentETH && (
+                        <a
+                          href={`https://basescan.org/tx/${receipt.txHashes.paymentETH}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-gray-500 hover:text-gray-700 mt-2 inline-block"
+                        >
+                          View ETH tx →
+                        </a>
                       )}
-                      
-                      <div className="flex items-center gap-4 text-sm">
-                        {parseFloat(event.amountETH) > 0 && (
-                          <span className="text-gray-900 font-medium">
-                            {parseFloat(event.amountETH).toFixed(4)} ETH
-                          </span>
-                        )}
-                        {parseFloat(event.amountUSDC) > 0 && (
-                          <span className="text-gray-900 font-medium">
-                            {parseFloat(event.amountUSDC).toFixed(4)} USDC
-                          </span>
-                        )}
-                      </div>
-                      
-                      <a
-                        href={`https://basescan.org/tx/${event.txHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-gray-500 hover:text-gray-700 mt-2 inline-block"
-                      >
-                        View tx →
-                      </a>
+                      {receipt.txHashes.paymentUSDC && (
+                        <a
+                          href={`https://basescan.org/tx/${receipt.txHashes.paymentUSDC}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-gray-500 hover:text-gray-700 mt-2 inline-block ml-4"
+                        >
+                          View USDC tx →
+                        </a>
+                      )}
                     </div>
                   ))}
-                  </div>
                   
-                  {/* Loading progress indicator */}
-                  {loadingEvents && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Loading more history...</span>
-                        <span className="text-xs text-gray-500">
-                          {eventsLoadProgress.loaded}/{eventsLoadProgress.total} periods
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5">
-                        <div 
-                          className="bg-gray-800 h-1.5 rounded-full transition-all duration-300"
-                          style={{ width: `${(eventsLoadProgress.loaded / eventsLoadProgress.total) * 100}%` }}
-                        />
-                      </div>
+                  {loadingReceipts && (
+                    <div className="text-center py-4">
+                      <div className="inline-block w-6 h-6 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin"></div>
+                      <p className="text-xs text-gray-500 mt-2">Loading more...</p>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
             
