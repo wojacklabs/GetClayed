@@ -49,6 +49,7 @@ export interface RoyaltyEvent {
 export async function getPendingRoyalties(userAddress: string): Promise<PendingRoyalties> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
+    const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
     
     console.log('[RoyaltyClaimService] Getting pending royalties for:', userAddress);
     console.log('[RoyaltyClaimService] Royalty contract address:', ROYALTY_CONTRACT_ADDRESS);
@@ -58,12 +59,14 @@ export async function getPendingRoyalties(userAddress: string): Promise<PendingR
       return { eth: '0', usdc: '0' };
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      console.error('[RoyaltyClaimService] ❌ No ethereum provider available');
+    if (typeof window === 'undefined') {
+      console.error('[RoyaltyClaimService] ❌ Window not available');
       return { eth: '0', usdc: '0' };
     }
     
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    // Use public RPC provider (no wallet needed for reading)
+    console.log('[RoyaltyClaimService] Using public RPC provider:', BASE_RPC_URL);
+    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, provider);
     
     console.log('[RoyaltyClaimService] Calling getPendingRoyalties...');
