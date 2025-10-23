@@ -236,8 +236,8 @@
       ]
     },
     "/Users/USER/web3/getclayed/contracts/ClayRoyalty.sol": {
-      "lastModificationDate": 1761031093694,
-      "contentHash": "8dc816bae5e3f1a63f55d6c1a9e39544",
+      "lastModificationDate": 1761211359150,
+      "contentHash": "3004be62d7ffa6dfe1f3f270e24d0984",
       "sourceName": "ClayRoyalty.sol",
       "solcConfig": {
         "version": "0.8.20",
