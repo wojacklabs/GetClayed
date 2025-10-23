@@ -3337,7 +3337,7 @@ export default function AdvancedClay() {
             provider = await wallets[0].getEthereumProvider();
           }
           
-          const { processLibraryPurchasesAndRoyalties } = await import('../../lib/royaltyService')
+          const { processLibraryPurchasesAndRoyalties, uploadRoyaltyReceipt } = await import('../../lib/royaltyService')
           const result = await processLibraryPurchasesAndRoyalties(
             serialized.id,
             usedLibraries,
@@ -3355,6 +3355,27 @@ export default function AdvancedClay() {
             throw new Error(result.error || 'Failed to process library purchases')
           }
           
+          // Upload royalty receipt to Irys (before project upload)
+          if (result.librariesWithOwners && result.txHashes) {
+            onProgress?.('Uploading royalty receipt...')
+            
+            const receipt = {
+              projectId: serialized.id,
+              projectName: projectName,
+              payer: walletAddress,
+              libraries: result.librariesWithOwners,
+              totalPaidETH: result.totalCostETH.toString(),
+              totalPaidUSDC: result.totalCostUSDC.toString(),
+              timestamp: Date.now(),
+              txHashes: result.txHashes
+            }
+            
+            const receiptId = await uploadRoyaltyReceipt(receipt)
+            if (receiptId) {
+              console.log('[Save] Royalty receipt uploaded:', receiptId)
+            }
+          }
+          
           const purchasedCount = usedLibraries.length - result.alreadyOwned
           if (purchasedCount > 0) {
             // Build payment message
@@ -3363,7 +3384,7 @@ export default function AdvancedClay() {
               payments.push(`${result.totalCostETH.toFixed(6)} ETH`)
             }
             if (result.totalCostUSDC > 0) {
-              payments.push(`${result.totalCostUSDC.toFixed(2)} USDC`)
+              payments.push(`${result.totalCostUSDC.toFixed(4)} USDC`)
             }
             const paymentStr = payments.join(' + ')
             
