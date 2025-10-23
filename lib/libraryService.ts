@@ -330,17 +330,20 @@ export async function queryLibraryAssets(
       
       // Get asset data from blockchain if contract is deployed
       let blockchainData: any = null;
-      if (LIBRARY_CONTRACT_ADDRESS && typeof window !== 'undefined' && window.ethereum) {
+      if (LIBRARY_CONTRACT_ADDRESS && typeof window !== 'undefined') {
         try {
-          const provider = new ethers.BrowserProvider(window.ethereum);
+          // Use public RPC provider (works without wallet connection)
+          const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+          const provider = new ethers.JsonRpcProvider(rpcUrl);
           const contract = new ethers.Contract(
             LIBRARY_CONTRACT_ADDRESS,
             LIBRARY_CONTRACT_ABI,
             provider
           );
           blockchainData = await contract.getAsset(projectId);
+          console.log('[LibraryService] Blockchain data for', projectId, '- isActive:', blockchainData.isActive);
         } catch (error) {
-          console.warn('[LibraryService] Could not fetch blockchain data for', projectId);
+          console.warn('[LibraryService] Could not fetch blockchain data for', projectId, error);
         }
       }
       
@@ -476,11 +479,13 @@ export async function getUserLibraryAssets(
       return [];
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
+    if (typeof window === 'undefined') {
       return [];
     }
     
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    // Use public RPC provider (works without wallet connection)
+    const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
     const contract = new ethers.Contract(
       LIBRARY_CONTRACT_ADDRESS,
       LIBRARY_CONTRACT_ABI,
