@@ -3324,7 +3324,14 @@ export default function AdvancedClay() {
           const result = await processLibraryPurchasesAndRoyalties(
             serialized.id,
             usedLibraries,
-            provider
+            provider,
+            (progressMsg) => {
+              // Show progress in popup
+              showPopup(progressMsg, 'info', {
+                autoClose: false,
+                showCloseButton: false
+              })
+            }
           )
           
           if (!result.success) {
@@ -3333,7 +3340,20 @@ export default function AdvancedClay() {
           
           const purchasedCount = usedLibraries.length - result.alreadyOwned
           if (purchasedCount > 0) {
-            showPopup(`Paid ${result.totalCost.toFixed(4)} ETH for ${purchasedCount} library assets${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 'success')
+            // Build payment message
+            const payments = []
+            if (result.totalCostETH > 0) {
+              payments.push(`${result.totalCostETH.toFixed(6)} ETH`)
+            }
+            if (result.totalCostUSDC > 0) {
+              payments.push(`${result.totalCostUSDC.toFixed(2)} USDC`)
+            }
+            const paymentStr = payments.join(' + ')
+            
+            showPopup(
+              `Paid ${paymentStr} for ${purchasedCount} library asset${purchasedCount > 1 ? 's' : ''}${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 
+              'success'
+            )
           } else {
             showPopup(`All ${usedLibraries.length} libraries already owned`, 'success')
           }
