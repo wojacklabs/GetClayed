@@ -68,8 +68,16 @@ export async function processLibraryPurchasesAndRoyalties(
         signer
       );
       
-      // Pay ETH royalties
+      // STEP 1: Register dependencies first (required before paying royalties)
+      const dependencyIds = usedLibraries.map(lib => lib.projectId);
+      console.log('[RoyaltyService] Registering project royalties...', { projectId, dependencyIds });
+      const regTx = await contract.registerProjectRoyalties(projectId, dependencyIds);
+      await regTx.wait();
+      console.log('[RoyaltyService] Project royalties registered');
+      
+      // STEP 2: Pay ETH royalties
       if (totalRoyaltyETH > 0) {
+        console.log('[RoyaltyService] Paying ETH royalties...');
         const royaltyWei = ethers.parseEther(totalRoyaltyETH.toFixed(18));
         const tx = await contract.recordRoyalties(projectId, 0, 0, { value: royaltyWei });
         await tx.wait();
@@ -77,8 +85,9 @@ export async function processLibraryPurchasesAndRoyalties(
         totalCost += totalRoyaltyETH;
       }
       
-      // Pay USDC royalties
+      // STEP 3: Pay USDC royalties
       if (totalRoyaltyUSDC > 0) {
+        console.log('[RoyaltyService] Paying USDC royalties...');
         const royaltyUnits = ethers.parseUnits(totalRoyaltyUSDC.toFixed(6), 6);
         const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
         
@@ -90,11 +99,6 @@ export async function processLibraryPurchasesAndRoyalties(
         console.log('[RoyaltyService] Paid', totalRoyaltyUSDC, 'USDC');
         totalCost += totalRoyaltyUSDC;
       }
-      
-      // Register dependencies
-      const dependencyIds = usedLibraries.map(lib => lib.projectId);
-      const regTx = await contract.registerProjectRoyalties(projectId, dependencyIds);
-      await regTx.wait();
     }
     
     return { success: true, totalCost, alreadyOwned: 0 };
