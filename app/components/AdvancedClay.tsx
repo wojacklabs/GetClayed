@@ -186,7 +186,7 @@ function Clay({
   onContextMenu
 }: {
   clay: ClayObject
-  tool: string
+  tool: string | null
   brushSize: number
   currentColor: string
   onUpdate: (clay: ClayObject) => void
@@ -256,7 +256,7 @@ function Clay({
       meshRef.current.material.side = THREE.DoubleSide
     }
     meshRef.current.frustumCulled = false
-  }, [clay.geometry])
+  }, [clay.geometry, clay.rotation])
   
   // Canvas event handlers
   useEffect(() => {
@@ -919,20 +919,28 @@ function Clay({
           lockY={false}
           lockZ={false}
           position={(() => {
-            // Calculate actual height of the shape
+            // Calculate world-space bounding box considering rotation
             if (!clay.geometry.boundingBox) {
               clay.geometry.computeBoundingBox()
             }
-            const box = clay.geometry.boundingBox!
-            const size = new THREE.Vector3()
-            box.getSize(size)
             
-            // Apply scale to get actual size
-            const scale = clay.scale instanceof THREE.Vector3 ? clay.scale.y : (clay.scale || 1)
-            const actualHeight = size.y * scale
+            // Create a temporary mesh to get world bounding box
+            const tempMesh = new THREE.Mesh(clay.geometry)
+            tempMesh.rotation.copy(clay.rotation || new THREE.Euler())
+            tempMesh.scale.copy(
+              clay.scale instanceof THREE.Vector3 
+                ? clay.scale 
+                : new THREE.Vector3(clay.scale || 1, clay.scale || 1, clay.scale || 1)
+            )
+            tempMesh.updateMatrixWorld()
             
-            // Position text above the shape with fixed offset
-            return [0, actualHeight * 0.5 + 0.5, 0]
+            // Compute world bounding box
+            const worldBox = new THREE.Box3().setFromObject(tempMesh)
+            const worldSize = new THREE.Vector3()
+            worldBox.getSize(worldSize)
+            
+            // Position text above the shape
+            return [0, worldSize.y * 0.5 + 0.5, 0]
           })()}
         >
           <Text
@@ -2026,7 +2034,7 @@ function RaycasterManager({
   setIsDraggingFromClay,
   controlsRef
 }: {
-  tool: string
+  tool: string | null
   currentColor: string
   clayObjects: ClayObject[]
   updateClay: (clay: ClayObject) => void
@@ -2068,11 +2076,11 @@ function RaycasterManager({
         console.log('[RaycasterManager] Pointer down on clay - disabling camera rotation')
       } else {
         setIsDraggingFromClay(false)
-        // Enable controls for background drag
-        if (controlsRef.current) {
+        // Enable controls for background drag (except when adding shapes)
+        if (controlsRef.current && tool !== 'add') {
           controlsRef.current.enabled = true
         }
-        console.log('[RaycasterManager] Pointer down on background - enabling camera rotation')
+        console.log('[RaycasterManager] Pointer down on background - camera rotation:', tool !== 'add')
       }
     }
     
@@ -2080,8 +2088,8 @@ function RaycasterManager({
       // Reset dragging state
       console.log('[RaycasterManager] Pointer up - resetting drag state')
       setIsDraggingFromClay(false)
-      // Re-enable controls after drag ends
-      if (controlsRef.current) {
+      // Re-enable controls after drag ends (except when adding shapes)
+      if (controlsRef.current && tool !== 'add') {
         controlsRef.current.enabled = true
       }
     }
@@ -2171,7 +2179,7 @@ export default function AdvancedClay() {
   const { showPopup } = usePopup()
   const router = useRouter()
   const [clayObjects, setClayObjects] = useState<ClayObject[]>([])
-  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize' | 'group'>('add')
+  const [tool, setTool] = useState<'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize' | 'group' | null>(null)
   const [brushSize, setBrushSize] = useState(0.8)
   const [currentColor, setCurrentColor] = useState('#B8C5D6')
   const [detail, setDetail] = useState(48)
@@ -2217,7 +2225,7 @@ export default function AdvancedClay() {
   
   // Tool guide data
   const toolGuides = [
-    { tool: 'rotate', title: 'Camera Angle', description: 'Drag background to rotate camera (always available)' },
+    { tool: null, title: 'Default Mode', description: 'Drag background to rotate camera. Press ESC to return here.' },
     { tool: 'rotateObject', title: 'Rotate Object', description: 'Drag to rotate selected object' },
     { tool: 'resize', title: 'Resize', description: 'Drag to resize selected object' },
     { tool: 'push', title: 'Push/Pull', description: 'Click and drag to deform surface' },
@@ -2619,11 +2627,21 @@ export default function AdvancedClay() {
     showPopup('Pasted!', 'success')
   }
   
-  // Keyboard shortcuts for copy/paste
+  // Keyboard shortcuts for copy/paste and tool deselection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle if not typing in input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+      
+      // ESC to deselect tool
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setTool(null)
+        setSelectedClayId(null)
+        setShowGroupingPanel(false)
+        console.log('[Keyboard] ESC - deselecting tool')
         return
       }
       
@@ -2649,7 +2667,7 @@ export default function AdvancedClay() {
     
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedClayId, copiedClay, clayObjects])
+  }, [selectedClayId, copiedClay, clayObjects, tool])
   
   // Warn before leaving page with unsaved changes
   useEffect(() => {
@@ -4125,16 +4143,21 @@ export default function AdvancedClay() {
       
       {/* Camera Reset Floating Button - Shows when camera has moved */}
       {cameraHasChanged && (
-        <button
-          onClick={() => {
-            setCameraResetTrigger(prev => prev + 1)
-            setCameraHasChanged(false)
-          }}
-          className="absolute bottom-24 right-4 p-4 rounded-full bg-gray-800 hover:bg-gray-700 text-white shadow-lg transition-all z-20 hover:scale-110"
-          title="Reset Camera Angle"
-        >
-          <Video size={24} />
-        </button>
+        <div className="absolute bottom-24 right-4 z-20 flex flex-col items-center gap-1">
+          <button
+            onClick={() => {
+              setCameraResetTrigger(prev => prev + 1)
+              setCameraHasChanged(false)
+            }}
+            className="p-4 rounded-full bg-gray-800 hover:bg-gray-700 text-white shadow-lg transition-all hover:scale-110"
+            title="Reset Camera Angle"
+          >
+            <Video size={24} />
+          </button>
+          <span className="text-xs text-gray-600 font-medium bg-white/90 px-2 py-0.5 rounded shadow-sm">
+            Reset
+          </span>
+        </div>
       )}
       
       {/* Library Floating Button */}
@@ -4467,22 +4490,7 @@ export default function AdvancedClay() {
             </div>
           </div>
           
-          {/* Context-specific controls */}
-          {tool === 'rotate' && (
-            <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-2">
-              <button
-                onClick={() => {
-                  // Trigger camera reset
-                  setCameraResetTrigger(prev => prev + 1)
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all"
-                title="Reset camera to initial position"
-              >
-                <RotateCcw size={16} />
-                <span className="text-sm">Reset Camera</span>
-              </button>
-            </div>
-          )}
+          {/* Context-specific controls - rotate tool removed */}
           
           {tool === 'paint' && !showGroupingPanel && (
             <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-2">
@@ -5199,7 +5207,7 @@ export default function AdvancedClay() {
       {/* Tool Guide Tooltip */}
       {showGuide && (() => {
         const currentTool = toolGuides[guideStep].tool
-        const buttonElement = toolButtonsRef.current[currentTool]
+        const buttonElement = currentTool ? toolButtonsRef.current[currentTool] : null
         
         let tooltipStyle: React.CSSProperties = {
           bottom: '8rem',
