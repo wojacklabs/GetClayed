@@ -138,14 +138,17 @@ export async function claimUSDCRoyalties(): Promise<string> {
 }
 
 /**
- * Get royalty events for a user (last 100)
+ * Get royalty events for a user
+ * @param userAddress User wallet address
+ * @param startDays Start from this many days ago
+ * @param endDays End at this many days ago
  */
-export async function getRoyaltyEvents(userAddress: string): Promise<RoyaltyEvent[]> {
+export async function getRoyaltyEvents(userAddress: string, startDays: number = 0, endDays: number = 1): Promise<RoyaltyEvent[]> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
     const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
     
-    console.log('[RoyaltyClaimService] Getting royalty events for:', userAddress);
+    console.log('[RoyaltyClaimService] Getting royalty events for:', userAddress, `(days ${startDays}-${endDays})`);
     
     if (!ROYALTY_CONTRACT_ADDRESS || typeof window === 'undefined') {
       console.log('[RoyaltyClaimService] Cannot get events - contract not configured or window unavailable');
@@ -153,26 +156,27 @@ export async function getRoyaltyEvents(userAddress: string): Promise<RoyaltyEven
     }
     
     // Use public RPC provider (no wallet needed for reading events)
-    console.log('[RoyaltyClaimService] Using public RPC for events');
     const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, provider);
     
-    // Get recent blocks (last ~7 days on Base, ~2 blocks/sec)
+    // Calculate block range
     const currentBlock = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, currentBlock - 604800); // ~7 days
+    const blocksPerDay = 43200; // ~24 hours (2 blocks/sec * 86400 sec)
+    const fromBlock = Math.max(0, currentBlock - (endDays * blocksPerDay));
+    const toBlock = currentBlock - (startDays * blocksPerDay);
     
-    console.log('[RoyaltyClaimService] Scanning blocks', fromBlock, 'to', currentBlock);
+    console.log('[RoyaltyClaimService] Scanning blocks', fromBlock, 'to', toBlock, `(days ${startDays}-${endDays})`);
     
     // Query RoyaltyRecorded events
     console.log('[RoyaltyClaimService] Querying RoyaltyRecorded events...');
     const recordedFilter = contract.filters.RoyaltyRecorded(null, userAddress);
-    const recordedEvents = await contract.queryFilter(recordedFilter, fromBlock, 'latest');
+    const recordedEvents = await contract.queryFilter(recordedFilter, fromBlock, toBlock);
     console.log('[RoyaltyClaimService] Found', recordedEvents.length, 'recorded events');
     
     // Query RoyaltyClaimed events
     console.log('[RoyaltyClaimService] Querying RoyaltyClaimed events...');
     const claimedFilter = contract.filters.RoyaltyClaimed(userAddress);
-    const claimedEvents = await contract.queryFilter(claimedFilter, fromBlock, 'latest');
+    const claimedEvents = await contract.queryFilter(claimedFilter, fromBlock, toBlock);
     console.log('[RoyaltyClaimService] Found', claimedEvents.length, 'claimed events');
     
     const events: RoyaltyEvent[] = [];

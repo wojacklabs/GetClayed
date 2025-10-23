@@ -17,10 +17,13 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
   const [showDetails, setShowDetails] = useState(false)
   const [royaltyEvents, setRoyaltyEvents] = useState<RoyaltyEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
+  const [eventsLoadProgress, setEventsLoadProgress] = useState({ loaded: 0, total: 0 })
   const { showPopup } = usePopup()
 
   useEffect(() => {
     loadPendingRoyalties()
+    // Start loading events in background
+    loadEventsProgressively()
     
     // Refresh every 30 seconds
     const interval = setInterval(loadPendingRoyalties, 30000)
@@ -91,17 +94,51 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
     }
   }
 
-  const handleShowDetails = async () => {
-    setShowDetails(true)
-    setLoadingEvents(true)
+  const loadEventsProgressively = async () => {
     try {
-      const events = await getRoyaltyEvents(walletAddress)
-      setRoyaltyEvents(events)
+      setLoadingEvents(true)
+      
+      // Load events in chunks (30 days at a time, going back in time)
+      const daysToLoad = [1, 7, 30, 90]; // Progressive loading: 1 day, then 7 days, then 30 days, then 90 days
+      const allEvents: RoyaltyEvent[] = []
+      
+      for (let i = 0; i < daysToLoad.length; i++) {
+        const days = daysToLoad[i]
+        const startDay = i > 0 ? daysToLoad[i - 1] : 0
+        
+        setEventsLoadProgress({ loaded: i, total: daysToLoad.length })
+        
+        try {
+          console.log(`[RoyaltyDashboard] Loading events from day ${startDay} to ${days}`)
+          const events = await getRoyaltyEvents(walletAddress, startDay, days)
+          
+          // Append new events
+          allEvents.push(...events)
+          
+          // Update state with accumulated events
+          setRoyaltyEvents([...allEvents].sort((a, b) => b.timestamp - a.timestamp))
+          
+          // Small delay to prevent rate limiting
+          if (i < daysToLoad.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+        } catch (error) {
+          console.error(`[RoyaltyDashboard] Error loading events for ${days} days:`, error)
+          // Continue with next range even if this one fails
+        }
+      }
+      
+      setEventsLoadProgress({ loaded: daysToLoad.length, total: daysToLoad.length })
     } catch (error) {
       console.error('Error loading royalty events:', error)
     } finally {
       setLoadingEvents(false)
     }
+  }
+  
+  const handleShowDetails = () => {
+    setShowDetails(true)
+    // Events are already loading in background
   }
 
   const hasPendingRoyalties = parseFloat(pendingETH) > 0 || parseFloat(pendingUSDC) > 0
@@ -191,14 +228,15 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
                     <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse"></div>
                   ))}
                 </div>
-              ) : royaltyEvents.length === 0 ? (
+              ) : royaltyEvents.length === 0 && !loadingEvents ? (
                 <div className="text-center py-12">
                   <TrendingUp size={32} className="text-gray-300 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">No royalty history yet</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {royaltyEvents.map((event, idx) => (
+                <>
+                  <div className="space-y-3">
+                    {royaltyEvents.map((event, idx) => (
                     <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <div className="flex items-center justify-between mb-2">
                         <span className={`text-xs font-medium px-2 py-1 rounded ${
@@ -238,7 +276,26 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
                       </a>
                     </div>
                   ))}
-                </div>
+                  </div>
+                  
+                  {/* Loading progress indicator */}
+                  {loadingEvents && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">Loading more history...</span>
+                        <span className="text-xs text-gray-500">
+                          {eventsLoadProgress.loaded}/{eventsLoadProgress.total} periods
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div 
+                          className="bg-gray-800 h-1.5 rounded-full transition-all duration-300"
+                          style={{ width: `${(eventsLoadProgress.loaded / eventsLoadProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             
