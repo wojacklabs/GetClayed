@@ -72,7 +72,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
     try {
       const txHash = await claimUSDCRoyalties()
       showPopup(
-        `Successfully claimed ${parseFloat(pendingUSDC).toFixed(2)} USDC`,
+        `Successfully claimed ${parseFloat(pendingUSDC).toFixed(4)} USDC`,
         'success',
         { title: 'Royalties Claimed!' }
       )
@@ -156,7 +156,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
             {parseFloat(pendingUSDC) > 0 && (
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-xs text-gray-600 mb-1">USDC</p>
-                <p className="text-2xl font-bold text-gray-900 mb-3">{parseFloat(pendingUSDC).toFixed(2)}</p>
+                <p className="text-2xl font-bold text-gray-900 mb-3">{parseFloat(pendingUSDC).toFixed(4)}</p>
                 <button
                   onClick={handleClaimUSDC}
                   disabled={claiming !== null}
@@ -172,7 +172,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
 
       {/* Royalty Details Modal */}
       {showDetails && (
-        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-black bg-opacity-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-[10000] p-4">
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Royalty History</h3>
@@ -223,7 +223,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
                         )}
                         {parseFloat(event.amountUSDC) > 0 && (
                           <span className="text-gray-900 font-medium">
-                            {parseFloat(event.amountUSDC).toFixed(2)} USDC
+                            {parseFloat(event.amountUSDC).toFixed(4)} USDC
                           </span>
                         )}
                       </div>
