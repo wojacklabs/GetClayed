@@ -93,7 +93,7 @@ export async function getPendingRoyalties(userAddress: string): Promise<PendingR
 /**
  * Claim pending ETH royalties
  */
-export async function claimETHRoyalties(): Promise<string> {
+export async function claimETHRoyalties(customProvider?: any): Promise<string> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
     
@@ -101,7 +101,16 @@ export async function claimETHRoyalties(): Promise<string> {
       throw new Error('Contract not configured');
     }
     
-    const { signer } = await getWalletProvider();
+    let signer;
+    if (customProvider) {
+      console.log('[RoyaltyClaimService] Using custom provider (Privy) for ETH claim');
+      const provider = new ethers.BrowserProvider(customProvider);
+      signer = await provider.getSigner();
+    } else {
+      const result = await getWalletProvider();
+      signer = result.signer;
+    }
+    
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, signer);
     
     const tx = await contract.claimRoyaltiesETH();
@@ -118,7 +127,7 @@ export async function claimETHRoyalties(): Promise<string> {
 /**
  * Claim pending USDC royalties
  */
-export async function claimUSDCRoyalties(): Promise<string> {
+export async function claimUSDCRoyalties(customProvider?: any): Promise<string> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
     
@@ -126,7 +135,16 @@ export async function claimUSDCRoyalties(): Promise<string> {
       throw new Error('Contract not configured');
     }
     
-    const { signer } = await getWalletProvider();
+    let signer;
+    if (customProvider) {
+      console.log('[RoyaltyClaimService] Using custom provider (Privy) for USDC claim');
+      const provider = new ethers.BrowserProvider(customProvider);
+      signer = await provider.getSigner();
+    } else {
+      const result = await getWalletProvider();
+      signer = result.signer;
+    }
+    
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, signer);
     
     const tx = await contract.claimRoyaltiesUSDC();

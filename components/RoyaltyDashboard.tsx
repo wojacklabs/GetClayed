@@ -5,6 +5,7 @@ import { DollarSign, TrendingUp, X } from 'lucide-react'
 import { getPendingRoyalties, claimETHRoyalties, claimUSDCRoyalties } from '../lib/royaltyClaimService'
 import { getRoyaltyReceipts, RoyaltyReceipt } from '../lib/royaltyService'
 import { usePopup } from './PopupNotification'
+import { useWallets } from '@privy-io/react-auth'
 
 interface RoyaltyDashboardProps {
   walletAddress: string
@@ -19,6 +20,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
   const [royaltyReceipts, setRoyaltyReceipts] = useState<RoyaltyReceipt[]>([])
   const [loadingReceipts, setLoadingReceipts] = useState(false)
   const { showPopup } = usePopup()
+  const { wallets } = useWallets()
 
   useEffect(() => {
     loadPendingRoyalties()
@@ -50,7 +52,18 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
     
     setClaiming('eth')
     try {
-      const txHash = await claimETHRoyalties()
+      // Get Privy provider
+      let provider = null
+      if (wallets && wallets.length > 0) {
+        try {
+          provider = await wallets[0].getEthereumProvider()
+          console.log('[RoyaltyDashboard] Got Privy provider for ETH claim')
+        } catch (error) {
+          console.error('[RoyaltyDashboard] Failed to get Privy provider:', error)
+        }
+      }
+      
+      const txHash = await claimETHRoyalties(provider)
       showPopup(
         `Successfully claimed ${parseFloat(pendingETH).toFixed(4)} ETH`,
         'success',
@@ -76,7 +89,18 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
     
     setClaiming('usdc')
     try {
-      const txHash = await claimUSDCRoyalties()
+      // Get Privy provider
+      let provider = null
+      if (wallets && wallets.length > 0) {
+        try {
+          provider = await wallets[0].getEthereumProvider()
+          console.log('[RoyaltyDashboard] Got Privy provider for USDC claim')
+        } catch (error) {
+          console.error('[RoyaltyDashboard] Failed to get Privy provider:', error)
+        }
+      }
+      
+      const txHash = await claimUSDCRoyalties(provider)
       showPopup(
         `Successfully claimed ${parseFloat(pendingUSDC).toFixed(4)} USDC`,
         'success',
