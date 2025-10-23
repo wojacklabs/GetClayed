@@ -140,15 +140,15 @@ export async function claimUSDCRoyalties(): Promise<string> {
 /**
  * Get royalty events for a user
  * @param userAddress User wallet address
- * @param startDays Start from this many days ago
- * @param endDays End at this many days ago
+ * @param startHours Start from this many hours ago
+ * @param endHours End at this many hours ago
  */
-export async function getRoyaltyEvents(userAddress: string, startDays: number = 0, endDays: number = 1): Promise<RoyaltyEvent[]> {
+export async function getRoyaltyEvents(userAddress: string, startHours: number = 0, endHours: number = 3): Promise<RoyaltyEvent[]> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
     const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
     
-    console.log('[RoyaltyClaimService] Getting royalty events for:', userAddress, `(days ${startDays}-${endDays})`);
+    console.log('[RoyaltyClaimService] Getting royalty events for:', userAddress, `(${startHours}h-${endHours}h ago)`);
     
     if (!ROYALTY_CONTRACT_ADDRESS || typeof window === 'undefined') {
       console.log('[RoyaltyClaimService] Cannot get events - contract not configured or window unavailable');
@@ -159,13 +159,14 @@ export async function getRoyaltyEvents(userAddress: string, startDays: number = 
     const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, provider);
     
-    // Calculate block range
+    // Calculate block range (Base: ~2 blocks/sec)
     const currentBlock = await provider.getBlockNumber();
-    const blocksPerDay = 43200; // ~24 hours (2 blocks/sec * 86400 sec)
-    const fromBlock = Math.max(0, currentBlock - (endDays * blocksPerDay));
-    const toBlock = currentBlock - (startDays * blocksPerDay);
+    const blocksPerHour = 7200; // ~1 hour (2 blocks/sec * 3600 sec)
+    const fromBlock = Math.max(0, currentBlock - (endHours * blocksPerHour));
+    const toBlock = currentBlock - (startHours * blocksPerHour);
     
-    console.log('[RoyaltyClaimService] Scanning blocks', fromBlock, 'to', toBlock, `(days ${startDays}-${endDays})`);
+    const blockRange = toBlock - fromBlock;
+    console.log('[RoyaltyClaimService] Scanning blocks', fromBlock, 'to', toBlock, `(${blockRange} blocks, ${startHours}h-${endHours}h ago)`);
     
     // Query RoyaltyRecorded events
     console.log('[RoyaltyClaimService] Querying RoyaltyRecorded events...');
