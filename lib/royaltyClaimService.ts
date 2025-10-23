@@ -50,13 +50,23 @@ export async function getPendingRoyalties(userAddress: string): Promise<PendingR
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
     
-    if (!ROYALTY_CONTRACT_ADDRESS || typeof window === 'undefined' || !window.ethereum) {
+    console.log('[RoyaltyClaimService] Getting pending royalties for:', userAddress);
+    console.log('[RoyaltyClaimService] Royalty contract address:', ROYALTY_CONTRACT_ADDRESS);
+    
+    if (!ROYALTY_CONTRACT_ADDRESS) {
+      console.error('[RoyaltyClaimService] ❌ Royalty contract address not configured');
+      return { eth: '0', usdc: '0' };
+    }
+    
+    if (typeof window === 'undefined' || !window.ethereum) {
+      console.error('[RoyaltyClaimService] ❌ No ethereum provider available');
       return { eth: '0', usdc: '0' };
     }
     
     const provider = new ethers.BrowserProvider(window.ethereum);
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, provider);
     
+    console.log('[RoyaltyClaimService] Calling getPendingRoyalties...');
     const [ethWei, usdcRaw] = await contract.getPendingRoyalties(userAddress);
     
     // Convert from wei to ETH (18 decimals)
@@ -65,9 +75,11 @@ export async function getPendingRoyalties(userAddress: string): Promise<PendingR
     // Convert from raw USDC (6 decimals)
     const usdc = ethers.formatUnits(usdcRaw, 6);
     
+    console.log('[RoyaltyClaimService] ✅ Pending royalties - ETH:', eth, 'USDC:', usdc);
+    
     return { eth, usdc };
   } catch (error) {
-    console.error('[RoyaltyService] Error getting pending royalties:', error);
+    console.error('[RoyaltyClaimService] ❌ Error getting pending royalties:', error);
     return { eth: '0', usdc: '0' };
   }
 }

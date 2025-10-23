@@ -2669,6 +2669,23 @@ export default function AdvancedClay() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedClayId, copiedClay, clayObjects, tool])
   
+  // Mouse wheel for brush size adjustment (push/pull tools)
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      // Only adjust brush size when push/pull tool is active and hovering over clay
+      if ((tool === 'push' || tool === 'pull') && hoveredClayId) {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        const delta = e.deltaY > 0 ? -0.05 : 0.05
+        setBrushSize(prev => Math.max(0.1, Math.min(2.0, prev + delta)))
+      }
+    }
+    
+    window.addEventListener('wheel', handleWheel, { passive: false })
+    return () => window.removeEventListener('wheel', handleWheel)
+  }, [tool, hoveredClayId])
+  
   // Warn before leaving page with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -3452,21 +3469,21 @@ export default function AdvancedClay() {
       console.log('Loading project:', projectId)
       
       // Initial loading message
-      let projectName = 'Loading project...';
+      let projectName = 'project...';
       
       // Download project from Irys with progress callback
       const project = await downloadClayProject(projectId, (progress) => {
         setChunkDownloadProgress({
           ...progress,
           isOpen: true,
-          projectName: projectName
+          projectName: `Loading ${projectName}`
         });
       })
       console.log('Downloaded project:', project)
       
       // Update with actual project name
       projectName = project.name || 'Untitled';
-      setChunkDownloadProgress(prev => ({ ...prev, projectName: `Loading ${projectName} project` }))
+      setChunkDownloadProgress(prev => ({ ...prev, projectName: `Loading ${projectName}` }))
       
       // Get mutable reference info
       const mutableRef = getMutableReference(project.id);
@@ -4043,7 +4060,7 @@ export default function AdvancedClay() {
             enabled={!isDeforming}
             makeDefault={false}
             rotateSpeed={1.5}
-            zoomSpeed={1.5}
+            zoomSpeed={((tool === 'push' || tool === 'pull') && hoveredClayId) ? 0 : 1.5}
             noPan={true}
             minDistance={1}
             maxDistance={100}

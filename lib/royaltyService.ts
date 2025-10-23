@@ -51,12 +51,18 @@ export async function processLibraryPurchasesAndRoyalties(
     });
     console.log('[RoyaltyService] Total royalties - ETH:', totalRoyaltyETH, 'USDC:', totalRoyaltyUSDC);
     
+    // Check if royalty contract is deployed
+    if (!ROYALTY_CONTRACT_ADDRESS) {
+      console.error('[RoyaltyService] ❌ ROYALTY_CONTRACT_ADDRESS not configured!');
+      throw new Error('Royalty contract not deployed. Cannot process library royalties.');
+    }
+    
     // Calculate total number of transactions needed
     const totalTransactions = 1 + (totalRoyaltyETH > 0 ? 1 : 0) + (totalRoyaltyUSDC > 0 ? 2 : 0);
     let currentTransaction = 0;
     
     // Pay royalties via ClayRoyalty contract
-    if (ROYALTY_CONTRACT_ADDRESS) {
+    {
       let provider, signer;
       if (customProvider) {
         provider = new ethers.BrowserProvider(customProvider);
@@ -137,6 +143,7 @@ export async function processLibraryPurchasesAndRoyalties(
       }
     }
     
+    console.log('[RoyaltyService] ✅ All royalty transactions completed successfully');
     console.log('[RoyaltyService] Total paid - ETH:', totalRoyaltyETH, 'USDC:', totalRoyaltyUSDC);
     return { success: true, totalCostETH: totalRoyaltyETH, totalCostUSDC: totalRoyaltyUSDC, alreadyOwned: 0 };
   } catch (error: any) {
