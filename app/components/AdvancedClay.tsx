@@ -2546,12 +2546,14 @@ export default function AdvancedClay() {
             selectedShape,
             detail,
             currentProjectInfo,
+            usedLibraries: usedLibraries,
+            pendingLibraryPurchases: Array.from(pendingLibraryPurchases),
             timestamp: new Date().toISOString()
           }
           
           localStorage.setItem('clayAutoSave', JSON.stringify(autoSaveData))
           setLastAutoSave(new Date())
-          console.log('Auto-saved to localStorage')
+          console.log('Auto-saved to localStorage (with library info)')
         } catch (error) {
           console.error('Failed to auto-save:', error)
         }
@@ -2563,7 +2565,7 @@ export default function AdvancedClay() {
         clearTimeout(autoSaveTimeoutRef.current)
       }
     }
-  }, [clayObjects, clayGroups, backgroundColor, selectedShape, detail, currentProjectInfo])
+  }, [clayObjects, clayGroups, backgroundColor, selectedShape, detail, currentProjectInfo, usedLibraries, pendingLibraryPurchases])
   
   // Initialize with one clay or continue from SimpleClay
   useEffect(() => {
@@ -2628,6 +2630,17 @@ export default function AdvancedClay() {
           
           if (saved.currentProjectInfo) {
             setCurrentProjectInfo(saved.currentProjectInfo);
+          }
+          
+          // Restore library information
+          if (saved.usedLibraries && saved.usedLibraries.length > 0) {
+            console.log('[AutoSave] Restoring used libraries:', saved.usedLibraries);
+            setUsedLibraries(saved.usedLibraries);
+          }
+          
+          if (saved.pendingLibraryPurchases && saved.pendingLibraryPurchases.length > 0) {
+            console.log('[AutoSave] Restoring pending library purchases:', saved.pendingLibraryPurchases);
+            setPendingLibraryPurchases(new Set(saved.pendingLibraryPurchases));
           }
           
           showPopup('Auto-saved project restored', 'info');
