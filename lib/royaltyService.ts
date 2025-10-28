@@ -276,10 +276,15 @@ export async function uploadRoyaltyReceipt(receipt: RoyaltyReceipt): Promise<str
 
 /**
  * Get royalty receipts for a user (as payer or library owner)
+ * SECURITY: Verifies receipts are uploaded from trusted Solana address
  */
 export async function getRoyaltyReceipts(userAddress: string, limit: number = 100): Promise<RoyaltyReceipt[]> {
   try {
     const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
+    
+    // SECURITY: Trusted uploader address (from fixed Solana key)
+    // This prevents malicious users from uploading fake receipts
+    const TRUSTED_UPLOADER_ADDRESS = process.env.NEXT_PUBLIC_TRUSTED_UPLOADER_ADDRESS;
     
     // Query receipts where user is the payer
     const payerQuery = `
@@ -296,6 +301,7 @@ export async function getRoyaltyReceipts(userAddress: string, limit: number = 10
           edges {
             node {
               id
+              address
               timestamp
             }
           }
@@ -317,6 +323,7 @@ export async function getRoyaltyReceipts(userAddress: string, limit: number = 10
           edges {
             node {
               id
+              address
               timestamp
               tags {
                 name
@@ -351,6 +358,14 @@ export async function getRoyaltyReceipts(userAddress: string, limit: number = 10
     const payerEdges = payerResult.data?.transactions?.edges || [];
     for (const edge of payerEdges) {
       try {
+        // SECURITY CHECK: Verify uploader address
+        if (TRUSTED_UPLOADER_ADDRESS && edge.node.address !== TRUSTED_UPLOADER_ADDRESS) {
+          console.warn('[RoyaltyService] ⚠️ Skipping receipt from untrusted uploader:', edge.node.id);
+          console.warn(`  Expected: ${TRUSTED_UPLOADER_ADDRESS}`);
+          console.warn(`  Got: ${edge.node.address}`);
+          continue;
+        }
+        
         const dataResponse = await fetch(`https://uploader.irys.xyz/tx/${edge.node.id}/data`);
         const receipt = await dataResponse.json();
         receipts.push(receipt);
@@ -364,6 +379,12 @@ export async function getRoyaltyReceipts(userAddress: string, limit: number = 10
     const ownerEdges = ownerResult.data?.transactions?.edges || [];
     for (const edge of ownerEdges) {
       if (seenIds.has(edge.node.id)) continue;
+      
+      // SECURITY CHECK: Verify uploader address
+      if (TRUSTED_UPLOADER_ADDRESS && edge.node.address !== TRUSTED_UPLOADER_ADDRESS) {
+        console.warn('[RoyaltyService] ⚠️ Skipping receipt from untrusted uploader:', edge.node.id);
+        continue;
+      }
       
       const tags = edge.node.tags.reduce((acc: any, tag: any) => {
         acc[tag.name] = tag.value;

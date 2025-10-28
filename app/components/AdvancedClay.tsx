@@ -2357,9 +2357,9 @@ export default function AdvancedClay() {
               }
             }
             
-            const { deactivateLibraryAsset } = await import('../../lib/libraryService');
-            console.log('[RemoveFromLibrary] Calling deactivateLibraryAsset with provider:', !!provider);
-            const result = await deactivateLibraryAsset(projectId, provider);
+            const { disableLibraryRoyalty } = await import('../../lib/libraryService');
+            console.log('[RemoveFromLibrary] Calling disableLibraryRoyalty with provider:', !!provider);
+            const result = await disableLibraryRoyalty(projectId, provider);
             
             if (result.success) {
               showPopup('Removed from library', 'success');
@@ -3595,10 +3595,10 @@ export default function AdvancedClay() {
         }
       }
       
-      // Step 1: Deactivate from Library (if registered)
+      // Step 1: Disable royalty from Library (if registered)
       try {
-          const { deactivateLibraryAsset } = await import('../../lib/libraryService')
-        const result = await deactivateLibraryAsset(projectId, privyProvider)
+          const { disableLibraryRoyalty } = await import('../../lib/libraryService')
+        const result = await disableLibraryRoyalty(projectId, privyProvider)
         if (result.success && result.txHash) {
           console.log('[Delete] Library asset deactivated:', result.txHash)
         }
