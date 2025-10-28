@@ -26,9 +26,7 @@ const ROYALTY_CONTRACT_ABI = [
   'function claimRoyaltiesETH() external',
   'function claimRoyaltiesUSDC() external',
   'function pendingRoyaltiesETH(address) external view returns (uint256)',
-  'function pendingRoyaltiesUSDC(address) external view returns (uint256)',
-  'event RoyaltyRecorded(string indexed projectId, address indexed recipient, uint256 amountETH, uint256 amountUSDC)',
-  'event RoyaltyClaimed(address indexed claimant, uint256 amountETH, uint256 amountUSDC)'
+  'function pendingRoyaltiesUSDC(address) external view returns (uint256)'
 ];
 
 export interface PendingRoyalties {
@@ -38,12 +36,14 @@ export interface PendingRoyalties {
 
 export interface RoyaltyEvent {
   projectId: string;
+  projectName: string;
   recipient: string;
   amountETH: string;
   amountUSDC: string;
   timestamp: number;
-  txHash: string;
-  type: 'recorded' | 'claimed';
+  txHash?: string;
+  type: 'earned' | 'paid';
+  payer?: string;
 }
 
 /**
@@ -159,94 +159,72 @@ export async function claimUSDCRoyalties(customProvider?: any): Promise<string> 
 }
 
 /**
- * Get royalty events for a user
+ * Get royalty events for a user from Irys (GraphQL-based, fast and reliable)
  * @param userAddress User wallet address
- * @param startHours Start from this many hours ago
- * @param endHours End at this many hours ago
+ * @param hoursAgo Filter events from this many hours ago (default 24h)
+ * @param limit Maximum number of events to return
  */
-export async function getRoyaltyEvents(userAddress: string, startHours: number = 0, endHours: number = 3): Promise<RoyaltyEvent[]> {
+export async function getRoyaltyEvents(userAddress: string, hoursAgo: number = 24, limit: number = 100): Promise<RoyaltyEvent[]> {
   try {
-    const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
-    const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+    console.log(`[RoyaltyClaimService] Getting royalty events from Irys for: ${userAddress} (last ${hoursAgo}h)`);
     
-    console.log('[RoyaltyClaimService] Getting royalty events for:', userAddress, `(${startHours}h-${endHours}h ago)`);
+    // Import getRoyaltyReceipts from royaltyService
+    const { getRoyaltyReceipts } = await import('./royaltyService');
     
-    if (!ROYALTY_CONTRACT_ADDRESS || typeof window === 'undefined') {
-      console.log('[RoyaltyClaimService] Cannot get events - contract not configured or window unavailable');
-      return [];
-    }
+    // Get receipts from Irys (much faster than blockchain events)
+    const receipts = await getRoyaltyReceipts(userAddress, limit * 2);
     
-    // Use public RPC provider (no wallet needed for reading events)
-    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
-    const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, provider);
+    console.log(`[RoyaltyClaimService] Found ${receipts.length} receipts from Irys`);
     
-    // Calculate block range (Base: ~2 blocks/sec)
-    const currentBlock = await provider.getBlockNumber();
-    const blocksPerHour = 7200; // ~1 hour (2 blocks/sec * 3600 sec)
-    const fromBlock = Math.max(0, currentBlock - (endHours * blocksPerHour));
-    const toBlock = currentBlock - (startHours * blocksPerHour);
-    
-    const blockRange = toBlock - fromBlock;
-    console.log('[RoyaltyClaimService] Scanning blocks', fromBlock, 'to', toBlock, `(${blockRange} blocks, ${startHours}h-${endHours}h ago)`);
-    
-    // Query RoyaltyRecorded events
-    console.log('[RoyaltyClaimService] Querying RoyaltyRecorded events...');
-    const recordedFilter = contract.filters.RoyaltyRecorded(null, userAddress);
-    const recordedEvents = await contract.queryFilter(recordedFilter, fromBlock, toBlock);
-    console.log('[RoyaltyClaimService] Found', recordedEvents.length, 'recorded events');
-    
-    // Query RoyaltyClaimed events
-    console.log('[RoyaltyClaimService] Querying RoyaltyClaimed events...');
-    const claimedFilter = contract.filters.RoyaltyClaimed(userAddress);
-    const claimedEvents = await contract.queryFilter(claimedFilter, fromBlock, toBlock);
-    console.log('[RoyaltyClaimService] Found', claimedEvents.length, 'claimed events');
-    
+    // Convert receipts to events
     const events: RoyaltyEvent[] = [];
+    const cutoffTime = Date.now() - (hoursAgo * 60 * 60 * 1000);
     
-    // Process recorded events
-    for (const event of recordedEvents) {
-      if ('args' in event) {
-        const block = await event.getBlock();
-        const args = event.args;
-        
+    for (const receipt of receipts) {
+      // Skip old receipts
+      if (receipt.timestamp < cutoffTime) continue;
+      
+      // Check if user is the payer (paid royalties)
+      if (receipt.payer.toLowerCase() === userAddress.toLowerCase()) {
         events.push({
-          projectId: args[0],
-          recipient: args[1],
-          amountETH: ethers.formatEther(args[2]),
-          amountUSDC: ethers.formatUnits(args[3], 6),
-          timestamp: block.timestamp * 1000,
-          txHash: event.transactionHash,
-          type: 'recorded'
+          projectId: receipt.projectId,
+          projectName: receipt.projectName,
+          recipient: userAddress,
+          amountETH: receipt.totalPaidETH,
+          amountUSDC: receipt.totalPaidUSDC,
+          timestamp: receipt.timestamp,
+          txHash: receipt.txHashes?.paymentETH || receipt.txHashes?.paymentUSDC,
+          type: 'paid',
+          payer: receipt.payer
         });
       }
-    }
-    
-    // Process claimed events
-    for (const event of claimedEvents) {
-      if ('args' in event) {
-        const block = await event.getBlock();
-        const args = event.args;
-        
-        events.push({
-          projectId: '', // Claimed events don't have projectId
-          recipient: args[0],
-          amountETH: ethers.formatEther(args[1]),
-          amountUSDC: ethers.formatUnits(args[2], 6),
-          timestamp: block.timestamp * 1000,
-          txHash: event.transactionHash,
-          type: 'claimed'
-        });
+      
+      // Check if user is a library owner (earned royalties)
+      for (const lib of receipt.libraries) {
+        if (lib.owner.toLowerCase() === userAddress.toLowerCase()) {
+          events.push({
+            projectId: receipt.projectId,
+            projectName: receipt.projectName,
+            recipient: lib.owner,
+            amountETH: lib.royaltyETH,
+            amountUSDC: lib.royaltyUSDC,
+            timestamp: receipt.timestamp,
+            txHash: receipt.txHashes?.paymentETH || receipt.txHashes?.paymentUSDC,
+            type: 'earned',
+            payer: receipt.payer
+          });
+          break; // Only add once per receipt even if user owns multiple libraries
+        }
       }
     }
     
     // Sort by timestamp (newest first)
     events.sort((a, b) => b.timestamp - a.timestamp);
     
-    console.log('[RoyaltyClaimService] ✅ Total events:', events.length);
-    return events.slice(0, 100); // Return last 100 events
-  } catch (error) {
-    console.error('[RoyaltyClaimService] ❌ Error getting royalty events:', error);
-    console.error(error);
+    console.log(`[RoyaltyClaimService] ✅ Converted to ${events.length} events`);
+    return events.slice(0, limit);
+  } catch (error: any) {
+    console.error('[RoyaltyClaimService] ❌ Error getting royalty events from Irys:', error?.message || error);
     return [];
   }
 }

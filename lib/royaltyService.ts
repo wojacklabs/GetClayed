@@ -370,9 +370,12 @@ export async function getRoyaltyReceipts(userAddress: string, limit: number = 10
         return acc;
       }, {});
       
+      // Get library count from tags
+      const libraryCount = parseInt(tags['Library-Count'] || '0');
+      
       // Check if user is a library owner in this receipt
       let isOwner = false;
-      for (let i = 0; i < 10; i++) { // Check up to 10 libraries
+      for (let i = 0; i < libraryCount; i++) {
         const ownerTag = tags[`Library-${i}-Owner`];
         if (ownerTag && ownerTag.toLowerCase() === userAddress.toLowerCase()) {
           isOwner = true;
