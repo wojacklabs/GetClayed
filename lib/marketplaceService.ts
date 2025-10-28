@@ -175,14 +175,9 @@ export async function buyListedAsset(
     const tx = await contract.buyAsset(projectId, { value: priceInWei });
     const receipt = await tx.wait();
     
-    // Update mutable reference to new owner
-    // The marketplace sale transfers ownership
-    // Note: We keep the same rootTxId but update the author
-    const currentRef = getMutableReference(projectId);
-    if (currentRef) {
-      saveMutableReference(projectId, currentRef.rootTxId, currentRef.latestTxId, currentRef.projectName, buyerAddress);
-      console.log('[MarketplaceService] Updated mutable reference for new owner:', buyerAddress);
-    }
+    // Transfer ownership on Irys by re-uploading with new owner
+    console.log('[MarketplaceService] Transferring project ownership on Irys...');
+    await transferProjectOwnership(projectId, buyerAddress);
     
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
@@ -263,12 +258,9 @@ export async function acceptOffer(
     const tx = await contract.acceptOffer(offerId);
     const receipt = await tx.wait();
     
-    // Update mutable reference to new owner
-    const currentRef = getMutableReference(projectId);
-    if (currentRef) {
-      saveMutableReference(projectId, currentRef.rootTxId, currentRef.latestTxId, currentRef.projectName, buyerAddress);
-      console.log('[MarketplaceService] Updated mutable reference for new owner:', buyerAddress);
-    }
+    // Transfer ownership on Irys by re-uploading with new owner
+    console.log('[MarketplaceService] Transferring project ownership on Irys...');
+    await transferProjectOwnership(projectId, buyerAddress);
     
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
@@ -406,6 +398,81 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
   } catch (error) {
     console.error('[MarketplaceService] Error querying listings:', error);
     return [];
+  }
+}
+
+/**
+ * Transfer project ownership on Irys by re-uploading with new owner
+ * @param projectId The project ID
+ * @param newOwner New owner's wallet address
+ */
+async function transferProjectOwnership(projectId: string, newOwner: string): Promise<void> {
+  try {
+    console.log('[MarketplaceService] Starting ownership transfer for project:', projectId);
+    console.log('[MarketplaceService] New owner:', newOwner);
+    
+    // Import necessary functions
+    const { downloadClayProject, uploadClayProject } = await import('./clayStorageService');
+    const { getMutableReference, saveMutableReference } = await import('./mutableStorageService');
+    
+    // 1. Download current project
+    const currentRef = getMutableReference(projectId);
+    if (!currentRef) {
+      console.error('[MarketplaceService] No mutable reference found for project:', projectId);
+      throw new Error('Project not found in local storage');
+    }
+    
+    console.log('[MarketplaceService] Downloading project from:', currentRef.latestTxId);
+    const project = await downloadClayProject(currentRef.latestTxId);
+    
+    // 2. Update ownership data
+    const previousOwner = project.author;
+    const originalCreator = project.originalCreator || previousOwner; // First transfer sets original creator
+    const transferCount = (project.transferCount || 0) + 1;
+    
+    const updatedProject = {
+      ...project,
+      author: newOwner.toLowerCase(),
+      originalCreator: originalCreator.toLowerCase(),
+      transferredFrom: previousOwner.toLowerCase(),
+      transferredAt: Date.now(),
+      transferCount: transferCount,
+      updatedAt: Date.now()
+    };
+    
+    console.log('[MarketplaceService] Updated project ownership:');
+    console.log('  - Previous owner:', previousOwner);
+    console.log('  - New owner:', newOwner);
+    console.log('  - Original creator:', originalCreator);
+    console.log('  - Transfer count:', transferCount);
+    
+    // 3. Re-upload with new owner (keeping same Root-TX)
+    const { transactionId, rootTxId } = await uploadClayProject(
+      updatedProject,
+      undefined, // No folder change
+      currentRef.rootTxId, // Keep same root
+      undefined, // No progress callback needed
+      project.thumbnailId // Keep same thumbnail
+    );
+    
+    console.log('[MarketplaceService] Project re-uploaded:');
+    console.log('  - New transaction:', transactionId);
+    console.log('  - Root TX (unchanged):', rootTxId);
+    
+    // 4. Update mutable reference with new owner
+    saveMutableReference(
+      projectId,
+      rootTxId,
+      transactionId,
+      project.name,
+      newOwner.toLowerCase()
+    );
+    
+    console.log('[MarketplaceService] ✅ Ownership transfer complete on Irys');
+  } catch (error) {
+    console.error('[MarketplaceService] ❌ Error transferring ownership on Irys:', error);
+    // Don't throw - contract transfer already succeeded
+    // This is just metadata update on Irys
   }
 }
 

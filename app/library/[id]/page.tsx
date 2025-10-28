@@ -198,10 +198,10 @@ export default function LibraryDetailPage() {
                               }
                             }
                             
-                            const { deactivateLibraryAsset } = await import('@/lib/libraryService');
-                            const result = await deactivateLibraryAsset(assetId, provider);
+                            const { disableLibraryRoyalty } = await import('@/lib/libraryService');
+                            const result = await disableLibraryRoyalty(assetId, provider);
                             if (result.success) {
-                              showPopup('Library asset deactivated', 'success');
+                              showPopup('Library royalty disabled', 'success');
                               setTimeout(() => {
                                 window.location.reload();
                               }, 1500);

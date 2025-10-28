@@ -16,9 +16,7 @@ interface IClayLibrary {
         address,
         address,
         uint256,
-        uint256,
-        uint256,
-        uint256,
+        bool,
         bool
     );
 }
@@ -140,8 +138,8 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         require(!listings[projectId].isActive, "Asset already listed");
         
         // Verify caller owns the asset in library
-        (,,,,,address currentOwner,,,,, uint256 listedAt, bool isActive) = libraryContract.getAsset(projectId);
-        require(isActive, "Asset not found in library");
+        (,,,,,address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled) = libraryContract.getAsset(projectId);
+        require(exists, "Asset not found in library");
         require(currentOwner == msg.sender, "Only owner can list asset");
         
         Listing memory newListing = Listing({
@@ -262,8 +260,8 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         require(duration >= 1 hours && duration <= 30 days, "Invalid duration");
         
         // Verify asset exists in library
-        (,,,,,address currentOwner,,,,, uint256 listedAt, bool isActive) = libraryContract.getAsset(projectId);
-        require(isActive, "Asset not found in library");
+        (,,,,,address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled) = libraryContract.getAsset(projectId);
+        require(exists, "Asset not found in library");
         require(currentOwner != msg.sender, "Cannot offer on your own asset");
         
         // Handle payment based on token type
@@ -307,8 +305,8 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         require(block.timestamp < offer.expiresAt, "Offer expired");
         
         // Verify caller owns the asset
-        (,,,,,address currentOwner,,,,, uint256 listedAt, bool isActive) = libraryContract.getAsset(offer.projectId);
-        require(isActive, "Asset not found in library");
+        (,,,,,address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled) = libraryContract.getAsset(offer.projectId);
+        require(exists, "Asset not found in library");
         require(currentOwner == msg.sender, "Only owner can accept offer");
         
         // Calculate fees

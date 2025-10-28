@@ -324,7 +324,13 @@ export async function uploadChunkManifest(
   folder: string,
   rootTxId?: string,
   dataType: string = 'clay-project',
-  thumbnailId?: string
+  thumbnailId?: string,
+  ownershipData?: {
+    originalCreator?: string;
+    transferredFrom?: string;
+    transferredAt?: number;
+    transferCount?: number;
+  }
 ): Promise<string> {
   const manifest = {
     projectId,
@@ -359,6 +365,22 @@ export async function uploadChunkManifest(
   
   if (thumbnailId) {
     tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
+  }
+  
+  // Add ownership transfer tags if provided
+  if (ownershipData) {
+    if (ownershipData.originalCreator) {
+      tags.push({ name: 'Original-Creator', value: ownershipData.originalCreator.toLowerCase() });
+    }
+    if (ownershipData.transferredFrom) {
+      tags.push({ name: 'Transferred-From', value: ownershipData.transferredFrom.toLowerCase() });
+    }
+    if (ownershipData.transferredAt) {
+      tags.push({ name: 'Transferred-At', value: ownershipData.transferredAt.toString() });
+    }
+    if (ownershipData.transferCount) {
+      tags.push({ name: 'Transfer-Count', value: ownershipData.transferCount.toString() });
+    }
   }
   
   const uploadData = Buffer.from(JSON.stringify(manifest), 'utf-8');

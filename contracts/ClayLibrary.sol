@@ -38,7 +38,8 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         address currentOwner;       // Current owner (can change via marketplace)
         address originalCreator;    // Original creator (never changes)
         uint256 listedAt;           // Timestamp when listed
-        bool isActive;              // Whether the asset is available
+        bool exists;                // Whether the asset exists (false = deleted)
+        bool royaltyEnabled;        // Whether royalty is active (can be disabled by owner)
     }
     
     // Mapping from projectId to LibraryAsset
@@ -74,7 +75,12 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         uint256 newRoyaltyUSDC
     );
     
-    event AssetDeactivated(
+    event RoyaltyDisabled(
+        string indexed projectId,
+        address indexed owner
+    );
+    
+    event AssetDeleted(
         string indexed projectId,
         address indexed owner
     );
@@ -117,7 +123,7 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
     ) external {
         require(bytes(projectId).length > 0, "Project ID cannot be empty");
         require(royaltyPerImportETH > 0 || royaltyPerImportUSDC > 0, "At least one royalty must be set");
-        require(!libraryAssets[projectId].isActive, "Asset already registered");
+        require(!libraryAssets[projectId].exists, "Asset already registered");
         
         LibraryAsset memory newAsset = LibraryAsset({
             projectId: projectId,
@@ -128,7 +134,8 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
             currentOwner: msg.sender,
             originalCreator: msg.sender,
             listedAt: block.timestamp,
-            isActive: true
+            exists: true,
+            royaltyEnabled: true
         });
         
         libraryAssets[projectId] = newAsset;
@@ -150,7 +157,7 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         uint256 newRoyaltyUSDC
     ) external {
         LibraryAsset storage asset = libraryAssets[projectId];
-        require(asset.isActive, "Asset not available");
+        require(asset.exists, "Asset not found");
         require(msg.sender == asset.currentOwner, "Only owner can update royalty");
         require(newRoyaltyETH > 0 || newRoyaltyUSDC > 0, "At least one royalty must be set");
         
@@ -166,6 +173,12 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
      */
     function getRoyaltyFee(string memory projectId) external view returns (uint256 royaltyETH, uint256 royaltyUSDC) {
         LibraryAsset storage asset = libraryAssets[projectId];
+        
+        // Return 0 if royalty is disabled
+        if (!asset.royaltyEnabled) {
+            return (0, 0);
+        }
+        
         return (asset.royaltyPerImportETH, asset.royaltyPerImportUSDC);
     }
     
@@ -181,7 +194,7 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         address newOwner
     ) external {
         LibraryAsset storage asset = libraryAssets[projectId];
-        require(asset.isActive, "Asset not available");
+        require(asset.exists, "Asset not found");
         require(
             msg.sender == asset.currentOwner || approvedMarketplaces[msg.sender],
             "Not authorized to transfer"
@@ -205,17 +218,50 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
     // Asset price update removed - royalty fees managed by updateRoyaltyFee instead
     
     /**
-     * @notice Deactivate an asset (only by current owner)
+     * @notice Disable royalty for an asset (only by current owner)
+     * @dev Asset remains tradable in marketplace, but no royalties will be charged on new uses
      * @param projectId The project ID
      */
-    function deactivateAsset(string memory projectId) external {
+    function disableRoyalty(string memory projectId) external {
         LibraryAsset storage asset = libraryAssets[projectId];
-        require(asset.isActive, "Asset already inactive");
-        require(msg.sender == asset.currentOwner, "Only owner can deactivate");
+        require(asset.exists, "Asset not found");
+        require(asset.royaltyEnabled, "Royalty already disabled");
+        require(msg.sender == asset.currentOwner, "Only owner can disable royalty");
         
-        asset.isActive = false;
+        asset.royaltyEnabled = false;
         
-        emit AssetDeactivated(projectId, msg.sender);
+        emit RoyaltyDisabled(projectId, msg.sender);
+    }
+    
+    /**
+     * @notice Enable royalty for an asset (only by current owner)
+     * @param projectId The project ID
+     */
+    function enableRoyalty(string memory projectId) external {
+        LibraryAsset storage asset = libraryAssets[projectId];
+        require(asset.exists, "Asset not found");
+        require(!asset.royaltyEnabled, "Royalty already enabled");
+        require(msg.sender == asset.currentOwner, "Only owner can enable royalty");
+        
+        asset.royaltyEnabled = true;
+        
+        emit RoyaltyFeeUpdated(projectId, asset.royaltyPerImportETH, asset.royaltyPerImportUSDC);
+    }
+    
+    /**
+     * @notice Delete an asset permanently (only by current owner)
+     * @dev This makes the asset untradable and removes it from existence
+     * @param projectId The project ID
+     */
+    function deleteAsset(string memory projectId) external {
+        LibraryAsset storage asset = libraryAssets[projectId];
+        require(asset.exists, "Asset not found");
+        require(msg.sender == asset.currentOwner, "Only owner can delete");
+        
+        asset.exists = false;
+        asset.royaltyEnabled = false;
+        
+        emit AssetDeleted(projectId, msg.sender);
     }
     
     /**
@@ -229,13 +275,13 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
     /**
      * @notice Get current owner of an asset
      * @param projectId The project ID
-     * @return currentOwner address, or address(0) if asset is inactive/deleted
+     * @return currentOwner address, or address(0) if asset doesn't exist
      */
     function getCurrentOwner(string memory projectId) external view returns (address) {
         LibraryAsset storage asset = libraryAssets[projectId];
         
-        // Return zero address if asset is inactive (deleted/deactivated)
-        if (!asset.isActive) {
+        // Return zero address only if asset doesn't exist (deleted)
+        if (!asset.exists) {
             return address(0);
         }
         

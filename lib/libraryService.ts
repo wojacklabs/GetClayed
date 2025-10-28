@@ -17,11 +17,14 @@ export const LIBRARY_CONTRACT_ABI = [
   "function registerAsset(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC) external",
   "function purchaseAssetWithETH(string projectId) external payable",
   "function purchaseAssetWithUSDC(string projectId) external",
-  "function getAsset(string projectId) external view returns (tuple(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool isActive))",
+  "function getAsset(string projectId) external view returns (tuple(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled))",
   "function getUserAssets(address user) external view returns (string[])",
   "function getTotalAssets() external view returns (uint256)",
   "function getAssetIdByIndex(uint256 index) external view returns (string)",
-  "function updateAssetPrice(string projectId, uint256 newPriceETH, uint256 newPriceUSDC) external"
+  "function updateRoyaltyFee(string projectId, uint256 newRoyaltyETH, uint256 newRoyaltyUSDC) external",
+  "function disableRoyalty(string projectId) external",
+  "function enableRoyalty(string projectId) external",
+  "function deleteAsset(string projectId) external"
 ];
 
 // USDC ERC20 ABI (minimal)
@@ -40,7 +43,8 @@ export interface LibraryAsset {
   currentOwner: string;
   originalCreator: string;
   listedAt: number;
-  isActive: boolean;
+  isActive: boolean;  // Maps to 'exists' from contract
+  royaltyEnabled?: boolean;  // New field from contract
   thumbnailId?: string;
   tags?: Record<string, string>;
 }
@@ -161,9 +165,10 @@ export async function registerLibraryAsset(
 }
 
 /**
- * Deactivate a library asset (for project deletion)
+ * Disable royalty for a library asset
+ * Asset remains tradable but no royalties on new uses
  */
-export async function deactivateLibraryAsset(
+export async function disableLibraryRoyalty(
   projectId: string,
   customProvider?: any
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
@@ -192,7 +197,7 @@ export async function deactivateLibraryAsset(
     
     const contract = new ethers.Contract(
       LIBRARY_CONTRACT_ADDRESS,
-      [...LIBRARY_CONTRACT_ABI, 'function deactivateAsset(string projectId) external'],
+      [...LIBRARY_CONTRACT_ABI, 'function disableRoyalty(string projectId) external'],
       signer
     );
     
@@ -200,10 +205,15 @@ export async function deactivateLibraryAsset(
     try {
       console.log('[LibraryService] Checking if asset is registered...');
       const asset = await contract.getAsset(projectId);
-      console.log('[LibraryService] Asset found, isActive:', asset.isActive);
-      if (!asset.isActive) {
-        // Already inactive, skip
-        console.log('[LibraryService] Asset already inactive, skipping');
+      console.log('[LibraryService] Asset found, exists:', asset[8], 'royaltyEnabled:', asset[9]);
+      if (!asset[8]) {  // exists field
+        // Not found, skip
+        console.log('[LibraryService] Asset does not exist, skipping');
+        return { success: true };
+      }
+      if (!asset[9]) {  // royaltyEnabled field
+        // Already disabled, skip
+        console.log('[LibraryService] Royalty already disabled, skipping');
         return { success: true };
       }
     } catch (error) {
@@ -212,18 +222,18 @@ export async function deactivateLibraryAsset(
       return { success: true };
     }
     
-    console.log('[LibraryService] Calling deactivateAsset contract method...');
-    const tx = await contract.deactivateAsset(projectId);
+    console.log('[LibraryService] Calling disableRoyalty contract method...');
+    const tx = await contract.disableRoyalty(projectId);
     console.log('[LibraryService] Transaction sent, hash:', tx.hash);
     console.log('[LibraryService] Waiting for confirmation...');
     await tx.wait();
     console.log('[LibraryService] Transaction confirmed!');
     
-    console.log('[LibraryService] Asset deactivated:', projectId);
+    console.log('[LibraryService] Royalty disabled for asset:', projectId);
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
-    console.error('[LibraryService] Error deactivating asset:', error);
-    // Don't fail the entire deletion if deactivate fails
+    console.error('[LibraryService] Error disabling royalty:', error);
+    // Don't fail the entire operation if royalty disable fails
     return { success: false, error: getErrorMessage(error) };
   }
 }
@@ -372,14 +382,15 @@ export async function queryLibraryAssets(
         asset.currentOwner = blockchainData.currentOwner;
         asset.originalCreator = blockchainData.originalCreator;
         asset.listedAt = Number(blockchainData.listedAt);
-        asset.isActive = blockchainData.isActive;
+        asset.isActive = blockchainData.exists;  // Use 'exists' field
+        asset.royaltyEnabled = blockchainData.royaltyEnabled;
       }
       
-      // Only add active assets to the list
+      // Only add existing assets to the list
       if (asset.isActive) {
         assets.push(asset);
       } else {
-        console.log('[LibraryService] Skipping inactive asset:', projectId);
+        console.log('[LibraryService] Skipping deleted asset:', projectId);
       }
     }
     

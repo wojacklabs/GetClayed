@@ -52,6 +52,11 @@ export interface ClayProject {
   backgroundColor?: string;
   thumbnailId?: string; // Transaction ID for the thumbnail
   usedLibraries?: UsedLibrary[]; // Library dependencies for royalty tracking
+  // Ownership transfer fields
+  originalCreator?: string; // Original creator (immutable)
+  transferredFrom?: string; // Previous owner (if transferred)
+  transferredAt?: number; // Transfer timestamp
+  transferCount?: number; // Number of times transferred
 }
 
 /**
@@ -370,6 +375,20 @@ export async function uploadClayProject(
     { name: 'File-Extension', value: '.clay.json' }
   ];
   
+  // Add ownership transfer tags if applicable
+  if (project.originalCreator) {
+    tags.push({ name: 'Original-Creator', value: project.originalCreator.toLowerCase() });
+  }
+  if (project.transferredFrom) {
+    tags.push({ name: 'Transferred-From', value: project.transferredFrom.toLowerCase() });
+  }
+  if (project.transferredAt) {
+    tags.push({ name: 'Transferred-At', value: project.transferredAt.toString() });
+  }
+  if (project.transferCount) {
+    tags.push({ name: 'Transfer-Count', value: project.transferCount.toString() });
+  }
+  
   console.log('[uploadClayProject] Step 2: Base tags created');
   
   // Add Root-TX tag if this is an update
@@ -457,7 +476,13 @@ export async function uploadClayProject(
       folder || '',
       rootTxId,
       'clay-project',
-      thumbnailId
+      thumbnailId,
+      {
+        originalCreator: project.originalCreator,
+        transferredFrom: project.transferredFrom,
+        transferredAt: project.transferredAt,
+        transferCount: project.transferCount
+      }
     );
     
     const finalRootTxId = rootTxId || manifestTxId;
