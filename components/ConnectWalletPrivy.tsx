@@ -17,27 +17,32 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   const walletAddress = wallets[0]?.address
   
   useEffect(() => {
-    if (authenticated && walletAddress) {
+    if (ready && authenticated && walletAddress) {
+      console.log('[Privy] Wallet connected:', walletAddress)
       onConnect(walletAddress)
-    } else {
+    } else if (ready && !authenticated) {
+      console.log('[Privy] Wallet disconnected')
       onDisconnect()
     }
-  }, [authenticated, walletAddress])
+  }, [ready, authenticated, walletAddress, onConnect, onDisconnect])
   
   const handleConnect = async () => {
     try {
+      console.log('[Privy] Initiating login...')
       await login()
     } catch (error) {
-      console.error('Failed to connect:', error)
+      console.error('[Privy] Failed to connect:', error)
+      // Show user-friendly error message if needed
     }
   }
   
   const handleDisconnect = async () => {
     try {
+      console.log('[Privy] Initiating logout...')
       await logout()
       onDisconnect()
     } catch (error) {
-      console.error('Failed to disconnect:', error)
+      console.error('[Privy] Failed to disconnect:', error)
     }
   }
   
