@@ -43,26 +43,25 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
 
   const loadNotifications = async () => {
     try {
-      const [royalties, events] = await Promise.all([
-        getPendingRoyalties(walletAddress),
-        getRoyaltyEvents(walletAddress)
-      ])
-      
+      // Get pending royalties
+      const royalties = await getPendingRoyalties(walletAddress)
       setPendingETH(royalties.eth)
       setPendingUSDC(royalties.usdc)
       
-      // Filter recent recorded events (last 24 hours)
-      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
+      // Get recent events from Irys (last 24 hours, GraphQL-based - fast!)
+      const events = await getRoyaltyEvents(walletAddress, 24, 50)
+      
+      // Filter earned royalties only (not paid)
       const recent = events
-        .filter(e => e.type === 'recorded' && e.timestamp > oneDayAgo)
+        .filter(e => e.type === 'earned')
         .slice(0, 5)
       
       setRecentEvents(recent)
-      
-      // Calculate unread (new royalties in last 24h)
       setUnreadCount(recent.length)
     } catch (error) {
-      console.error('Error loading notifications:', error)
+      console.error('[RoyaltyNotifications] Error loading notifications:', error)
+      setRecentEvents([])
+      setUnreadCount(0)
     }
   }
 
@@ -133,11 +132,11 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-gray-900 font-medium mb-1">
-                            New Royalty Earned
+                            Royalty from "{event.projectName}"
                           </p>
                           <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
                             {parseFloat(event.amountETH) > 0 && (
-                              <span>{parseFloat(event.amountETH).toFixed(4)} ETH</span>
+                              <span>{parseFloat(event.amountETH).toFixed(6)} ETH</span>
                             )}
                             {parseFloat(event.amountUSDC) > 0 && (
                               <span>{parseFloat(event.amountUSDC).toFixed(2)} USDC</span>
@@ -204,20 +203,20 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                     <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <div className="flex items-center gap-2 mb-2">
                         <DollarSign size={16} className="text-green-600" />
-                        <span className="text-sm font-medium text-gray-900">New Royalty</span>
+                        <span className="text-sm font-medium text-gray-900">{event.type === 'earned' ? 'Earned' : 'Paid'}</span>
                         <span className="text-xs text-gray-500 ml-auto">
                           {new Date(event.timestamp).toLocaleDateString()}
                         </span>
                       </div>
                       
-                      {event.projectId && (
-                        <p className="text-xs text-gray-600 mb-1">From: {event.projectId.slice(0, 12)}...</p>
-                      )}
+                      <p className="text-xs text-gray-600 mb-2">
+                        Project: <span className="font-medium">{event.projectName}</span>
+                      </p>
                       
                       <div className="flex items-center gap-3 text-sm">
                         {parseFloat(event.amountETH) > 0 && (
                           <span className="text-gray-900 font-medium">
-                            {parseFloat(event.amountETH).toFixed(4)} ETH
+                            {parseFloat(event.amountETH).toFixed(6)} ETH
                           </span>
                         )}
                         {parseFloat(event.amountUSDC) > 0 && (
