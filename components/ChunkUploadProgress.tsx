@@ -32,7 +32,7 @@ export function ChunkUploadProgress({
       <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4 pointer-events-none">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 max-w-md w-full pointer-events-auto">
           <h3 className="text-lg font-medium mb-4 text-gray-800">
-            {isDownload ? 'Loading' : 'Saving'} {projectName}
+            {isDownload ? `Loading ${projectName} project` : `Saving ${projectName} project`}
           </h3>
           
           {/* Progress bar */}
