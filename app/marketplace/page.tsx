@@ -312,7 +312,7 @@ export default function MarketplacePage() {
       
       {/* Listing Detail Modal */}
       {selectedListing && (
-        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4" onClick={() => setSelectedListing(null)}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setSelectedListing(null)}>
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -396,7 +396,7 @@ export default function MarketplacePage() {
       
       {/* Make Offer Modal */}
       {showOfferModal && selectedListing && (
-        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Make an Offer</h3>
             

@@ -158,14 +158,12 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Pending Royalties</h3>
-          {hasPendingRoyalties && (
-            <button
-              onClick={handleShowDetails}
-              className="text-xs text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              View Details
-            </button>
-          )}
+          <button
+            onClick={handleShowDetails}
+            className="text-xs text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            View History
+          </button>
         </div>
         
         {!hasPendingRoyalties ? (

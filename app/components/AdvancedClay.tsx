@@ -4968,7 +4968,7 @@ export default function AdvancedClay() {
       
       {/* Library Search Panel */}
       {showLibrarySearch && (
-        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Import from Library</h3>
@@ -5046,7 +5046,7 @@ export default function AdvancedClay() {
       
       {/* Library Registration Modal */}
       {showLibraryModal && (
-        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Register to Library</h3>
             

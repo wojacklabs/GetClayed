@@ -173,7 +173,7 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
 
       {/* All Notifications Modal */}
       {showAllNotifications && (
-        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-black bg-opacity-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-[10000] p-4">
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">All Notifications</h3>
