@@ -3497,14 +3497,14 @@ export default function AdvancedClay() {
         setChunkDownloadProgress({
           ...progress,
           isOpen: true,
-          projectName: `Loading ${projectName}`
+          projectName: projectName
         });
       })
       console.log('Downloaded project:', project)
       
       // Update with actual project name
       projectName = project.name || 'Untitled';
-      setChunkDownloadProgress(prev => ({ ...prev, projectName: `Loading ${projectName}` }))
+      setChunkDownloadProgress(prev => ({ ...prev, projectName: projectName }))
       
       // Get mutable reference info
       const mutableRef = getMutableReference(project.id);
