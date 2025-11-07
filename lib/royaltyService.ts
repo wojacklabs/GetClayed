@@ -184,7 +184,7 @@ export async function processLibraryPurchasesAndRoyalties(
       try {
         const existingDeps = await contract.getProjectDependencies(projectId);
         
-        if (existingDeps && existingDeps.length >= 0) {
+        if (existingDeps && existingDeps.length > 0) {
           // Project has royalties registered
           console.log('[RoyaltyService] ⚠️ Project already has registered royalties');
           console.log('[RoyaltyService] Existing dependencies:', existingDeps.length);
