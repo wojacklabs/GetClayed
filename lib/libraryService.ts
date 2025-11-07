@@ -18,6 +18,8 @@ export const LIBRARY_CONTRACT_ABI = [
   "function purchaseAssetWithETH(string projectId) external payable",
   "function purchaseAssetWithUSDC(string projectId) external",
   "function getAsset(string projectId) external view returns (tuple(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled))",
+  "function getRoyaltyFee(string projectId) external view returns (uint256 royaltyETH, uint256 royaltyUSDC)",
+  "function getCurrentOwner(string projectId) external view returns (address)",
   "function getUserAssets(address user) external view returns (string[])",
   "function getTotalAssets() external view returns (uint256)",
   "function getAssetIdByIndex(uint256 index) external view returns (string)",
