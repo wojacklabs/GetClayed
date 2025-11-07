@@ -2246,6 +2246,8 @@ export default function AdvancedClay() {
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportProjectName, setExportProjectName] = useState('')
   const [showNewFileModal, setShowNewFileModal] = useState(false)
+  const [showProjectSwitchModal, setShowProjectSwitchModal] = useState(false)
+  const [pendingProjectId, setPendingProjectId] = useState<string | null>(null)
   // Thumbnail capture removed - using MiniViewer instead
   const thumbnailResolveRef = useRef<((value: string) => void) | null>(null)
   
@@ -2445,39 +2447,65 @@ export default function AdvancedClay() {
       let projectData: any;
       let dependencyLibraries: any[] = [];
       
-      try {
-        projectData = await downloadClayProject(libraryProjectId);
-        const tags = projectData.tags as Record<string, string> | undefined;
-        thumbnailId = tags?.['Thumbnail-ID'];
-        console.log('[LibraryUpload] Found thumbnail ID:', thumbnailId);
+      // CRITICAL FIX: Check if this is the current project being worked on
+      // If so, use in-memory usedLibraries instead of downloading
+      const isCurrentProject = currentProjectInfo && currentProjectInfo.projectId === libraryProjectId;
+      
+      if (isCurrentProject) {
+        console.log('[LibraryUpload] This is the current project - using in-memory library dependencies');
+        dependencyLibraries = usedLibraries;
         
-        // SECURITY: Verify project integrity before allowing library registration
-        if ((projectData as any).__integrityWarning) {
-          showPopup(
-            `Cannot register as library: ${(projectData as any).__integrityWarning}. Please ensure your project data is valid.`,
-            'error'
-          )
-          setIsRegisteringLibrary(false)
-          return
+        // Get thumbnail from currentProjectInfo if available
+        // We'll still try to download for thumbnail, but use current libraries
+        try {
+          projectData = await downloadClayProject(libraryProjectId);
+          const tags = projectData.tags as Record<string, string> | undefined;
+          thumbnailId = tags?.['Thumbnail-ID'];
+          console.log('[LibraryUpload] Found thumbnail ID:', thumbnailId);
+        } catch (error) {
+          console.log('[LibraryUpload] Could not download project for thumbnail, continuing without it');
         }
-        
-        // DEPENDENCY CHECK: Verify library dependencies are properly tracked
-        if (projectData.usedLibraries && projectData.usedLibraries.length > 0) {
-          const { detectLibraryTampering } = await import('../../lib/projectIntegrityService')
-          const tamperCheck = detectLibraryTampering(projectData)
-          if (tamperCheck.tampered) {
+      } else {
+        // Not current project, download to get dependencies
+        try {
+          projectData = await downloadClayProject(libraryProjectId);
+          const tags = projectData.tags as Record<string, string> | undefined;
+          thumbnailId = tags?.['Thumbnail-ID'];
+          console.log('[LibraryUpload] Found thumbnail ID:', thumbnailId);
+          
+          // SECURITY: Verify project integrity before allowing library registration
+          if ((projectData as any).__integrityWarning) {
             showPopup(
-              `Cannot register as library: This project's library dependencies have been tampered with. Missing: ${tamperCheck.missing.join(', ')}`,
+              `Cannot register as library: ${(projectData as any).__integrityWarning}. Please ensure your project data is valid.`,
               'error'
             )
             setIsRegisteringLibrary(false)
             return
           }
           
-          dependencyLibraries = projectData.usedLibraries;
+          // DEPENDENCY CHECK: Verify library dependencies are properly tracked
+          if (projectData.usedLibraries && projectData.usedLibraries.length > 0) {
+            const { detectLibraryTampering } = await import('../../lib/projectIntegrityService')
+            const tamperCheck = detectLibraryTampering(projectData)
+            if (tamperCheck.tampered) {
+              showPopup(
+                `Cannot register as library: This project's library dependencies have been tampered with. Missing: ${tamperCheck.missing.join(', ')}`,
+                'error'
+              )
+              setIsRegisteringLibrary(false)
+              return
+            }
+            
+            dependencyLibraries = projectData.usedLibraries;
+          }
+        } catch (error) {
+          console.log('[LibraryUpload] No project data found, registering without dependencies check');
         }
-      } catch (error) {
-        console.log('[LibraryUpload] No project data found, registering without dependencies check');
+      }
+      
+      console.log('[LibraryUpload] Dependency libraries detected:', dependencyLibraries.length);
+      if (dependencyLibraries.length > 0) {
+        console.log('[LibraryUpload] Dependencies:', dependencyLibraries.map(lib => lib.name).join(', '));
       }
       
       // STEP 2: ECONOMICS - Validate minimum price based on CURRENT blockchain state
@@ -3587,8 +3615,11 @@ export default function AdvancedClay() {
             }
           }
           
-          const purchasedCount = finalUsedLibraries.length - result.alreadyOwned
-          if (purchasedCount > 0) {
+          // CRITICAL FIX: Only show "Paid" if royalties were actually paid (totalCost > 0)
+          // Don't rely on purchasedCount as it can be wrong when some libraries are deleted
+          const actuallyPaid = result.totalCostETH > 0 || result.totalCostUSDC > 0
+          
+          if (actuallyPaid) {
             // Build payment message
             const payments = []
             if (result.totalCostETH > 0) {
@@ -3598,13 +3629,16 @@ export default function AdvancedClay() {
               payments.push(`${result.totalCostUSDC.toFixed(4)} USDC`)
             }
             const paymentStr = payments.join(' + ')
+            const purchasedCount = finalUsedLibraries.length - result.alreadyOwned
             
             showPopup(
-              `Paid ${paymentStr} for ${purchasedCount} library asset${purchasedCount > 1 ? 's' : ''}${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 
+              `Royalty paid: ${paymentStr} for ${purchasedCount} library asset${purchasedCount > 1 ? 's' : ''}${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 
               'success'
             )
+          } else if (result.alreadyOwned > 0) {
+            showPopup(`All ${result.alreadyOwned} libraries already owned - no payment needed`, 'success')
           } else {
-            showPopup(`All ${finalUsedLibraries.length} libraries already owned`, 'success')
+            showPopup('No active library dependencies - no payment needed', 'success')
           }
           
           // Clear used libraries after successful payment
@@ -3731,22 +3765,9 @@ export default function AdvancedClay() {
     }
   }
 
-  const handleProjectSelect = async (projectId: string) => {
+  // Helper function to actually load the project
+  const loadProjectById = async (projectId: string) => {
     try {
-      // CRITICAL FIX: Warn user if current project has unsaved library imports
-      if (currentProjectInfo && currentProjectInfo.isDirty && usedLibraries.length > 0) {
-        const confirmSwitch = window.confirm(
-          `You have imported ${usedLibraries.length} library asset(s) that are not saved yet.\n\n` +
-          `If you switch projects now, you will need to import them again and pay royalties again when you save.\n\n` +
-          `Do you want to switch anyway?`
-        );
-        
-        if (!confirmSwitch) {
-          console.log('[ProjectSelect] User cancelled project switch to preserve library imports');
-          return;
-        }
-      }
-      
       console.log('Loading project:', projectId)
       
       // Initial loading message
@@ -3862,6 +3883,33 @@ export default function AdvancedClay() {
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
       showPopup('Failed to load project. Please try again.', 'error')
     }
+  }
+
+  const handleProjectSelect = async (projectId: string) => {
+    // CRITICAL FIX: Warn user if current project has unsaved library imports
+    if (currentProjectInfo && currentProjectInfo.isDirty && usedLibraries.length > 0) {
+      // Show modal instead of window.confirm
+      setPendingProjectId(projectId);
+      setShowProjectSwitchModal(true);
+      return;
+    }
+    
+    // No warning needed, load directly
+    await loadProjectById(projectId);
+  }
+  
+  const confirmProjectSwitch = async () => {
+    if (pendingProjectId) {
+      setShowProjectSwitchModal(false);
+      await loadProjectById(pendingProjectId);
+      setPendingProjectId(null);
+    }
+  }
+  
+  const cancelProjectSwitch = () => {
+    console.log('[ProjectSelect] User cancelled project switch to preserve library imports');
+    setShowProjectSwitchModal(false);
+    setPendingProjectId(null);
   }
 
   const handleProjectMove = (projectId: string, folderPath: string) => {
@@ -5247,14 +5295,10 @@ export default function AdvancedClay() {
           <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
             <h3 className="text-lg font-semibold mb-4">Create New Project?</h3>
             <p className="text-gray-600 mb-6">
-              Creating a new project will reset all current work.
-              {usedLibraries.length > 0 && (
-                <span className="block mt-2 text-red-600 font-semibold">
-                  Warning: You have imported {usedLibraries.length} library asset(s) that are not saved yet. 
-                  You will need to import them again and pay royalties again.
-                </span>
-              )}
-              {' '}Are you sure you want to continue?
+              {usedLibraries.length > 0 
+                ? `You have ${usedLibraries.length} unsaved library import${usedLibraries.length > 1 ? 's' : ''} (royalties unpaid). Creating a new project will lose all current work.`
+                : 'Creating a new project will reset all current work. Are you sure you want to continue?'
+              }
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -5268,6 +5312,32 @@ export default function AdvancedClay() {
                 className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-blue-600"
               >
                 Create New
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Project Switch Warning Modal */}
+      {showProjectSwitchModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
+            <h3 className="text-lg font-semibold mb-4">Switch Project?</h3>
+            <p className="text-gray-600 mb-6">
+              You have {usedLibraries.length} unsaved library import{usedLibraries.length > 1 ? 's' : ''}. Switching now will lose them. You'll need to re-import and pay royalties again when uploading.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelProjectSwitch}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmProjectSwitch}
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-blue-600"
+              >
+                Switch Anyway
               </button>
             </div>
           </div>
