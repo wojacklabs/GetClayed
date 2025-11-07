@@ -3396,9 +3396,20 @@ export default function AdvancedClay() {
       return
     }
     
-    // FIX: Verify network before saving
+    // Get Privy wallet provider
+    let privyProvider = null;
+    if (wallets && wallets.length > 0) {
+      try {
+        privyProvider = await wallets[0].getEthereumProvider();
+        console.log('[Save] Got Privy provider for network verification');
+      } catch (error) {
+        console.error('[Save] Failed to get Privy provider:', error);
+      }
+    }
+    
+    // FIX: Verify network before saving (with Privy provider)
     const { verifyAndSwitchNetwork } = await import('../../lib/networkUtils')
-    const isCorrectNetwork = await verifyAndSwitchNetwork(showPopup)
+    const isCorrectNetwork = await verifyAndSwitchNetwork(showPopup, privyProvider)
     if (!isCorrectNetwork) {
       return
     }
