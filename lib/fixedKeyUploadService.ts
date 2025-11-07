@@ -96,16 +96,22 @@ export class FixedKeyUploader {
       }
 
       // Create wallet object compatible with Irys (like CM's Note)
+      if (!this.keypair) {
+        throw new Error('Keypair not initialized');
+      }
+      
+      const keypair = this.keypair; // Create const reference to avoid null issues
+      
       const wallet = {
-        publicKey: this.keypair.publicKey,
-        secretKey: this.keypair.secretKey,
+        publicKey: keypair.publicKey,
+        secretKey: keypair.secretKey,
         signTransaction: async (tx: any) => {
-          tx.partialSign(this.keypair!);
+          tx.partialSign(keypair);
           return tx;
         },
         signAllTransactions: async (txs: any[]) => {
           return txs.map(tx => {
-            tx.partialSign(this.keypair!);
+            tx.partialSign(keypair);
             return tx;
           });
         },
@@ -120,7 +126,7 @@ export class FixedKeyUploader {
           } else {
             messageBytes = new Uint8Array(Buffer.from(message));
           }
-          return nacl.sign.detached(messageBytes, this.keypair!.secretKey);
+          return nacl.sign.detached(messageBytes, keypair.secretKey);
         },
         sign: async (data: any) => {
           if (data instanceof Uint8Array || typeof data === 'string' || data instanceof ArrayBuffer) {

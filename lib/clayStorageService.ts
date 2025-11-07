@@ -302,14 +302,19 @@ export async function uploadProjectThumbnail(
           chunkSetId,
           chunkMetadata.length,
           transactionIds,
-        projectId,
-        '',
-        undefined,
-        'project-thumbnail'
-      );
-      
-      console.log('[ClayStorage] Thumbnail uploaded via chunks, manifest:', manifestTxId);
-      return manifestTxId;
+          projectId,
+          '',
+          undefined,
+          'project-thumbnail'
+        );
+        
+        console.log('[ClayStorage] Thumbnail uploaded via chunks, manifest:', manifestTxId);
+        return manifestTxId;
+      } catch (manifestError) {
+        console.error('[ClayStorage] Manifest upload failed:', manifestError);
+        console.log('[ClayStorage] Chunks uploaded but manifest failed. Chunks can be retrieved later.');
+        return null;
+      }
     }
     
     // Direct upload for small thumbnails

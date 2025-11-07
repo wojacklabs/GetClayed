@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, ShoppingCart, TrendingUp, Tag, Clock, DollarSign } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, TrendingUp, Tag, Clock, DollarSign, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { TrackballControls } from '@react-three/drei'
@@ -99,6 +99,7 @@ export default function MarketplaceDetailPage() {
       const result = await makeAssetOffer(
         listing.projectId,
         parseFloat(offerPrice),
+        listing.paymentToken, // Use same payment token as listing
         parseInt(offerDuration)
       )
       
