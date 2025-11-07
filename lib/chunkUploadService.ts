@@ -19,6 +19,16 @@ export interface ChunkUploadProgress {
 
 const CHUNK_SIZE = 50 * 1024; // 50KB chunks, will be ~67KB after base64 encoding
 
+// FIX P1-10: Upload progress tracking
+interface UploadProgress {
+  projectId: string;
+  chunkSetId: string;
+  uploadedChunks: Array<{ index: number; txId: string }>;
+  totalChunks: number;
+  startedAt: number;
+  base64Hash: string; // Hash to verify data hasn't changed
+}
+
 /**
  * Split large data into chunks for upload
  * Ensures clean string boundaries to avoid JSON parsing issues
@@ -42,7 +52,21 @@ export function splitIntoChunks(data: string): string[] {
 }
 
 /**
+ * Simple hash function for data verification
+ */
+function simpleHash(data: string): string {
+  let hash = 0;
+  for (let i = 0; i < Math.min(data.length, 1000); i++) {
+    const char = data.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash.toString(36);
+}
+
+/**
  * Upload data in chunks if it exceeds 100KB
+ * FIX P1-10: Supports resuming interrupted uploads
  */
 export async function uploadInChunks(
   data: string,
@@ -55,14 +79,85 @@ export async function uploadInChunks(
 ): Promise<{ transactionIds: string[]; chunkMetadata: ChunkMetadata[] }> {
   const chunks = splitIntoChunks(data);
   const totalChunks = chunks.length;
-  const chunkSetId = uuidv4(); // Unique ID for this chunk set
+  const base64Data = Buffer.from(data, 'utf-8').toString('base64');
+  const dataHash = simpleHash(base64Data);
   
   console.log(`[ChunkUpload] Splitting data into ${totalChunks} chunks`);
   
-  const transactionIds: string[] = [];
+  // FIX P1-10: Check for existing upload progress
+  const progressKey = `upload-progress-${projectId}`;
+  let progress: UploadProgress | null = null;
+  let chunkSetId: string;
+  
+  try {
+    const savedProgress = localStorage.getItem(progressKey);
+    if (savedProgress) {
+      const parsed: UploadProgress = JSON.parse(savedProgress);
+      
+      // Verify data hasn't changed
+      if (parsed.base64Hash === dataHash && parsed.totalChunks === totalChunks) {
+        progress = parsed;
+        chunkSetId = parsed.chunkSetId;
+        console.log(`[ChunkUpload] Resuming upload: ${parsed.uploadedChunks.length}/${totalChunks} chunks already uploaded`);
+      } else {
+        console.log('[ChunkUpload] Data changed, starting fresh upload');
+        localStorage.removeItem(progressKey);
+        chunkSetId = uuidv4();
+      }
+    } else {
+      chunkSetId = uuidv4();
+    }
+  } catch (error) {
+    console.warn('[ChunkUpload] Could not load progress, starting fresh:', error);
+    chunkSetId = uuidv4();
+  }
+  
+  // Initialize or use existing progress
+  if (!progress) {
+    progress = {
+      projectId,
+      chunkSetId,
+      uploadedChunks: [],
+      totalChunks,
+      startedAt: Date.now(),
+      base64Hash: dataHash
+    };
+  }
+  
+  const transactionIds: string[] = new Array(totalChunks);
   const chunkMetadata: ChunkMetadata[] = [];
   
+  // Build map of already uploaded chunks
+  const uploadedMap = new Map<number, string>();
+  progress.uploadedChunks.forEach(chunk => {
+    uploadedMap.set(chunk.index, chunk.txId);
+    transactionIds[chunk.index] = chunk.txId;
+  });
+  
   for (let i = 0; i < chunks.length; i++) {
+    // FIX P1-10: Skip already uploaded chunks
+    if (uploadedMap.has(i)) {
+      console.log(`[ChunkUpload] Skipping chunk ${i + 1}/${totalChunks} (already uploaded: ${uploadedMap.get(i)})`);
+      chunkMetadata.push({
+        chunkId: uploadedMap.get(i)!,
+        chunkIndex: i,
+        totalChunks,
+        chunkSetId,
+        projectId,
+        rootTxId
+      });
+      
+      // Still update progress for user feedback
+      if (onProgress) {
+        onProgress({
+          currentChunk: i + 1,
+          totalChunks,
+          percentage: ((i + 1) / totalChunks) * 100
+        });
+      }
+      continue;
+    }
+    
     const chunk = chunks[i];
     const chunkIndex = i;
     
@@ -115,7 +210,7 @@ export async function uploadInChunks(
     // Upload chunk using fixed key uploader
     const receipt = await fixedKeyUploader.upload(chunkBuffer, tags);
     
-    transactionIds.push(receipt.id);
+    transactionIds[i] = receipt.id;
     chunkMetadata.push({
       chunkId: receipt.id,
       chunkIndex,
@@ -125,7 +220,24 @@ export async function uploadInChunks(
       rootTxId
     });
     
+    // FIX P1-10: Save progress after each chunk
+    progress!.uploadedChunks.push({ index: i, txId: receipt.id });
+    try {
+      localStorage.setItem(progressKey, JSON.stringify(progress));
+    } catch (storageError) {
+      console.warn('[ChunkUpload] Could not save progress:', storageError);
+      // Continue anyway - upload is more important than progress tracking
+    }
+    
     console.log(`[ChunkUpload] Uploaded chunk ${i + 1}/${totalChunks}, TX: ${receipt.id}`);
+  }
+  
+  // FIX P1-10: Clear progress after successful upload
+  try {
+    localStorage.removeItem(progressKey);
+    console.log('[ChunkUpload] Upload complete, progress cleared');
+  } catch (error) {
+    console.warn('[ChunkUpload] Could not clear progress:', error);
   }
   
   return { transactionIds, chunkMetadata };
@@ -133,6 +245,7 @@ export async function uploadInChunks(
 
 /**
  * Download and reassemble chunks
+ * FIX P1-9: Optimized for large projects with batched downloads and memory management
  */
 export async function downloadChunks(
   chunkSetId: string, 
@@ -148,18 +261,40 @@ export async function downloadChunks(
     if (chunkIds && chunkIds.length === totalChunks) {
       console.log(`[ChunkDownload] Using ${chunkIds.length} chunk IDs from manifest`);
       
-      for (let i = 0; i < chunkIds.length; i++) {
-        const txId = chunkIds[i];
-        try {
-          const chunkResponse = await fetch(`https://uploader.irys.xyz/tx/${txId}/data`);
-          const chunkData = await chunkResponse.json();
-          
-          if (!chunkData.chunk) {
-            throw new Error(`Chunk ${i} data is missing`);
+      // FIX P1-9: Download in batches to reduce memory pressure
+      const BATCH_SIZE = 5; // Download 5 chunks at a time
+      
+      for (let batchStart = 0; batchStart < chunkIds.length; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, chunkIds.length);
+        const batchIds = chunkIds.slice(batchStart, batchEnd);
+        
+        console.log(`[ChunkDownload] Downloading batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(chunkIds.length / BATCH_SIZE)} (chunks ${batchStart + 1}-${batchEnd})`);
+        
+        // Download batch in parallel
+        const batchPromises = batchIds.map(async (txId, batchIndex) => {
+          const i = batchStart + batchIndex;
+          try {
+            const chunkResponse = await fetch(`https://uploader.irys.xyz/tx/${txId}/data`);
+            const chunkData = await chunkResponse.json();
+            
+            if (!chunkData.chunk) {
+              throw new Error(`Chunk ${i} data is missing`);
+            }
+            return { index: i, chunk: chunkData.chunk };
+          } catch (error) {
+            console.error(`[ChunkDownload] Error downloading chunk ${i}:`, error);
+            throw error;
           }
-          chunks[i] = chunkData.chunk;
+        });
+        
+        // Wait for batch to complete
+        const batchResults = await Promise.all(batchPromises);
+        
+        // Store results
+        for (const result of batchResults) {
+          chunks[result.index] = result.chunk;
           foundChunks++;
-          console.log(`[ChunkDownload] Downloaded chunk ${i + 1}/${totalChunks} - Length: ${chunkData.chunk.length}`);
+          console.log(`[ChunkDownload] Downloaded chunk ${result.index + 1}/${totalChunks} - Length: ${result.chunk.length}`);
           
           // Report progress
           if (onProgress) {
@@ -169,8 +304,11 @@ export async function downloadChunks(
               percentage: (foundChunks / totalChunks) * 100
             });
           }
-        } catch (error) {
-          console.error(`[ChunkDownload] Error downloading chunk ${i}:`, error);
+        }
+        
+        // FIX P1-9: Allow garbage collection between batches
+        if (batchEnd < chunkIds.length && typeof window !== 'undefined') {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
     } else {

@@ -27,16 +27,52 @@ export class FixedKeyUploader {
     }
   }
 
-  async upload(data: Buffer | Uint8Array | string, tags: Array<{ name: string; value: string }>) {
+  async upload(data: Buffer | Uint8Array | string, tags: Array<{ name: string; value: string }>, maxRetries: number = 3) {
     if (!this.keypair) {
       throw new Error('Private key not initialized');
     }
 
+    // FIX: Add retry logic for network failures
+    let lastError: any;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[FixedKeyUploader] Upload attempt ${attempt}/${maxRetries}`);
+        console.log('[FixedKeyUploader] Starting upload with fixed key...');
+        console.log('[FixedKeyUploader] Data type:', typeof data);
+        console.log('[FixedKeyUploader] Data size:', data instanceof Buffer ? data.length : data instanceof Uint8Array ? data.length : data.length);
+        console.log('[FixedKeyUploader] Tags:', tags);
+        
+        return await this._performUpload(data, tags);
+      } catch (error: any) {
+        lastError = error;
+        const errorMessage = error?.message || error?.toString() || 'Unknown error';
+        
+        // Check if it's a network-related error
+        const isNetworkError = 
+          errorMessage.includes('network') ||
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('ECONNREFUSED') ||
+          errorMessage.includes('ETIMEDOUT') ||
+          errorMessage.includes('fetch failed');
+        
+        if (!isNetworkError || attempt === maxRetries) {
+          // Not a network error or last attempt - throw immediately
+          console.error(`[FixedKeyUploader] Upload failed (attempt ${attempt}/${maxRetries}):`, error);
+          throw error;
+        }
+        
+        // Network error and not last attempt - retry with exponential backoff
+        const waitTime = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+        console.warn(`[FixedKeyUploader] Network error on attempt ${attempt}/${maxRetries}, retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    throw lastError;
+  }
+
+  private async _performUpload(data: Buffer | Uint8Array | string, tags: Array<{ name: string; value: string }>) {
     try {
-      console.log('[FixedKeyUploader] Starting upload with fixed key...');
-      console.log('[FixedKeyUploader] Data type:', typeof data);
-      console.log('[FixedKeyUploader] Data size:', data instanceof Buffer ? data.length : data instanceof Uint8Array ? data.length : data.length);
-      console.log('[FixedKeyUploader] Tags:', tags);
       
       // Convert data to File
       let dataFile: File;
@@ -125,7 +161,7 @@ export class FixedKeyUploader {
         signature: result.signature || ''
       };
     } catch (error) {
-      console.error('[FixedKeyUploader] Upload error:', error);
+      console.error('[FixedKeyUploader] _performUpload error:', error);
       throw error;
     }
   }

@@ -71,6 +71,16 @@ export function getErrorMessage(error: any): string {
     return 'Please connect your wallet first';
   }
   
+  // FIX P1-5: Wallet disconnection errors
+  if (
+    errorMessage.includes('No signer') ||
+    errorMessage.includes('Provider is not connected') ||
+    errorMessage.includes('provider disconnected') ||
+    errorMessage.includes('Signer not available')
+  ) {
+    return 'Wallet connection lost. Please reconnect your wallet.';
+  }
+  
   // Network error
   if (errorMessage.includes('network') || errorMessage.includes('NETWORK')) {
     return 'Network error. Please try again';

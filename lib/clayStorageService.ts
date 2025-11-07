@@ -19,6 +19,8 @@ export interface ClayData {
   vertices?: Array<{ x: number; y: number; z: number }>; // For push/pull deformed vertices
   dimensions?: { x: number; y: number; z: number }; // For cube actual dimensions
   groupId?: string; // ID of the group this object belongs to
+  librarySourceId?: string; // Library projectId if imported from library (for royalty tracking)
+  librarySourceName?: string; // Library name for reference
 }
 
 export interface ClayGroup {
@@ -57,6 +59,15 @@ export interface ClayProject {
   transferredFrom?: string; // Previous owner (if transferred)
   transferredAt?: number; // Transfer timestamp
   transferCount?: number; // Number of times transferred
+  // Security: Project integrity signature
+  signature?: {
+    projectId: string;
+    librariesHash: string;
+    clayDataHash: string;
+    signature: string;
+    signedBy: string;
+    signedAt: number;
+  };
 }
 
 /**
@@ -98,6 +109,14 @@ export function serializeClayProject(
     // Add groupId if present
     if (clay.groupId) {
       clayData.groupId = clay.groupId;
+    }
+    
+    // Add library source tracking if present
+    if (clay.librarySourceId) {
+      clayData.librarySourceId = clay.librarySourceId;
+    }
+    if (clay.librarySourceName) {
+      clayData.librarySourceName = clay.librarySourceName;
     }
     
     // Add shape-specific parameters
@@ -236,6 +255,7 @@ export function decompressClayProject(data: Uint8Array): ClayProject {
 
 /**
  * Upload thumbnail to Irys
+ * MEDIUM FIX M1: Improved error handling for partial upload failures
  */
 export async function uploadProjectThumbnail(
   thumbnailDataUrl: string,
@@ -273,12 +293,15 @@ export async function uploadProjectThumbnail(
         throw new Error('No chunk set ID found');
       }
       
-      const manifestTxId = await uploadChunkManifest(
-        `thumbnail-${projectId}`,
-        `Thumbnail for ${projectId}`,
-        chunkSetId,
-        chunkMetadata.length,
-        transactionIds,
+      // MEDIUM FIX M1: Better error handling for manifest upload
+      let manifestTxId;
+      try {
+        manifestTxId = await uploadChunkManifest(
+          `thumbnail-${projectId}`,
+          `Thumbnail for ${projectId}`,
+          chunkSetId,
+          chunkMetadata.length,
+          transactionIds,
         projectId,
         '',
         undefined,
@@ -505,7 +528,8 @@ export async function uploadClayProject(
  */
 export async function downloadClayProject(
   transactionId: string,
-  onProgress?: (progress: { currentChunk: number; totalChunks: number; percentage: number }) => void
+  onProgress?: (progress: { currentChunk: number; totalChunks: number; percentage: number }) => void,
+  skipIntegrityCheck: boolean = false
 ): Promise<ClayProject> {
   try {
     console.log('[downloadClayProject] Downloading from transaction:', transactionId)
@@ -563,7 +587,42 @@ export async function downloadClayProject(
     }
     
     // Regular project data
-    return data as ClayProject;
+    const project = data as ClayProject;
+    
+    // SECURITY: Verify project integrity if signature exists
+    if (!skipIntegrityCheck && project.signature) {
+      console.log('[downloadClayProject] Verifying project signature...');
+      
+      try {
+        const { verifyProjectSignature, detectLibraryTampering } = await import('./projectIntegrityService');
+        
+        // Check for library tampering
+        const tamperCheck = detectLibraryTampering(project);
+        if (tamperCheck.tampered) {
+          console.error('[downloadClayProject] ⚠️ Library tampering detected!');
+          console.error('  Missing from declaration:', tamperCheck.missing);
+          console.error('  Extra in declaration:', tamperCheck.extra);
+        }
+        
+        // Verify signature
+        const verification = await verifyProjectSignature(project, project.signature);
+        if (!verification.valid) {
+          console.error('[downloadClayProject] ❌ Signature verification failed:', verification.error);
+          // Add a warning flag to the project
+          (project as any).__integrityWarning = verification.error;
+        } else {
+          console.log('[downloadClayProject] ✅ Project signature verified');
+        }
+      } catch (verifyError) {
+        console.error('[downloadClayProject] Error verifying signature:', verifyError);
+        // Don't block loading, just warn
+      }
+    } else if (!skipIntegrityCheck && !project.signature && (project.usedLibraries && project.usedLibraries.length > 0)) {
+      console.warn('[downloadClayProject] ⚠️ Project has libraries but no signature (legacy project)');
+      (project as any).__integrityWarning = 'This project was created before integrity verification was added';
+    }
+    
+    return project;
   } catch (error) {
     console.error('[downloadClayProject] Error:', error)
     throw error;
@@ -853,6 +912,14 @@ export function restoreClayObjects(project: ClayProject, detail: number = 48): a
     // Restore groupId if present
     if (clayData.groupId) {
       restoredClay.groupId = clayData.groupId;
+    }
+    
+    // Restore library source tracking if present
+    if (clayData.librarySourceId) {
+      restoredClay.librarySourceId = clayData.librarySourceId;
+    }
+    if (clayData.librarySourceName) {
+      restoredClay.librarySourceName = clayData.librarySourceName;
     }
     
     return restoredClay;

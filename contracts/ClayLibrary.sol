@@ -113,6 +113,9 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
      * @param description Asset description
      * @param royaltyPerImportETH Royalty per import in ETH (wei)
      * @param royaltyPerImportUSDC Royalty per import in USDC (6 decimals)
+     * @dev TODO: Add dependency-based minimum price validation on-chain
+     *      Currently validated client-side in AdvancedClay.tsx
+     *      Future enhancement: Add dependencyIds[] parameter and verify royalty > sum(dependencies)
      */
     function registerAsset(
         string memory projectId,
@@ -122,7 +125,8 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         uint256 royaltyPerImportUSDC
     ) external {
         require(bytes(projectId).length > 0, "Project ID cannot be empty");
-        require(royaltyPerImportETH > 0 || royaltyPerImportUSDC > 0, "At least one royalty must be set");
+        // FIX: Allow free libraries (0 ETH, 0 USDC) for community contributions
+        // require(royaltyPerImportETH > 0 || royaltyPerImportUSDC > 0, "At least one royalty must be set");
         require(!libraryAssets[projectId].exists, "Asset already registered");
         
         LibraryAsset memory newAsset = LibraryAsset({
@@ -159,7 +163,8 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         LibraryAsset storage asset = libraryAssets[projectId];
         require(asset.exists, "Asset not found");
         require(msg.sender == asset.currentOwner, "Only owner can update royalty");
-        require(newRoyaltyETH > 0 || newRoyaltyUSDC > 0, "At least one royalty must be set");
+        // FIX: Allow free libraries (0 ETH, 0 USDC)
+        // require(newRoyaltyETH > 0 || newRoyaltyUSDC > 0, "At least one royalty must be set");
         
         asset.royaltyPerImportETH = newRoyaltyETH;
         asset.royaltyPerImportUSDC = newRoyaltyUSDC;

@@ -123,7 +123,7 @@ export default function MarketplacePage() {
     }
     
     try {
-      const result = await buyListedAsset(listing.projectId, parseFloat(listing.price), walletAddress)
+      const result = await buyListedAsset(listing.projectId, walletAddress)
       if (result.success) {
         showPopup('Purchase successful! You are now the owner.', 'success')
         setSelectedListing(null)

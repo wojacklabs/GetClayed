@@ -230,3 +230,6 @@ npx hardhat verify --network base 0x62eDd08a9943656661818f62679eaa8000C108a3 0x4
 
 **새로운 시작으로 더 견고한 시스템 구축 완료!** 🚀
 
+
+
+

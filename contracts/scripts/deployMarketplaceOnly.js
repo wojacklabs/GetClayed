@@ -4,14 +4,15 @@ async function main() {
   console.log("🛒 Deploying ClayMarketplace only...\n");
   
   const LIBRARY_ADDRESS = "0xB48d4B9067af863AAC10D2B0e213C01ef51df3a0";
+  const ROYALTY_ADDRESS = "0x9204F459508cD03850F53E5064E778f88C0C8D45";  // UPDATED: Add royalty address
   
   const [deployer] = await hre.ethers.getSigners();
   console.log("💼 Deploying with account:", deployer.address);
   console.log("💰 Balance:", hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address)), "ETH\n");
   
-  console.log("Deploying ClayMarketplace...");
+  console.log("Deploying ClayMarketplace (SECURITY FIX: with royalty contract)...");
   const ClayMarketplace = await hre.ethers.getContractFactory("ClayMarketplace");
-  const marketplace = await ClayMarketplace.deploy(LIBRARY_ADDRESS);
+  const marketplace = await ClayMarketplace.deploy(LIBRARY_ADDRESS, ROYALTY_ADDRESS);
   await marketplace.waitForDeployment();
   const marketplaceAddress = await marketplace.getAddress();
   console.log("✅ ClayMarketplace deployed to:", marketplaceAddress);

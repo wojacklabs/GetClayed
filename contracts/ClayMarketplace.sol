@@ -21,6 +21,12 @@ interface IClayLibrary {
     );
 }
 
+interface IClayRoyalty {
+    function calculateTotalRoyalties(string memory projectId) external view returns (uint256 totalETH, uint256 totalUSDC);
+    function totalRoyaltiesPaidETH(string memory projectId) external view returns (uint256);
+    function totalRoyaltiesPaidUSDC(string memory projectId) external view returns (uint256);
+}
+
 /**
  * @title ClayMarketplace
  * @notice NFT-style marketplace for buying/selling Clay library assets
@@ -28,6 +34,7 @@ interface IClayLibrary {
  */
 contract ClayMarketplace is Ownable, ReentrancyGuard {
     IClayLibrary public libraryContract;
+    IClayRoyalty public royaltyContract;
     
     // USDC token address on Base Mainnet
     address public constant USDC_ADDRESS = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
@@ -116,15 +123,30 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         address indexed buyer
     );
     
+    event OfferRefundFailed(
+        uint256 indexed offerId,
+        string indexed projectId,
+        address indexed buyer,
+        uint256 refundAmount
+    );
+    
     event ListingPriceUpdated(
         string indexed projectId,
         uint256 oldPrice,
         uint256 newPrice
     );
     
-    constructor(address _libraryContract) Ownable(msg.sender) {
+    constructor(address _libraryContract, address _royaltyContract) Ownable(msg.sender) {
         libraryContract = IClayLibrary(_libraryContract);
+        royaltyContract = IClayRoyalty(_royaltyContract);
         usdcToken = IERC20(USDC_ADDRESS);
+    }
+    
+    /**
+     * @notice Update royalty contract address (only owner)
+     */
+    function setRoyaltyContract(address _royaltyContract) external onlyOwner {
+        royaltyContract = IClayRoyalty(_royaltyContract);
     }
     
     /**
@@ -132,6 +154,8 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
      * @param projectId The project ID
      * @param price Sale price
      * @param paymentToken Payment token (0: ETH, 1: USDC)
+     * @dev CRITICAL SECURITY FIX: Validates price against PAID royalties (not current)
+     *      This prevents underpricing even if libraries are deleted after project creation
      */
     function listAsset(string memory projectId, uint256 price, PaymentToken paymentToken) external {
         require(price > 0, "Price must be greater than 0");
@@ -141,6 +165,23 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         (,,,,,address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled) = libraryContract.getAsset(projectId);
         require(exists, "Asset not found in library");
         require(currentOwner == msg.sender, "Only owner can list asset");
+        
+        // CRITICAL SECURITY FIX: Validate price against PAID royalties (not current state)
+        // This prevents selling below cost even if libraries are deleted/disabled
+        // Uses totalRoyaltiesPaid instead of calculateTotalRoyalties
+        if (address(royaltyContract) != address(0)) {
+            // Get PAID royalties from ClayRoyalty contract
+            uint256 paidETH = royaltyContract.totalRoyaltiesPaidETH(projectId);
+            uint256 paidUSDC = royaltyContract.totalRoyaltiesPaidUSDC(projectId);
+            
+            if (paymentToken == PaymentToken.ETH) {
+                // Price must be HIGHER than royalties PAID (not current state)
+                // This protects creators even if their libraries are later deleted
+                require(price > paidETH, "Price must be higher than royalties paid");
+            } else {
+                require(price > paidUSDC, "Price must be higher than royalties paid");
+            }
+        }
         
         Listing memory newListing = Listing({
             projectId: projectId,
@@ -171,17 +212,12 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         uint256 sellerPayment = listing.price - platformFee;
         
         if (listing.paymentToken == PaymentToken.ETH) {
-            require(msg.value >= listing.price, "Insufficient ETH payment");
+            // FIX: Require exact amount to prevent refund failures
+            require(msg.value == listing.price, "Exact ETH amount required");
             
             // Transfer ETH to seller
             (bool success, ) = listing.seller.call{value: sellerPayment}("");
             require(success, "Payment to seller failed");
-            
-            // Refund excess payment
-            if (msg.value > listing.price) {
-                (bool refundSuccess, ) = msg.sender.call{value: msg.value - listing.price}("");
-                require(refundSuccess, "Refund failed");
-            }
         } else {
             require(msg.value == 0, "Do not send ETH for USDC purchase");
             
@@ -214,6 +250,7 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
     /**
      * @notice Cancel a listing
      * @param projectId The project ID
+     * @dev CRITICAL FIX: Also cancels all active offers and refunds buyers
      */
     function cancelListing(string memory projectId) external {
         Listing storage listing = listings[projectId];
@@ -222,6 +259,10 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         
         listing.isActive = false;
         _removeFromActiveListings(projectId);
+        
+        // CRITICAL FIX: Cancel all active offers for this asset and refund buyers
+        // This prevents buyers' funds from being locked when seller cancels listing
+        _cancelAllOffers(projectId);
         
         emit ListingCancelled(projectId, msg.sender);
     }
@@ -434,9 +475,11 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
                     success = usdcToken.transfer(offer.buyer, offer.offerPrice);
                 }
                 
-                // If refund fails, buyer can claim manually later
+                // FIX: Emit event even if refund fails, so user knows to claim manually
                 if (success) {
                     emit OfferCancelled(offerIds[i], projectId, offer.buyer);
+                } else {
+                    emit OfferRefundFailed(offerIds[i], projectId, offer.buyer, offer.offerPrice);
                 }
             }
         }

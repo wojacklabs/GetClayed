@@ -30,10 +30,10 @@ async function main() {
   await setRoyaltyTx.wait();
   console.log("   ✅ ClayLibrary.royaltyContract set to:", royaltyAddress);
   
-  // Step 4: Deploy Marketplace contract
-  console.log("\n4️⃣  Deploying ClayMarketplace...");
+  // Step 4: Deploy Marketplace contract (SECURITY FIX: now requires royalty contract)
+  console.log("\n4️⃣  Deploying ClayMarketplace (with royalty contract for price validation)...");
   const ClayMarketplace = await hre.ethers.getContractFactory("ClayMarketplace");
-  const marketplace = await ClayMarketplace.deploy(libraryAddress);
+  const marketplace = await ClayMarketplace.deploy(libraryAddress, royaltyAddress);
   await marketplace.waitForDeployment();
   const marketplaceAddress = await marketplace.getAddress();
   console.log("   ✅ ClayMarketplace deployed to:", marketplaceAddress);
@@ -43,6 +43,16 @@ async function main() {
   const approveTx = await library.setApprovedMarketplace(marketplaceAddress, true);
   await approveTx.wait();
   console.log("   ✅ ClayMarketplace approved for ownership transfers");
+  
+  // Step 6: Verify royalty contract is set in marketplace (SECURITY FIX)
+  console.log("\n6️⃣  Verifying royalty contract in ClayMarketplace...");
+  const marketplaceRoyaltyAddress = await marketplace.royaltyContract();
+  console.log("   ℹ️  Marketplace royalty contract:", marketplaceRoyaltyAddress);
+  if (marketplaceRoyaltyAddress.toLowerCase() === royaltyAddress.toLowerCase()) {
+    console.log("   ✅ Royalty contract correctly set for price validation");
+  } else {
+    console.warn("   ⚠️  Warning: Royalty contract mismatch!");
+  }
   
   console.log("\n");
   console.log("═".repeat(60));
@@ -62,7 +72,7 @@ async function main() {
   console.log("\n📝 Verification Commands (run later):");
   console.log(`npx hardhat verify --network base ${libraryAddress} ${hre.ethers.ZeroAddress}`);
   console.log(`npx hardhat verify --network base ${royaltyAddress} ${libraryAddress}`);
-  console.log(`npx hardhat verify --network base ${marketplaceAddress} ${libraryAddress}`);
+  console.log(`npx hardhat verify --network base ${marketplaceAddress} ${libraryAddress} ${royaltyAddress}`);
   
   console.log("\n✨ Features Enabled:");
   console.log("   ✅ Pull Pattern (Claim-based royalties)");
