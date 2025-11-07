@@ -93,29 +93,45 @@ if (project.usedLibraries && project.usedLibraries.length > 0) {
 
 ---
 
-### 수정 2: 프로젝트 전환 시 저장 안내
+### 수정 2: 프로젝트 전환 시 저장 안내 (커스텀 모달)
 **파일**: `app/components/AdvancedClay.tsx`  
 **함수**: `handleProjectSelect`  
-**위치**: Line 3737-3748
+**위치**: Line 3856-3867, Modal UI: 5293-5317
 
 ```typescript
 // CRITICAL FIX: Warn user if current project has unsaved library imports
 if (currentProjectInfo && currentProjectInfo.isDirty && usedLibraries.length > 0) {
-  const confirmSwitch = window.confirm(
-    `You have imported ${usedLibraries.length} library asset(s) that are not saved yet.\n\n` +
-    `If you switch projects now, you will need to import them again and pay royalties again when you save.\n\n` +
-    `Do you want to switch anyway?`
-  );
-  
-  if (!confirmSwitch) {
-    console.log('[ProjectSelect] User cancelled project switch to preserve library imports');
-    return;
-  }
+  // Show modal instead of window.confirm
+  setPendingProjectId(projectId);
+  setShowProjectSwitchModal(true);
+  return;
 }
 ```
 
+**모달 UI** (미니멀 디자인):
+```tsx
+<div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+  <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
+    <h3 className="text-lg font-semibold mb-4">Switch Project?</h3>
+    <p className="text-gray-600 mb-6">
+      You have {usedLibraries.length} unsaved library import{usedLibraries.length > 1 ? 's' : ''}. 
+      Switching now will lose them and require re-importing with new royalty payments.
+    </p>
+    <div className="flex justify-end gap-3">
+      <button onClick={cancelProjectSwitch} className="px-4 py-2 text-gray-600 hover:text-gray-800">
+        Cancel
+      </button>
+      <button onClick={confirmProjectSwitch} className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-blue-600">
+        Switch Anyway
+      </button>
+    </div>
+  </div>
+</div>
+```
+
 **효과**:
-- ✅ 사용자가 저장하지 않은 library import가 있을 때 명확한 경고
+- ✅ 기존 디자인과 일관된 커스텀 모달
+- ✅ 간결하고 명확한 경고 메시지
 - ✅ 실수로 프로젝트 전환하는 것 방지
 - ✅ 중복 royalty 지불 방지
 
@@ -138,25 +154,22 @@ setPendingLibraryPurchases(new Set())
 
 ---
 
-### 수정 4: New File 모달에 Library Import 경고
+### 수정 4: New File 모달에 Library Import 경고 (간결화)
 **파일**: `app/components/AdvancedClay.tsx`  
 **컴포넌트**: New File Confirmation Modal  
-**위치**: Line 5251-5256
+**위치**: Line 5265-5270
 
 ```typescript
 <p className="text-gray-600 mb-6">
-  Creating a new project will reset all current work.
-  {usedLibraries.length > 0 && (
-    <span className="block mt-2 text-red-600 font-semibold">
-      Warning: You have imported {usedLibraries.length} library asset(s) that are not saved yet. 
-      You will need to import them again and pay royalties again.
-    </span>
-  )}
-  {' '}Are you sure you want to continue?
+  {usedLibraries.length > 0 
+    ? `You have ${usedLibraries.length} unsaved library import${usedLibraries.length > 1 ? 's' : ''}. Creating a new project will lose all current work.`
+    : 'Creating a new project will reset all current work. Are you sure you want to continue?'
+  }
 </p>
 ```
 
 **효과**:
+- ✅ 간결하고 명확한 메시지 (1문장)
 - ✅ 새 프로젝트 생성 시에도 명확한 경고
 - ✅ 사용자가 의도하지 않은 library 정보 손실 방지
 
@@ -286,25 +299,23 @@ handleProjectSelect(projectId) →
 
 ---
 
-## 사용자 안내 메시지
+## 사용자 안내 메시지 (간결한 버전)
 
-### 한국어
+### 영어 (최종)
+**Project Switch**:
 ```
-저장하지 않은 라이브러리가 ${count}개 있습니다.
-
-지금 프로젝트를 전환하면, 다시 import하고 royalty를 다시 지불해야 합니다.
-
-계속하시겠습니까?
+You have 2 unsaved library imports. Switching now will lose them and require re-importing with new royalty payments.
 ```
 
-### 영어
+**New Project**:
 ```
-You have imported ${count} library asset(s) that are not saved yet.
-
-If you switch projects now, you will need to import them again and pay royalties again when you save.
-
-Do you want to switch anyway?
+You have 2 unsaved library imports. Creating a new project will lose all current work.
 ```
+
+**디자인 원칙**:
+- 간결함: 1-2문장으로 핵심만 전달
+- 명확함: 무엇을 잃고, 무엇이 필요한지 명시
+- 일관성: 기존 모달 스타일과 동일
 
 ---
 
