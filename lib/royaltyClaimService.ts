@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { getErrorMessage } from './errorHandler';
+import { BASE_RPC_URL } from './networkUtils';
 
 /**
  * Get wallet provider - supports Privy and MetaMask
@@ -56,7 +57,6 @@ export interface RoyaltyEvent {
 export async function getPendingRoyalties(userAddress: string): Promise<PendingRoyalties> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
-    const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
     
     console.log('[RoyaltyClaimService] Getting pending royalties for:', userAddress);
     console.log('[RoyaltyClaimService] Royalty contract address:', ROYALTY_CONTRACT_ADDRESS);

@@ -3,6 +3,7 @@ import { fixedKeyUploader } from './fixedKeyUploadService';
 import { getErrorMessage } from './errorHandler';
 import { uploadInChunks, uploadChunkManifest } from './chunkUploadService';
 import { downloadClayProject, ClayProject } from './clayStorageService';
+import { BASE_RPC_URL } from './networkUtils';
 
 const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
 
@@ -507,8 +508,7 @@ export async function queryLibraryAssets(
       if (LIBRARY_CONTRACT_ADDRESS && typeof window !== 'undefined') {
         try {
           // Use public RPC provider (works without wallet connection)
-          const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
-          const provider = new ethers.JsonRpcProvider(rpcUrl);
+          const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
           const contract = new ethers.Contract(
             LIBRARY_CONTRACT_ADDRESS,
             LIBRARY_CONTRACT_ABI,
@@ -659,8 +659,7 @@ export async function getUserLibraryAssets(
     }
     
     // Use public RPC provider (works without wallet connection)
-    const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
     const contract = new ethers.Contract(
       LIBRARY_CONTRACT_ADDRESS,
       LIBRARY_CONTRACT_ABI,
@@ -696,8 +695,7 @@ export async function getLibraryCurrentRoyalties(
   }
   
   try {
-    const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
     const contract = new ethers.Contract(
       LIBRARY_CONTRACT_ADDRESS,
       LIBRARY_CONTRACT_ABI,
