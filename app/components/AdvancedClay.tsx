@@ -2370,7 +2370,7 @@ export default function AdvancedClay() {
       return;
     }
     
-    showPopup('Remove this project from Library? Users will no longer pay royalties.', 'warning', {
+    showPopup('Remove from Library?', 'warning', {
       autoClose: false,
       confirmButton: {
         text: 'Remove',
@@ -2517,7 +2517,7 @@ export default function AdvancedClay() {
       if (dependencyLibraries.length > 0) {
         const { calculateMinimumPriceFromBlockchain } = await import('../../lib/libraryService')
         
-        showPopup('Checking current library prices on blockchain...', 'info')
+        showPopup('Checking prices...', 'info')
         
         const priceCheck = await calculateMinimumPriceFromBlockchain(dependencyLibraries)
         
@@ -2536,8 +2536,7 @@ export default function AdvancedClay() {
             .join(', ')
           
           showPopup(
-            `⚠️ Warning: ${priceCheck.deletedLibraries.length} of your dependencies have been deleted: ${deletedNames}. ` +
-            `These won't receive royalties, so minimum price is reduced.`,
+            `⚠️ ${priceCheck.deletedLibraries.length} dependencies deleted: ${deletedNames}`,
             'warning'
           )
         }
@@ -2549,8 +2548,7 @@ export default function AdvancedClay() {
             .join(', ')
           
           showPopup(
-            `⚠️ Warning: ${priceCheck.disabledLibraries.length} of your dependencies have disabled royalties: ${disabledNames}. ` +
-            `These won't receive royalties, so minimum price is reduced.`,
+            `⚠️ ${priceCheck.disabledLibraries.length} dependencies disabled: ${disabledNames}`,
             'warning'
           )
         }
@@ -2558,10 +2556,7 @@ export default function AdvancedClay() {
         // Enforce minimum pricing based on CURRENT blockchain values
         if (ethPrice > 0 && ethPrice <= priceCheck.minETH) {
           showPopup(
-            `⚠️ Price too low! This project uses ${priceCheck.activeLibraries.length} active library(ies). ` +
-            `To protect the original creators, your royalty must be HIGHER than their CURRENT total royalties. ` +
-            `Current minimum: ${priceCheck.minETH.toFixed(6)} ETH (you set: ${ethPrice.toFixed(6)} ETH). ` +
-            `Suggested: ${(priceCheck.minETH * 1.2).toFixed(6)} ETH or more.`,
+            `Price too low. Minimum: ${priceCheck.minETH.toFixed(4)} ETH (you set: ${ethPrice.toFixed(4)}). Suggested: ${(priceCheck.minETH * 1.2).toFixed(4)}`,
             'error'
           )
           setIsRegisteringLibrary(false)
@@ -2570,10 +2565,7 @@ export default function AdvancedClay() {
         
         if (usdcPrice > 0 && usdcPrice <= priceCheck.minUSDC) {
           showPopup(
-            `⚠️ Price too low! This project uses ${priceCheck.activeLibraries.length} active library(ies). ` +
-            `To protect the original creators, your royalty must be HIGHER than their CURRENT total royalties. ` +
-            `Current minimum: ${priceCheck.minUSDC.toFixed(2)} USDC (you set: ${usdcPrice.toFixed(2)} USDC). ` +
-            `Suggested: ${(priceCheck.minUSDC * 1.2).toFixed(2)} USDC or more.`,
+            `Price too low. Minimum: ${priceCheck.minUSDC.toFixed(2)} USDC (you set: ${usdcPrice.toFixed(2)}). Suggested: ${(priceCheck.minUSDC * 1.2).toFixed(2)}`,
             'error'
           )
           setIsRegisteringLibrary(false)
@@ -2583,18 +2575,16 @@ export default function AdvancedClay() {
         // Show helpful info to user
         if (ethPrice > 0 && ethPrice > priceCheck.minETH) {
           const message = priceCheck.activeLibraries.length > 0
-            ? `✅ Good pricing! Your royalty (${ethPrice.toFixed(6)} ETH) is higher than current dependencies (${priceCheck.minETH.toFixed(6)} ETH). ` +
-              `Original creators will receive their fair share when someone uses your library.`
-            : `✅ This project has no active library dependencies. You can set any price.`
+            ? `✅ Price OK (${ethPrice.toFixed(4)} ETH > ${priceCheck.minETH.toFixed(4)} minimum)`
+            : `✅ No dependencies - any price OK`
           
           showPopup(message, 'success')
         }
         
         if (usdcPrice > 0 && usdcPrice > priceCheck.minUSDC) {
           const message = priceCheck.activeLibraries.length > 0
-            ? `✅ Good pricing! Your royalty (${usdcPrice.toFixed(2)} USDC) is higher than current dependencies (${priceCheck.minUSDC.toFixed(2)} USDC). ` +
-              `Original creators will receive their fair share when someone uses your library.`
-            : `✅ This project has no active library dependencies. You can set any price.`
+            ? `✅ Price OK (${usdcPrice.toFixed(2)} USDC > ${priceCheck.minUSDC.toFixed(2)} minimum)`
+            : `✅ No dependencies - any price OK`
           
           showPopup(message, 'success')
         }
@@ -2612,7 +2602,7 @@ export default function AdvancedClay() {
       )
       
       if (result.success) {
-        showPopup('Asset registered to library!', 'success')
+        showPopup('Registered to library', 'success')
         setShowLibraryModal(false)
         setLibraryAssetName('')
         setLibraryDescription('')
@@ -2649,7 +2639,7 @@ export default function AdvancedClay() {
   const handleImportFromLibrary = async (asset: any) => {
     try {
       // Download the project (free import)
-      showPopup('Importing library asset...', 'info')
+      showPopup('Importing...', 'info')
       
       const project = await downloadClayProject(asset.projectId)
       const importedObjects = restoreClayObjects(project)
@@ -2739,7 +2729,7 @@ export default function AdvancedClay() {
         return newSet
       })
       
-      showPopup(`Imported with ${librariesToAdd.length} library dependency(ies). Payment on upload.`, 'success')
+      showPopup(`Imported (${librariesToAdd.length} dependencies)`, 'success')
       setShowLibrarySearch(false)
     } catch (error: any) {
       showPopup(error.message || 'Import failed', 'error')
@@ -3030,7 +3020,7 @@ export default function AdvancedClay() {
         } catch (error) {
           console.error('Failed to restore auto-save:', error);
           localStorage.removeItem('clayAutoSave');
-          showPopup('Failed to restore auto-saved data. Starting fresh.', 'error');
+          showPopup('Auto-save restore failed', 'error');
         }
     }
     
@@ -3184,12 +3174,12 @@ export default function AdvancedClay() {
   // Group-related functions
   const createGroup = useCallback((name: string) => {
     if (selectedForGrouping.length < 2) {
-      showPopup('Please select at least 2 objects to group', 'error')
+      showPopup('Select 2+ objects to group', 'error')
       return
     }
     
     if (!mainObjectForGroup) {
-      showPopup('Please select a main object for the group', 'error')
+      showPopup('Select main object', 'error')
       return
     }
     
@@ -3219,7 +3209,7 @@ export default function AdvancedClay() {
     setSelectedForGrouping([])
     setMainObjectForGroup(null)
     setShowGroupingPanel(false)
-    showPopup(`Created group: ${newGroup.name}`, 'success')
+    showPopup(`Group: ${newGroup.name}`, 'success')
   }, [selectedForGrouping, mainObjectForGroup, clayGroups, addToHistory, showPopup])
   
   const ungroupObjects = useCallback((groupId: string) => {
@@ -3487,39 +3477,53 @@ export default function AdvancedClay() {
         backgroundColor
       })
       
-      // SECURITY: Auto-detect libraries actually used in the project
-      // This prevents users from removing libraries from usedLibraries array
-      const detectedLibraries = new Map<string, any>()
+      // CRITICAL FIX: Use usedLibraries as the source of truth
+      // Only verify that they're actually being used (not removed)
+      const detectedLibraryIds = new Set<string>()
       
+      // First, collect all library IDs actually present in clayObjects
       clayObjects.forEach(clay => {
-        if (clay.librarySourceId && clay.librarySourceName) {
-          if (!detectedLibraries.has(clay.librarySourceId)) {
-            // Find the library details from usedLibraries
-            const libDetails = usedLibraries.find(lib => lib.projectId === clay.librarySourceId)
-            if (libDetails) {
-              detectedLibraries.set(clay.librarySourceId, libDetails)
-            } else {
-              // Library not in usedLibraries - this is suspicious!
-              console.warn(`[SECURITY] Object ${clay.id} claims to be from library ${clay.librarySourceId} (${clay.librarySourceName}) but library not found in usedLibraries!`)
-              // Still add it to enforce royalty payment
-              detectedLibraries.set(clay.librarySourceId, {
-                projectId: clay.librarySourceId,
-                name: clay.librarySourceName,
-                royaltyPerImportETH: '0',
-                royaltyPerImportUSDC: '0'
-              })
-            }
+        if (clay.librarySourceId) {
+          detectedLibraryIds.add(clay.librarySourceId)
+        }
+      })
+      
+      // Use usedLibraries, but only include those that are still in clayObjects
+      // This prevents:
+      // 1. User removing all objects from a library but still claiming it
+      // 2. User deleting usedLibraries entries to avoid payment
+      const finalUsedLibraries = usedLibraries.filter(lib => {
+        const stillUsed = detectedLibraryIds.has(lib.projectId)
+        if (!stillUsed && usedLibraries.length > 0) {
+          console.log(`[SECURITY] Library ${lib.name} (${lib.projectId}) was imported but all objects removed - not charging`)
+        }
+        return stillUsed
+      })
+      
+      // SECURITY: Check for objects claiming libraries not in usedLibraries
+      clayObjects.forEach(clay => {
+        if (clay.librarySourceId) {
+          const isKnown = usedLibraries.some(lib => lib.projectId === clay.librarySourceId)
+          if (!isKnown) {
+            console.warn(`[SECURITY] Object ${clay.id} claims library ${clay.librarySourceId} (${clay.librarySourceName}) not in usedLibraries - adding it!`)
+            // Add it to ensure payment
+            finalUsedLibraries.push({
+              projectId: clay.librarySourceId,
+              name: clay.librarySourceName || 'Unknown',
+              royaltyPerImportETH: '0',
+              royaltyPerImportUSDC: '0',
+              creator: undefined
+            })
           }
         }
       })
       
-      const finalUsedLibraries = Array.from(detectedLibraries.values())
-      
-      // Log security check results
-      console.log(`[SECURITY] Detected ${finalUsedLibraries.length} libraries from clay objects`)
-      console.log(`[SECURITY] User claimed ${usedLibraries.length} libraries`)
-      if (finalUsedLibraries.length !== usedLibraries.length) {
-        console.warn(`[SECURITY WARNING] Mismatch between detected (${finalUsedLibraries.length}) and claimed (${usedLibraries.length}) libraries!`)
+      // Log results
+      console.log(`[Save] usedLibraries state: ${usedLibraries.length} libraries`)
+      console.log(`[Save] Detected in clayObjects: ${detectedLibraryIds.size} libraries`)
+      console.log(`[Save] Final libraries to pay: ${finalUsedLibraries.length}`)
+      if (finalUsedLibraries.length > 0) {
+        console.log(`[Save] Libraries:`, finalUsedLibraries.map(lib => lib.name).join(', '))
       }
       
       // Step 1: Serialize the clay objects
@@ -3636,9 +3640,9 @@ export default function AdvancedClay() {
               'success'
             )
           } else if (result.alreadyOwned > 0) {
-            showPopup(`All ${result.alreadyOwned} libraries already owned - no payment needed`, 'success')
+            showPopup(`All ${result.alreadyOwned} libraries owned`, 'success')
           } else {
-            showPopup('No active library dependencies - no payment needed', 'success')
+            showPopup('No library dependencies', 'success')
           }
           
           // Clear used libraries after successful payment
@@ -3672,12 +3676,12 @@ export default function AdvancedClay() {
           } else {
             console.error('[Save] ❌ No provider available for signing')
             // FIX P0-4: More strict warning for missing signature
-            showPopup('Warning: Could not sign project data. Project integrity cannot be verified.', 'warning')
+            showPopup('Could not sign project data', 'warning')
           }
         } catch (signError: any) {
           console.error('[Save] ❌ Failed to sign project:', signError)
           // FIX P0-4: Warn user about security implications
-          showPopup('Warning: Project signature failed. This project may not be verifiable for royalty payments.', 'warning')
+          showPopup('Project signature failed', 'warning')
         }
       }
 
@@ -3749,14 +3753,20 @@ export default function AdvancedClay() {
       folderStructureRef.current?.refreshProjects()
     } catch (error: any) {
       console.error('Failed to save project:', error)
-      if (error?.message?.includes('User rejected')) {
-        // Transaction cancelled by user
+      
+      // CRITICAL FIX: Always throw errors to prevent upload after failure
+      if (error?.message?.includes('User rejected') || error?.message?.includes('user rejected')) {
+        showPopup('Upload cancelled by user', 'info')
+        throw new Error('Upload cancelled by user')
       } else if (error?.message?.includes('Insufficient balance')) {
-        throw new Error('Insufficient balance. Your project is over 100KB and requires IRYS tokens.')
+        showPopup('Insufficient IRYS balance (project >100KB)', 'error')
+        throw new Error('Insufficient IRYS balance')
       } else if (error?.message?.includes('over 100KB')) {
-        throw new Error('Project size exceeds 100KB free tier. Payment is required.')
+        showPopup('Project >100KB - payment required', 'error')
+        throw new Error('Project >100KB - payment required')
       } else {
-        throw new Error('Failed to save project. Please try again.')
+        showPopup(error.message || 'Save failed', 'error')
+        throw new Error(error.message || 'Save failed')
       }
     } finally {
       // FIX P0-2: Always remove beforeunload listener
@@ -3876,12 +3886,12 @@ export default function AdvancedClay() {
       const libraryInfo = project.usedLibraries && project.usedLibraries.length > 0 
         ? ` (with ${project.usedLibraries.length} library dependencies)`
         : '';
-      showPopup(`Project "${project.name}" loaded successfully!${libraryInfo}`, 'success')
+      showPopup(`Loaded: ${project.name}${libraryInfo}`, 'success')
     } catch (error) {
       console.error('Failed to load project:', error)
       // Close download progress dialog on error
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
-      showPopup('Failed to load project. Please try again.', 'error')
+      showPopup('Failed to load project', 'error')
     }
   }
 
@@ -3968,10 +3978,10 @@ export default function AdvancedClay() {
       // Clear cache to refresh list
       queryCache.delete(`projects-${walletAddress}`)
       
-      showPopup('Project deleted successfully!', 'success')
+      showPopup('Deleted', 'success')
     } catch (error) {
       console.error('Failed to delete project:', error)
-      showPopup('Failed to delete project. Please try again.', 'error')
+      showPopup('Delete failed', 'error')
     }
   }
 
@@ -3987,14 +3997,14 @@ export default function AdvancedClay() {
       // If this is the current project, update its name and save
       if (currentProjectInfo && currentProjectInfo.projectId === projectId) {
         await handleSaveProject(newName, false);
-        showPopup('Project renamed successfully!', 'success');
+        showPopup('Renamed', 'success');
       } else {
         // For other projects, we need to load, rename, and save
         showPopup('Please open the project to rename it', 'info');
       }
     } catch (error) {
       console.error('Failed to rename project:', error)
-      showPopup('Failed to rename project. Please try again.', 'error')
+      showPopup('Rename failed', 'error')
     }
   }
 
@@ -4047,14 +4057,14 @@ export default function AdvancedClay() {
         queryCache.delete(`projects-${walletAddress}`)
         
         if (projectsToDelete.length > 0) {
-          showPopup(`Folder and ${projectsToDelete.length} project(s) deleted successfully!`, 'success')
+          showPopup(`Deleted folder + ${projectsToDelete.length} projects`, 'success')
         } else {
-          showPopup('Folder deleted successfully!', 'success')
+          showPopup('Folder deleted', 'success')
         }
       }
     } catch (error) {
       console.error('Failed to delete folder contents:', error)
-      showPopup('Failed to delete folder contents. Please try again.', 'error')
+      showPopup('Delete folder failed', 'error')
     }
   }
 
@@ -4072,10 +4082,10 @@ export default function AdvancedClay() {
         author: walletAddress || 'Anonymous',
         description: 'Created with GetClayed'
       })
-      showPopup('GLB file exported successfully', 'success')
+      showPopup('Exported', 'success')
     } catch (error) {
       console.error('Failed to export GLB:', error)
-      showPopup('Failed to export GLB file', 'error')
+      showPopup('Export failed', 'error')
     }
     
     setShowExportModal(false)
@@ -4120,7 +4130,7 @@ export default function AdvancedClay() {
     setPendingLibraryPurchases(new Set())
     
     setShowNewFileModal(false)
-    showPopup('New project created', 'success')
+    showPopup('New project', 'success')
   }
   
   // Move selected clay with keyboard
@@ -4170,10 +4180,10 @@ export default function AdvancedClay() {
         if (selectedClay) {
           // If group is selected, copy the first object of the group (paste will copy whole group)
           if (selectedGroupId && selectedClay.groupId === selectedGroupId) {
-            showPopup('Group copied', 'success')
+            showPopup('Copied', 'success')
             console.log('[Clipboard] Copied group:', selectedGroupId)
           } else {
-            showPopup('Object copied', 'success')
+            showPopup('Copied', 'success')
             console.log('[Clipboard] Copied object:', selectedClay.id)
           }
           clipboardRef.current = { clay: selectedClay, mode: 'copy' }
@@ -4195,7 +4205,7 @@ export default function AdvancedClay() {
             addToHistory(newClays)
             setSelectedClayId(null)
             setSelectedGroupId(null)
-            showPopup('Group cut', 'success')
+            showPopup('Cut', 'success')
             console.log('[Clipboard] Cut group:', selectedGroupId)
           } else {
             // Remove single object
@@ -4203,7 +4213,7 @@ export default function AdvancedClay() {
             setClayObjects(newClays)
             addToHistory(newClays)
             setSelectedClayId(null)
-            showPopup('Object cut', 'success')
+            showPopup('Cut', 'success')
             console.log('[Clipboard] Cut object:', selectedClay.id)
           }
         }
@@ -4262,7 +4272,7 @@ export default function AdvancedClay() {
               setClayGroups(prev => [...prev, newGroup])
               addToHistory(newClays)
               setSelectedClayId(newGroupObjects[0].id)
-              showPopup('Group pasted', 'success')
+              showPopup('Pasted', 'success')
               console.log('[Clipboard] Pasted group with', newGroupObjects.length, 'objects')
             }
           } else {
@@ -4293,7 +4303,7 @@ export default function AdvancedClay() {
             setClayObjects(newClays)
             addToHistory(newClays)
             setSelectedClayId(newClay.id)
-            showPopup('Object pasted', 'success')
+            showPopup('Pasted', 'success')
             console.log('[Clipboard] Pasted new object:', newClay.id)
           }
           
@@ -4914,7 +4924,7 @@ export default function AdvancedClay() {
                       const selectedClay = clayObjects.find(c => c.id === selectedClayId)
                       if (selectedClay) {
                         updateClay({ ...selectedClay, color })
-                        showPopup('Color applied', 'success')
+                        showPopup('Color changed', 'success')
                       }
                     }
                   }}
@@ -5571,7 +5581,7 @@ export default function AdvancedClay() {
                   const clay = clayObjects.find(c => c.id === contextMenu.clayId)
                   if (clay) {
                     clipboardRef.current = { clay, mode: 'copy' }
-                    showPopup('Object copied', 'success')
+                    showPopup('Copied', 'success')
                   }
                   setContextMenu(null)
                 }}
@@ -5588,7 +5598,7 @@ export default function AdvancedClay() {
                     setClayObjects(newClays)
                     addToHistory(newClays)
                     setSelectedClayId(null)
-                    showPopup('Object cut', 'success')
+                    showPopup('Cut', 'success')
                   }
                   setContextMenu(null)
                 }}
