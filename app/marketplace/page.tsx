@@ -143,6 +143,7 @@ export default function MarketplacePage() {
       const result = await makeAssetOffer(
         selectedListing.projectId,
         parseFloat(offerPrice),
+        'ETH', // Default to ETH
         parseInt(offerDuration)
       )
       

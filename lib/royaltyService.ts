@@ -73,15 +73,31 @@ export async function processLibraryPurchasesAndRoyalties(
     const projectIds = usedLibraries.map(lib => lib.projectId);
     const currentStates = await getLibraryCurrentRoyalties(projectIds);
     
-    // CRITICAL FIX: Pre-validate USDC balance BEFORE any contract calls
+    // Filter to only active libraries first
+    const activeLibraries = usedLibraries.filter(lib => {
+      const state = currentStates.get(lib.projectId);
+      return state && state.exists && state.enabled;
+    });
+    
+    console.log('[RoyaltyService] Total libraries:', usedLibraries.length);
+    console.log('[RoyaltyService] Active libraries:', activeLibraries.length);
+    console.log('[RoyaltyService] Filtered out:', usedLibraries.length - activeLibraries.length);
+    
+    // Calculate total royalties (both ETH and USDC) - using stored values
+    // Note: Contract will use current values from getRoyaltyFee
+    let totalRoyaltyETH = 0;
     let totalRoyaltyUSDC = 0;
-    for (const library of usedLibraries) {
+    
+    for (const library of activeLibraries) {
       const state = currentStates.get(library.projectId);
-      if (state && state.exists && state.enabled) {
+      if (state) {
+        // Use current blockchain values
+        totalRoyaltyETH += state.ethAmount;
         totalRoyaltyUSDC += state.usdcAmount;
       }
     }
     
+    // CRITICAL FIX: Pre-validate USDC balance BEFORE any contract calls
     if (totalRoyaltyUSDC > 0 && customProvider) {
       // Check USDC balance early to fail fast
       const { ethers } = await import('ethers');
@@ -108,21 +124,6 @@ export async function processLibraryPurchasesAndRoyalties(
         );
       }
     }
-    
-    // Filter to only active libraries
-    const activeLibraries = usedLibraries.filter(lib => {
-      const state = currentStates.get(lib.projectId);
-      return state && state.exists && state.enabled;
-    });
-    
-    console.log('[RoyaltyService] Total libraries:', usedLibraries.length);
-    console.log('[RoyaltyService] Active libraries:', activeLibraries.length);
-    console.log('[RoyaltyService] Filtered out:', usedLibraries.length - activeLibraries.length);
-    
-    // Calculate total royalties (both ETH and USDC) - using stored values
-    // Note: Contract will use current values from getRoyaltyFee
-    let totalRoyaltyETH = 0;
-    let totalRoyaltyUSDC = 0;
     
     for (const library of activeLibraries) {
       const state = currentStates.get(library.projectId);
