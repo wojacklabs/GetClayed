@@ -8,8 +8,11 @@ export const BASE_CHAIN_ID_HEX = '0x2105';
 
 /**
  * Base Mainnet RPC URL
+ * Uses Next.js API route proxy to avoid CORS issues
  */
-export const BASE_RPC_URL = 'https://mainnet.base.org';
+export const BASE_RPC_URL = typeof window !== 'undefined'
+  ? '/api/rpc'  // Client-side: use proxy to avoid CORS
+  : (process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org');  // Server-side: direct RPC
 
 /**
  * Check if user is on the correct network (Base Mainnet)
