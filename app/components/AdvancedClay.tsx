@@ -3733,6 +3733,20 @@ export default function AdvancedClay() {
 
   const handleProjectSelect = async (projectId: string) => {
     try {
+      // CRITICAL FIX: Warn user if current project has unsaved library imports
+      if (currentProjectInfo && currentProjectInfo.isDirty && usedLibraries.length > 0) {
+        const confirmSwitch = window.confirm(
+          `You have imported ${usedLibraries.length} library asset(s) that are not saved yet.\n\n` +
+          `If you switch projects now, you will need to import them again and pay royalties again when you save.\n\n` +
+          `Do you want to switch anyway?`
+        );
+        
+        if (!confirmSwitch) {
+          console.log('[ProjectSelect] User cancelled project switch to preserve library imports');
+          return;
+        }
+      }
+      
       console.log('Loading project:', projectId)
       
       // Initial loading message
@@ -3790,6 +3804,36 @@ export default function AdvancedClay() {
         setBackgroundColor(project.backgroundColor)
       }
       
+      // CRITICAL FIX: Restore library information when loading project
+      // This ensures royalty payments are enforced even after refresh or project switch
+      if (project.usedLibraries && project.usedLibraries.length > 0) {
+        console.log('[ProjectLoad] Restoring library information:', project.usedLibraries);
+        
+        // Convert old format to new format if needed
+        const converted = project.usedLibraries.map((lib: any) => ({
+          projectId: lib.projectId,
+          name: lib.name,
+          royaltyPerImportETH: lib.royaltyPerImportETH || lib.priceETH || '0',
+          royaltyPerImportUSDC: lib.royaltyPerImportUSDC || lib.priceUSDC || '0',
+          creator: lib.creator || lib.originalCreator || lib.currentOwner
+        }));
+        
+        setUsedLibraries(converted);
+        
+        // Mark these libraries as pending purchase
+        // They will be checked during upload - if already owned, no payment needed
+        setPendingLibraryPurchases(new Set(converted.map((lib: any) => lib.projectId)));
+        
+        console.log('[ProjectLoad] Library info restored:', {
+          libraries: converted.length,
+          pendingPurchases: converted.map((lib: any) => lib.projectId)
+        });
+      } else {
+        // Clear library info if project has no dependencies
+        setUsedLibraries([]);
+        setPendingLibraryPurchases(new Set());
+      }
+      
       // Set current project info
       setCurrentProjectInfo({
         projectId: project.id,
@@ -3807,7 +3851,11 @@ export default function AdvancedClay() {
       // Close download progress dialog
       setChunkDownloadProgress(prev => ({ ...prev, isOpen: false }));
       
-      showPopup(`Project "${project.name}" loaded successfully!`, 'success')
+      // Show library info in success message
+      const libraryInfo = project.usedLibraries && project.usedLibraries.length > 0 
+        ? ` (with ${project.usedLibraries.length} library dependencies)`
+        : '';
+      showPopup(`Project "${project.name}" loaded successfully!${libraryInfo}`, 'success')
     } catch (error) {
       console.error('Failed to load project:', error)
       // Close download progress dialog on error
@@ -4018,6 +4066,11 @@ export default function AdvancedClay() {
     setCurrentProject(null)
     setBackgroundColor('#f0f0f0')
     setCurrentFolder('')
+    
+    // CRITICAL FIX: Clear library information when creating new project
+    setUsedLibraries([])
+    setPendingLibraryPurchases(new Set())
+    
     setShowNewFileModal(false)
     showPopup('New project created', 'success')
   }
@@ -5194,7 +5247,14 @@ export default function AdvancedClay() {
           <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
             <h3 className="text-lg font-semibold mb-4">Create New Project?</h3>
             <p className="text-gray-600 mb-6">
-              Creating a new project will reset all current work. Are you sure you want to continue?
+              Creating a new project will reset all current work.
+              {usedLibraries.length > 0 && (
+                <span className="block mt-2 text-red-600 font-semibold">
+                  Warning: You have imported {usedLibraries.length} library asset(s) that are not saved yet. 
+                  You will need to import them again and pay royalties again.
+                </span>
+              )}
+              {' '}Are you sure you want to continue?
             </p>
             <div className="flex justify-end gap-3">
               <button
