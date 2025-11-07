@@ -67,20 +67,78 @@ export async function processLibraryPurchasesAndRoyalties(
       return { success: true, totalCostETH: 0, totalCostUSDC: 0, alreadyOwned: 0 };
     }
     
-    // Calculate total royalties (both ETH and USDC)
+    // SECURITY FIX: Check current blockchain state to filter deleted/disabled libraries
+    // This ensures we don't send excess ETH/USDC that would get stuck in contract
+    const { getLibraryCurrentRoyalties } = await import('./libraryService');
+    const projectIds = usedLibraries.map(lib => lib.projectId);
+    const currentStates = await getLibraryCurrentRoyalties(projectIds);
+    
+    // CRITICAL FIX: Pre-validate USDC balance BEFORE any contract calls
+    let totalRoyaltyUSDC = 0;
+    for (const library of usedLibraries) {
+      const state = currentStates.get(library.projectId);
+      if (state && state.exists && state.enabled) {
+        totalRoyaltyUSDC += state.usdcAmount;
+      }
+    }
+    
+    if (totalRoyaltyUSDC > 0 && customProvider) {
+      // Check USDC balance early to fail fast
+      const { ethers } = await import('ethers');
+      const provider = new ethers.BrowserProvider(customProvider);
+      const signer = await provider.getSigner();
+      const usdcContract = new ethers.Contract(
+        '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC_ADDRESS
+        ['function balanceOf(address) external view returns (uint256)'],
+        signer
+      );
+      
+      const userAddress = await signer.getAddress();
+      const usdcBalance = await usdcContract.balanceOf(userAddress);
+      const royaltyUnits = ethers.parseUnits(totalRoyaltyUSDC.toFixed(6), 6);
+      
+      if (usdcBalance < royaltyUnits) {
+        const balanceFormatted = ethers.formatUnits(usdcBalance, 6);
+        const requiredFormatted = totalRoyaltyUSDC.toFixed(2);
+        throw new Error(
+          `Insufficient USDC balance.\n` +
+          `Required: ${requiredFormatted} USDC\n` +
+          `Available: ${balanceFormatted} USDC\n` +
+          `Please add ${(totalRoyaltyUSDC - parseFloat(balanceFormatted)).toFixed(2)} USDC to your wallet before saving.`
+        );
+      }
+    }
+    
+    // Filter to only active libraries
+    const activeLibraries = usedLibraries.filter(lib => {
+      const state = currentStates.get(lib.projectId);
+      return state && state.exists && state.enabled;
+    });
+    
+    console.log('[RoyaltyService] Total libraries:', usedLibraries.length);
+    console.log('[RoyaltyService] Active libraries:', activeLibraries.length);
+    console.log('[RoyaltyService] Filtered out:', usedLibraries.length - activeLibraries.length);
+    
+    // Calculate total royalties (both ETH and USDC) - using stored values
+    // Note: Contract will use current values from getRoyaltyFee
     let totalRoyaltyETH = 0;
     let totalRoyaltyUSDC = 0;
     
-    for (const library of usedLibraries) {
-      totalRoyaltyETH += parseFloat(library.royaltyPerImportETH || '0');
-      totalRoyaltyUSDC += parseFloat(library.royaltyPerImportUSDC || '0');
+    for (const library of activeLibraries) {
+      const state = currentStates.get(library.projectId);
+      if (state) {
+        // Use current blockchain values
+        totalRoyaltyETH += state.ethAmount;
+        totalRoyaltyUSDC += state.usdcAmount;
+      }
     }
     
-    console.log('[RoyaltyService] Used libraries:', usedLibraries.length);
-    usedLibraries.forEach((lib, idx) => {
-      console.log(`  ${idx + 1}. ${lib.name}: ${lib.royaltyPerImportETH} ETH, ${lib.royaltyPerImportUSDC} USDC`);
+    console.log('[RoyaltyService] Active libraries:');
+    activeLibraries.forEach((lib, idx) => {
+      const state = currentStates.get(lib.projectId);
+      console.log(`  ${idx + 1}. ${lib.name}: ${state?.ethAmount} ETH, ${state?.usdcAmount} USDC`);
     });
-    console.log('[RoyaltyService] Total royalties - ETH:', totalRoyaltyETH, 'USDC:', totalRoyaltyUSDC);
+    console.log('[RoyaltyService] Total royalties (current blockchain values) - ETH:', totalRoyaltyETH, 'USDC:', totalRoyaltyUSDC);
     
     // Check if royalty contract is deployed
     if (!ROYALTY_CONTRACT_ADDRESS) {
@@ -107,32 +165,121 @@ export async function processLibraryPurchasesAndRoyalties(
         ROYALTY_CONTRACT_ADDRESS,
         [
           'function recordRoyalties(string projectId, uint256 price, uint8 paymentToken) external payable',
-          'function registerProjectRoyalties(string projectId, string[] dependencyIds) external'
+          'function registerProjectRoyalties(string projectId, string[] dependencyIds) external',
+          'function getProjectDependencies(string projectId) external view returns (tuple(string dependencyProjectId, uint256 royaltyPercentage, uint256 fixedRoyaltyETH, uint256 fixedRoyaltyUSDC)[])',
+          'event RoyaltyRecorded(string indexed projectId, address indexed recipient, uint256 amountETH, uint256 amountUSDC)'
         ],
         signer
       );
       
       // STEP 1: Register dependencies first (required before paying royalties)
-      currentTransaction++;
-      const dependencyIds = usedLibraries.map(lib => lib.projectId);
-      const libraryNames = usedLibraries.map(lib => lib.name).join(', ');
+      // SECURITY FIX: Only register ACTIVE libraries (not deleted/disabled)
+      // CRITICAL FIX: Check if already registered AND if royalties were paid
       
-      onProgress?.(`[${currentTransaction}/${totalTransactions}] Registering ${usedLibraries.length} library dependencies (${libraryNames}). Please sign...`);
-      console.log('[RoyaltyService] Registering project royalties...', { projectId, dependencyIds });
+      let needsRegistration = true;
+      let needsRoyaltyPayment = true;
       
-      const regTx = await contract.registerProjectRoyalties(projectId, dependencyIds);
+      // Check if project already has registered royalties
+      try {
+        const existingDeps = await contract.getProjectDependencies(projectId);
+        
+        if (existingDeps && existingDeps.length >= 0) {
+          // Project has royalties registered
+          console.log('[RoyaltyService] ⚠️ Project already has registered royalties');
+          console.log('[RoyaltyService] Existing dependencies:', existingDeps.length);
+          needsRegistration = false;
+          
+          // CRITICAL FIX: Check if royalties were actually PAID
+          // This handles partial failure case: registerProjectRoyalties succeeded but recordRoyalties failed
+          try {
+            const filter = contract.filters.RoyaltyRecorded(projectId);
+            const events = await contract.queryFilter(filter, -100000); // Last ~100k blocks
+            
+            if (events.length > 0) {
+              console.log('[RoyaltyService] ✅ Royalties already paid for this project (found', events.length, 'payment events)');
+              console.log('[RoyaltyService] This is a project UPDATE - no payment needed');
+              needsRoyaltyPayment = false;
+            } else {
+              console.log('[RoyaltyService] ⚠️ Registered but NO payment events found!');
+              console.log('[RoyaltyService] This might be a PARTIAL FAILURE recovery - will retry payment');
+              needsRoyaltyPayment = true;
+            }
+          } catch (eventError) {
+            console.warn('[RoyaltyService] Could not query payment events, assuming payment needed');
+            needsRoyaltyPayment = true;
+          }
+        }
+      } catch (error: any) {
+        // Project not registered yet (this will throw)
+        console.log('[RoyaltyService] Project not yet registered, will register dependencies');
+        needsRegistration = true;
+        needsRoyaltyPayment = true;
+      }
       
-      onProgress?.(`[${currentTransaction}/${totalTransactions}] Waiting for registration confirmation...`);
-      await regTx.wait();
-      console.log('[RoyaltyService] Project royalties registered');
+      const txHashes: any = {};
       
-      const txHashes: any = { register: regTx.hash };
-      
-      // STEP 2: Pay ETH royalties
-      if (totalRoyaltyETH > 0) {
+      // STEP 1A: Register dependencies (if needed)
+      if (needsRegistration && activeLibraries.length > 0) {
         currentTransaction++;
-        const ethLibraries = usedLibraries.filter(lib => parseFloat(lib.royaltyPerImportETH || '0') > 0);
-        const ethLibraryNames = ethLibraries.map(lib => `${lib.name} (${lib.royaltyPerImportETH} ETH)`).join(', ');
+        const dependencyIds = activeLibraries.map(lib => lib.projectId);
+        const libraryNames = activeLibraries.map(lib => lib.name).join(', ');
+        
+        onProgress?.(`[${currentTransaction}/${totalTransactions}] Registering ${activeLibraries.length} active library dependencies (${libraryNames}). Please sign...`);
+        console.log('[RoyaltyService] Registering project royalties...', { projectId, dependencyIds });
+        
+        const regTx = await contract.registerProjectRoyalties(projectId, dependencyIds);
+        txHashes.register = regTx.hash;
+        
+        onProgress?.(`[${currentTransaction}/${totalTransactions}] Waiting for registration confirmation...`);
+        await regTx.wait();
+        console.log('[RoyaltyService] ✅ Project royalties registered');
+      } else if (!needsRegistration && !needsRoyaltyPayment) {
+        // CASE: Project update (registration done, payment done)
+        console.log('[RoyaltyService] ✅ Project UPDATE - registration and payment already completed');
+        txHashes.register = 'already-registered';
+        
+        // No payment needed for updates
+        return {
+          success: true,
+          totalCostETH: 0,
+          totalCostUSDC: 0,
+          alreadyOwned: activeLibraries.length,
+          txHashes,
+          librariesWithOwners: []
+        };
+      } else if (!needsRegistration && needsRoyaltyPayment) {
+        // CASE: Partial failure recovery (registration done, but payment failed/pending)
+        console.log('[RoyaltyService] ⚠️ PARTIAL FAILURE RECOVERY');
+        console.log('[RoyaltyService] Registration exists but no payment events found');
+        console.log('[RoyaltyService] Will attempt to pay royalties (retry after failure)');
+        txHashes.register = 'already-registered-retry-payment';
+        // Continue to payment steps below
+      } else {
+        // CASE: No active libraries
+        console.log('[RoyaltyService] ⚠️ No active libraries to register (all deleted/disabled)');
+        txHashes.register = 'no-active-libraries';
+        
+        return {
+          success: true,
+          totalCostETH: 0,
+          totalCostUSDC: 0,
+          alreadyOwned: 0,
+          txHashes,
+          librariesWithOwners: []
+        };
+      }
+      
+      // STEP 2: Pay ETH royalties (for NEW projects OR partial failure recovery)
+      if (totalRoyaltyETH > 0 && needsRoyaltyPayment) {
+        currentTransaction++;
+        const ethLibraries = activeLibraries.filter(lib => {
+          const state = currentStates.get(lib.projectId);
+          return state && state.ethAmount > 0;
+        });
+        const ethLibraryNames = ethLibraries.map(lib => {
+          const state = currentStates.get(lib.projectId);
+          return `${lib.name} (${state?.ethAmount} ETH)`;
+        }).join(', ');
         
         onProgress?.(`[${currentTransaction}/${totalTransactions}] Paying ${totalRoyaltyETH.toFixed(6)} ETH royalty for: ${ethLibraryNames}. Please sign...`);
         console.log('[RoyaltyService] Paying ETH royalties...');
@@ -146,18 +293,39 @@ export async function processLibraryPurchasesAndRoyalties(
         console.log('[RoyaltyService] ✅ Paid', totalRoyaltyETH, 'ETH in royalties');
       }
       
-      // STEP 3: Pay USDC royalties
-      if (totalRoyaltyUSDC > 0) {
-        const usdcLibraries = usedLibraries.filter(lib => parseFloat(lib.royaltyPerImportUSDC || '0') > 0);
-        const usdcLibraryNames = usdcLibraries.map(lib => `${lib.name} (${lib.royaltyPerImportUSDC} USDC)`).join(', ');
+      // STEP 3: Pay USDC royalties (for NEW projects OR partial failure recovery)
+      if (totalRoyaltyUSDC > 0 && needsRoyaltyPayment) {
+        const usdcLibraries = activeLibraries.filter(lib => {
+          const state = currentStates.get(lib.projectId);
+          return state && state.usdcAmount > 0;
+        });
+        const usdcLibraryNames = usdcLibraries.map(lib => {
+          const state = currentStates.get(lib.projectId);
+          return `${lib.name} (${state?.usdcAmount} USDC)`;
+        }).join(', ');
+        
+        // SECURITY FIX: Check USDC balance before approve
+        const royaltyUnits = ethers.parseUnits(totalRoyaltyUSDC.toFixed(6), 6);
+        const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+        
+        const userAddress = await signer.getAddress();
+        const usdcBalance = await usdcContract.balanceOf(userAddress);
+        
+        if (usdcBalance < royaltyUnits) {
+          const balanceFormatted = ethers.formatUnits(usdcBalance, 6);
+          const requiredFormatted = totalRoyaltyUSDC.toFixed(2);
+          throw new Error(
+            `Insufficient USDC balance. ` +
+            `Required: ${requiredFormatted} USDC, ` +
+            `Available: ${balanceFormatted} USDC. ` +
+            `Please add USDC to your wallet first.`
+          );
+        }
         
         // Approve
         currentTransaction++;
         onProgress?.(`[${currentTransaction}/${totalTransactions}] Approving ${totalRoyaltyUSDC.toFixed(2)} USDC for royalty payment. Please sign...`);
         console.log('[RoyaltyService] Approving USDC...');
-        
-        const royaltyUnits = ethers.parseUnits(totalRoyaltyUSDC.toFixed(6), 6);
-        const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
         
         const approveTx = await usdcContract.approve(ROYALTY_CONTRACT_ADDRESS, royaltyUnits);
         txHashes.approveUSDC = approveTx.hash;
@@ -185,16 +353,18 @@ export async function processLibraryPurchasesAndRoyalties(
         provider
       );
       
+      // Get current owners for ACTIVE libraries only
       const librariesWithOwners = await Promise.all(
-        usedLibraries.map(async (lib) => {
+        activeLibraries.map(async (lib) => {
           try {
             const owner = await libraryContract.getCurrentOwner(lib.projectId);
+            const state = currentStates.get(lib.projectId);
             return {
               projectId: lib.projectId,
               name: lib.name,
               owner: owner,
-              royaltyETH: lib.royaltyPerImportETH,
-              royaltyUSDC: lib.royaltyPerImportUSDC
+              royaltyETH: state?.ethAmount.toString() || '0',
+              royaltyUSDC: state?.usdcAmount.toString() || '0'
             };
           } catch (error) {
             console.error('[RoyaltyService] Failed to get owner for', lib.projectId);
@@ -202,8 +372,8 @@ export async function processLibraryPurchasesAndRoyalties(
               projectId: lib.projectId,
               name: lib.name,
               owner: lib.creator || '',
-              royaltyETH: lib.royaltyPerImportETH,
-              royaltyUSDC: lib.royaltyPerImportUSDC
+              royaltyETH: '0',
+              royaltyUSDC: '0'
             };
           }
         })
@@ -426,6 +596,10 @@ export async function getRoyaltyReceipts(userAddress: string, limit: number = 10
   }
 }
 
+/**
+ * Calculate minimum price based on stored library data (DEPRECATED - Use calculateMinimumPriceFromBlockchain)
+ * WARNING: This uses stored values which may be outdated!
+ */
 export async function calculateMinimumPrice(
   usedLibraries: LibraryDependency[]
 ): Promise<{ minETH: number; minUSDC: number }> {
@@ -433,7 +607,7 @@ export async function calculateMinimumPrice(
     return { minETH: 0, minUSDC: 0 };
   }
   
-  // Sum up direct royalty amounts
+  // Sum up direct royalty amounts from stored data
   const minETH = usedLibraries.reduce((sum, lib) => {
     return sum + parseFloat(lib.royaltyPerImportETH || '0');
   }, 0);

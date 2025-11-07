@@ -49,6 +49,11 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
     uint256 public constant ROYALTY_PERCENTAGE = 1000; // 10%
     uint256 public constant PERCENTAGE_DENOMINATOR = 10000;
     
+    // CRITICAL FIX: Track total royalties actually paid for each project
+    // This prevents marketplace underpricing by ensuring sale price > paid royalties
+    mapping(string => uint256) public totalRoyaltiesPaidETH;
+    mapping(string => uint256) public totalRoyaltiesPaidUSDC;
+    
     // Events
     event RoyaltiesRegistered(
         string indexed projectId,
@@ -114,9 +119,10 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
     
     /**
      * @notice Calculate total royalties for a project (fixed amounts)
+     * @dev FIX: Only counts active libraries (not deleted ones)
      * @param projectId The project ID
-     * @return totalETH Total ETH royalties
-     * @return totalUSDC Total USDC royalties
+     * @return totalETH Total ETH royalties from active libraries
+     * @return totalUSDC Total USDC royalties from active libraries
      */
     function calculateTotalRoyalties(string memory projectId) public view returns (uint256 totalETH, uint256 totalUSDC) {
         ProjectRoyalties storage royalty = projectRoyalties[projectId];
@@ -125,11 +131,18 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
             return (0, 0);
         }
         
-        // Sum up fixed royalties
+        // FIX: Sum up fixed royalties only for existing libraries
         for (uint256 i = 0; i < royalty.dependencies.length; i++) {
             LibraryDependency memory dep = royalty.dependencies[i];
-            totalETH += dep.fixedRoyaltyETH;
-            totalUSDC += dep.fixedRoyaltyUSDC;
+            
+            // Check if library still exists
+            address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
+            
+            // Only count if library exists (owner != 0)
+            if (owner != address(0)) {
+                totalETH += dep.fixedRoyaltyETH;
+                totalUSDC += dep.fixedRoyaltyUSDC;
+            }
         }
         
         return (totalETH, totalUSDC);
@@ -152,6 +165,20 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
         if (paymentToken == PaymentToken.ETH) {
             require(msg.value > 0, "No ETH sent");
             
+            // FIX: Calculate actual total needed (excluding deleted libraries)
+            uint256 totalETHNeeded = 0;
+            for (uint256 i = 0; i < royalty.dependencies.length; i++) {
+                LibraryDependency memory dep = royalty.dependencies[i];
+                address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
+                
+                // Only count if library still exists (owner != 0)
+                if (dep.fixedRoyaltyETH > 0 && owner != address(0)) {
+                    totalETHNeeded += dep.fixedRoyaltyETH;
+                }
+            }
+            
+            require(msg.value >= totalETHNeeded, "Insufficient ETH sent");
+            
             // Record fixed royalties for each dependency
             for (uint256 i = 0; i < royalty.dependencies.length; i++) {
                 LibraryDependency memory dep = royalty.dependencies[i];
@@ -167,13 +194,28 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
                     emit RoyaltyRecorded(projectId, owner, royaltyAmount, 0);
                 }
             }
+            
+            // CRITICAL FIX: Store total royalties paid for marketplace minimum price validation
+            totalRoyaltiesPaidETH[projectId] = totalETHNeeded;
+            
+            // Refund excess ETH if any
+            if (msg.value > totalETHNeeded) {
+                (bool success, ) = msg.sender.call{value: msg.value - totalETHNeeded}("");
+                require(success, "Refund failed");
+            }
         } else {
             require(msg.value == 0, "Do not send ETH for USDC royalties");
             
-            // Calculate total USDC needed
+            // FIX: Calculate total USDC needed (excluding deleted libraries)
             uint256 totalUSDC = 0;
             for (uint256 i = 0; i < royalty.dependencies.length; i++) {
-                totalUSDC += royalty.dependencies[i].fixedRoyaltyUSDC;
+                LibraryDependency memory dep = royalty.dependencies[i];
+                address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
+                
+                // Only count if library still exists (owner != 0)
+                if (dep.fixedRoyaltyUSDC > 0 && owner != address(0)) {
+                    totalUSDC += dep.fixedRoyaltyUSDC;
+                }
             }
             
             require(totalUSDC > 0, "No USDC royalties for this project");
@@ -199,6 +241,9 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
                     emit RoyaltyRecorded(projectId, owner, 0, royaltyAmount);
                 }
             }
+            
+            // CRITICAL FIX: Store total royalties paid for marketplace minimum price validation
+            totalRoyaltiesPaidUSDC[projectId] = totalUSDC;
         }
     }
     

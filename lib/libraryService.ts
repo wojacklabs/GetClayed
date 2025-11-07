@@ -121,6 +121,101 @@ export async function registerLibraryAsset(
     }
     
     console.log('[LibraryService] Calling registerAsset contract method...');
+    
+    // CRITICAL FIX: Estimate gas before transaction - don't proceed if estimation fails
+    try {
+      const { estimateAndConfirmGas } = await import('./gasEstimation');
+      const { confirmed, estimate } = await estimateAndConfirmGas(
+        contract,
+        'registerAsset',
+        [projectId, name, description, royaltyETHWei, royaltyUSDCUnits]
+      );
+      
+      if (!confirmed) {
+        return { success: false, error: 'Transaction cancelled by user' };
+      }
+      
+      // Use estimated gas limit if available
+      if (estimate) {
+        console.log('[LibraryService] Using estimated gas limit:', estimate.gasLimit.toString());
+        const tx = await contract.registerAsset(
+          projectId, name, description, royaltyETHWei, royaltyUSDCUnits,
+          { gasLimit: estimate.gasLimit }
+        );
+        console.log('[LibraryService] Transaction sent, hash:', tx.hash);
+        console.log('[LibraryService] Waiting for confirmation...');
+        await tx.wait();
+        console.log('[LibraryService] Transaction confirmed!');
+        
+        // Skip the second registerAsset call below
+        // Continue to Irys tagging...
+        const libraryMetadata = {
+          projectId,
+          name,
+          description,
+          royaltyETH,
+          royaltyUSDC,
+          registeredBy: walletAddress,
+          registeredAt: Date.now()
+        };
+        
+        const data = Buffer.from(JSON.stringify(libraryMetadata), 'utf-8');
+        const tags = [
+          { name: 'App-Name', value: 'GetClayed' },
+          { name: 'Data-Type', value: 'library-registration' },
+          { name: 'Project-ID', value: projectId },
+          { name: 'Asset-Name', value: name },
+          { name: 'Royalty-ETH', value: royaltyETH.toString() },
+          { name: 'Royalty-USDC', value: royaltyUSDC.toString() },
+          { name: 'Registered-By', value: walletAddress.toLowerCase() },
+          { name: 'Registered-At', value: Date.now().toString() }
+        ];
+        
+        if (thumbnailId) {
+          tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
+        }
+        
+        await fixedKeyUploader.upload(data, tags);
+        
+        return { success: true, txHash: tx.hash };
+      }
+    } catch (gasError: any) {
+      console.error('[LibraryService] Gas estimation failed:', gasError);
+      
+      // Ask user if they want to proceed anyway
+      const errorMsg = gasError.message || gasError.toString();
+      let userFriendlyError = 'Gas estimation failed.';
+      
+      if (errorMsg.includes('already registered')) {
+        userFriendlyError = 'This library is already registered.';
+        return { success: false, error: userFriendlyError };
+      } else if (errorMsg.includes('insufficient')) {
+        userFriendlyError = 'Insufficient balance to complete this transaction.';
+        return { success: false, error: userFriendlyError };
+      }
+      
+      // For other errors, let user decide
+      if (typeof window !== 'undefined') {
+        const proceed = confirm(
+          `${userFriendlyError}\n\n` +
+          `This usually means the transaction will fail.\n` +
+          `Possible reasons:\n` +
+          `- Library already registered\n` +
+          `- Invalid parameters\n` +
+          `- Network issues\n\n` +
+          `Do you want to proceed anyway?\n` +
+          `(Warning: You may lose gas fees if transaction fails)`
+        );
+        
+        if (!proceed) {
+          return { success: false, error: 'Transaction cancelled due to gas estimation failure' };
+        }
+      } else {
+        // Server-side or no window - fail safely
+        return { success: false, error: userFriendlyError };
+      }
+    }
+    
     // Register asset on blockchain (royalty amounts, not prices!)
     const tx = await contract.registerAsset(projectId, name, description, royaltyETHWei, royaltyUSDCUnits);
     console.log('[LibraryService] Transaction sent, hash:', tx.hash);
@@ -165,8 +260,73 @@ export async function registerLibraryAsset(
 }
 
 /**
+ * Delete a library asset completely
+ * This removes the asset from existence - it cannot be traded or used
+ * Use this when deleting a project that was registered as a library
+ */
+export async function deleteLibraryAsset(
+  projectId: string,
+  customProvider?: any
+): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    if (!LIBRARY_CONTRACT_ADDRESS) {
+      // Library not deployed, skip silently
+      return { success: true };
+    }
+    
+    console.log('[LibraryService] Deleting library asset:', projectId);
+    
+    let signer;
+    if (customProvider) {
+      console.log('[LibraryService] Using custom provider (Privy) for delete');
+      const provider = new ethers.BrowserProvider(customProvider);
+      signer = await provider.getSigner();
+    } else {
+      console.log('[LibraryService] Using getWalletProvider for delete');
+      const result = await getWalletProvider();
+      signer = result.signer;
+    }
+    
+    const contract = new ethers.Contract(
+      LIBRARY_CONTRACT_ADDRESS,
+      [...LIBRARY_CONTRACT_ABI, 'function deleteAsset(string projectId) external'],
+      signer
+    );
+    
+    // Check if asset is registered
+    try {
+      const asset = await contract.getAsset(projectId);
+      if (!asset.exists) {
+        // Already deleted or never registered
+        console.log('[LibraryService] Asset not registered in library, skipping');
+        return { success: true };
+      }
+    } catch (error) {
+      // Not registered in library, skip
+      console.log('[LibraryService] Asset not found in library, skipping');
+      return { success: true };
+    }
+    
+    console.log('[LibraryService] Calling deleteAsset contract method...');
+    const tx = await contract.deleteAsset(projectId);
+    console.log('[LibraryService] Transaction sent, hash:', tx.hash);
+    console.log('[LibraryService] Waiting for confirmation...');
+    await tx.wait();
+    console.log('[LibraryService] Transaction confirmed!');
+    
+    console.log('[LibraryService] Library asset deleted:', projectId);
+    return { success: true, txHash: tx.hash };
+  } catch (error: any) {
+    console.error('[LibraryService] Error deleting library asset:', error);
+    // Don't fail the entire operation if delete fails
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/**
  * Disable royalty for a library asset
  * Asset remains tradable but no royalties on new uses
+ * Use this when you want to keep the library available but stop collecting royalties
  */
 export async function disableLibraryRoyalty(
   projectId: string,
@@ -509,5 +669,144 @@ export async function getUserLibraryAssets(
     console.error('[LibraryService] Error getting user assets:', error);
     return [];
   }
+}
+
+/**
+ * Get current blockchain state for library assets
+ * CRITICAL: Always check current blockchain state, not stored data
+ * This prevents TOCTOU attacks and ensures accurate royalty calculations
+ */
+export async function getLibraryCurrentRoyalties(
+  projectIds: string[]
+): Promise<Map<string, {
+  ethAmount: number;
+  usdcAmount: number;
+  exists: boolean;
+  enabled: boolean;
+}>> {
+  const results = new Map();
+  
+  if (!LIBRARY_CONTRACT_ADDRESS) {
+    console.warn('[LibraryService] Library contract not deployed');
+    return results;
+  }
+  
+  try {
+    const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const contract = new ethers.Contract(
+      LIBRARY_CONTRACT_ADDRESS,
+      LIBRARY_CONTRACT_ABI,
+      provider
+    );
+    
+    // PERFORMANCE: Fetch all libraries in parallel
+    const promises = projectIds.map(async (projectId) => {
+      try {
+        // Get current royalty fee from blockchain
+        const [royaltyETH, royaltyUSDC] = await contract.getRoyaltyFee(projectId);
+        
+        // Get asset info
+        const asset = await contract.getAsset(projectId);
+        
+        const state = {
+          ethAmount: parseFloat(ethers.formatEther(royaltyETH)),
+          usdcAmount: parseFloat(ethers.formatUnits(royaltyUSDC, 6)),
+          exists: asset.exists,
+          enabled: asset.royaltyEnabled
+        };
+        
+        console.log(`[LibraryService] Current blockchain state for ${projectId}:`, {
+          eth: ethers.formatEther(royaltyETH),
+          usdc: ethers.formatUnits(royaltyUSDC, 6),
+          exists: asset.exists,
+          enabled: asset.royaltyEnabled
+        });
+        
+        return { projectId, state };
+      } catch (error) {
+        console.error(`[LibraryService] Failed to get current state for ${projectId}:`, error);
+        // Library doesn't exist or error - treat as deleted
+        return {
+          projectId,
+          state: {
+            ethAmount: 0,
+            usdcAmount: 0,
+            exists: false,
+            enabled: false
+          }
+        };
+      }
+    });
+    
+    const allResults = await Promise.all(promises);
+    
+    // Build results map
+    for (const { projectId, state } of allResults) {
+      results.set(projectId, state);
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('[LibraryService] Error getting library current royalties:', error);
+    return results;
+  }
+}
+
+/**
+ * Calculate minimum price based on CURRENT blockchain state
+ * SECURITY: This prevents TOCTOU attacks and ensures accurate pricing
+ */
+export async function calculateMinimumPriceFromBlockchain(
+  usedLibraries: { projectId: string; name: string; royaltyPerImportETH?: string; royaltyPerImportUSDC?: string }[]
+): Promise<{ 
+  minETH: number; 
+  minUSDC: number; 
+  activeLibraries: string[]; 
+  deletedLibraries: string[];
+  disabledLibraries: string[];
+}> {
+  if (usedLibraries.length === 0) {
+    return { minETH: 0, minUSDC: 0, activeLibraries: [], deletedLibraries: [], disabledLibraries: [] };
+  }
+  
+  // Get current blockchain state for all libraries
+  const projectIds = usedLibraries.map(lib => lib.projectId);
+  const currentStates = await getLibraryCurrentRoyalties(projectIds);
+  
+  let minETH = 0;
+  let minUSDC = 0;
+  const activeLibraries: string[] = [];
+  const deletedLibraries: string[] = [];
+  const disabledLibraries: string[] = [];
+  
+  for (const lib of usedLibraries) {
+    const current = currentStates.get(lib.projectId);
+    
+    if (current && current.exists && current.enabled) {
+      // Use CURRENT blockchain values, not stored values
+      minETH += current.ethAmount;
+      minUSDC += current.usdcAmount;
+      activeLibraries.push(lib.projectId);
+      
+      console.log(`[LibraryService] Including ${lib.name}: ${current.ethAmount} ETH, ${current.usdcAmount} USDC`);
+    } else if (current && !current.exists) {
+      deletedLibraries.push(lib.projectId);
+      console.warn(`[LibraryService] Library ${lib.projectId} (${lib.name}) has been DELETED - excluding from minimum price`);
+    } else if (current && !current.enabled) {
+      disabledLibraries.push(lib.projectId);
+      console.warn(`[LibraryService] Library ${lib.projectId} (${lib.name}) has royalty DISABLED - excluding from minimum price`);
+    }
+  }
+  
+  console.log(`[LibraryService] Minimum price calculation:`, {
+    totalETH: minETH,
+    totalUSDC: minUSDC,
+    active: activeLibraries.length,
+    deleted: deletedLibraries.length,
+    disabled: disabledLibraries.length
+  });
+  
+  return { minETH, minUSDC, activeLibraries, deletedLibraries, disabledLibraries };
 }
 

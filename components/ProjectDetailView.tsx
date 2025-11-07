@@ -95,6 +95,15 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       const projectData = await downloadClayProject(projectId)
       setProject(projectData)
       
+      // SECURITY: Check for integrity warnings
+      if ((projectData as any).__integrityWarning) {
+        showPopup(
+          `⚠️ Security Warning: ${(projectData as any).__integrityWarning}. This project's library information may have been tampered with.`,
+          'error',
+          { autoClose: false }
+        )
+      }
+      
       const restoredObjects = restoreClayObjects(projectData)
       setClayObjects(restoredObjects)
       

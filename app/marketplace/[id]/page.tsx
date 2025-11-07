@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { TrackballControls } from '@react-three/drei'
 import * as THREE from 'three'
-import { queryMarketplaceListings, getProjectOffers, buyListedAsset, makeAssetOffer, acceptOffer, MarketplaceListing, MarketplaceOffer } from '@/lib/marketplaceService'
+import { queryMarketplaceListings, getProjectOffers, buyListedAsset, makeAssetOffer, acceptOffer, cancelOfferById, MarketplaceListing, MarketplaceOffer } from '@/lib/marketplaceService'
 import { queryLibraryAssets } from '@/lib/libraryService'
 import { downloadClayProject, restoreClayObjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
@@ -80,7 +80,7 @@ export default function MarketplaceDetailPage() {
     if (!walletAddress || !listing) return
     
     try {
-      const result = await buyListedAsset(listing.projectId, parseFloat(listing.price), walletAddress)
+      const result = await buyListedAsset(listing.projectId, walletAddress)
       if (result.success) {
         showPopup('Purchase successful!', 'success')
         router.push('/marketplace')
@@ -127,6 +127,21 @@ export default function MarketplaceDetailPage() {
       }
     } catch (error: any) {
       showPopup(error.message || 'Accept failed', 'error')
+    }
+  }
+  
+  // FIX P1-11: Allow buyers to cancel their expired offers
+  const handleCancelOffer = async (offerId: number) => {
+    try {
+      const result = await cancelOfferById(offerId);
+      if (result.success) {
+        showPopup('Offer cancelled. Your funds have been refunded.', 'success');
+        loadListingDetail(); // Reload to update offers
+      } else {
+        showPopup(result.error || 'Failed to cancel offer', 'error');
+      }
+    } catch (error: any) {
+      showPopup(error.message || 'Failed to cancel offer', 'error');
     }
   }
   
@@ -246,30 +261,100 @@ export default function MarketplaceDetailPage() {
             </div>
             
             {/* Offers */}
-            {offers.length > 0 && walletAddress === listing.seller && (
+            {offers.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Offers ({offers.length})</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {walletAddress === listing.seller ? 'Received Offers' : 'All Offers'} ({offers.length})
+                </h3>
                 <div className="space-y-3">
-                  {offers.map((offer) => (
-                    <div key={offer.offerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{offer.offerPrice} ETH/USDC</p>
-                        <p className="text-xs text-gray-500">
-                          From {offer.buyer.slice(0, 6)}...{offer.buyer.slice(-4)}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Expires {new Date(offer.expiresAt * 1000).toLocaleDateString()}
-                        </p>
+                  {offers.map((offer) => {
+                    // FIX P1-11: Calculate time until expiration
+                    const timeLeft = offer.expiresAt - Math.floor(Date.now() / 1000);
+                    const hoursLeft = timeLeft / 3600;
+                    const daysLeft = hoursLeft / 24;
+                    const isExpired = timeLeft < 0;
+                    const isBuyer = walletAddress?.toLowerCase() === offer.buyer.toLowerCase();
+                    const isSeller = walletAddress?.toLowerCase() === listing.seller.toLowerCase();
+                    
+                    let expiryWarning = '';
+                    let expiryColor = 'text-gray-400';
+                    
+                    if (isExpired) {
+                      expiryWarning = '⚠️ EXPIRED - Click cancel to refund';
+                      expiryColor = 'text-red-600 font-semibold';
+                    } else if (hoursLeft < 1) {
+                      expiryWarning = '⚠️ Expires in less than 1 hour!';
+                      expiryColor = 'text-red-600 font-semibold';
+                    } else if (hoursLeft < 24) {
+                      expiryWarning = `⏰ Expires in ${Math.floor(hoursLeft)} hours`;
+                      expiryColor = 'text-orange-600 font-medium';
+                    } else if (daysLeft < 3) {
+                      expiryWarning = `Expires in ${Math.floor(daysLeft)} days`;
+                      expiryColor = 'text-yellow-600';
+                    } else {
+                      expiryWarning = `Expires ${new Date(offer.expiresAt * 1000).toLocaleDateString()}`;
+                    }
+                    
+                    return (
+                      <div key={offer.offerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {offer.offerPrice} {offer.paymentToken}
+                            {isBuyer && <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">Your Offer</span>}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {isBuyer ? 'You made this offer' : `From ${offer.buyer.slice(0, 6)}...${offer.buyer.slice(-4)}`}
+                          </p>
+                          <p className={`text-xs ${expiryColor} mt-1`}>
+                            {expiryWarning}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {/* Seller: Accept button */}
+                          {isSeller && !isBuyer && (
+                            <button
+                              onClick={() => handleAcceptOffer(offer)}
+                              disabled={isExpired}
+                              className={`px-3 py-1.5 text-white text-sm rounded ${
+                                isExpired 
+                                  ? 'bg-gray-400 cursor-not-allowed' 
+                                  : 'bg-green-500 hover:bg-green-600'
+                              }`}
+                            >
+                              {isExpired ? 'Expired' : 'Accept'}
+                            </button>
+                          )}
+                          {/* Buyer: Cancel button (especially for expired offers) */}
+                          {isBuyer && (
+                            <button
+                              onClick={() => handleCancelOffer(offer.offerId)}
+                              className={`px-3 py-1.5 text-sm rounded ${
+                                isExpired
+                                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                              }`}
+                            >
+                              {isExpired ? 'Claim Refund' : 'Cancel'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleAcceptOffer(offer)}
-                        className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm rounded"
-                      >
-                        Accept
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                {/* FIX P1-11: Help text for expired offers */}
+                {offers.some(o => o.expiresAt < Math.floor(Date.now() / 1000)) && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-yellow-800">
+                        {walletAddress === listing.seller 
+                          ? 'Expired offers cannot be accepted. Buyers can cancel them to get refunds.'
+                          : 'Your expired offers are still holding your funds. Click "Claim Refund" to get them back.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             

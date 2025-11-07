@@ -37,6 +37,7 @@ export function getAllMutableReferences(): Record<string, MutableReference> {
 
 /**
  * Save a mutable reference
+ * FIX P1-8: Handles localStorage quota exceeded with automatic cleanup
  */
 export function saveMutableReference(
   projectId: string,
@@ -47,6 +48,18 @@ export function saveMutableReference(
 ): void {
   try {
     const refs = getAllMutableReferences();
+    
+    // FIX P1-8: Auto-cleanup if too many references (limit to 100)
+    const refArray = Object.values(refs);
+    if (refArray.length >= 100) {
+      console.log('[MutableStorage] Reference limit reached, cleaning up old references...');
+      // Sort by updatedAt and keep only the most recent 80
+      refArray.sort((a, b) => a.updatedAt - b.updatedAt);
+      const toDelete = refArray.slice(0, 20);
+      toDelete.forEach(ref => delete refs[ref.projectId]);
+      console.log(`[MutableStorage] Cleaned up ${toDelete.length} old references`);
+    }
+    
     refs[projectId] = {
       projectId,
       rootTxId,
@@ -58,7 +71,38 @@ export function saveMutableReference(
     localStorage.setItem(STORAGE_KEY, JSON.stringify(refs));
     console.log(`[MutableStorage] Saved reference for project ${projectId}: root=${rootTxId}, latest=${latestTxId}`);
   } catch (error) {
-    console.error('[MutableStorage] Error saving reference:', error);
+    // FIX P1-8: Handle quota exceeded error
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.error('[MutableStorage] Storage quota exceeded, forcing cleanup...');
+      try {
+        const refs = getAllMutableReferences();
+        const refArray = Object.values(refs).sort((a, b) => a.updatedAt - b.updatedAt);
+        const toKeep = refArray.slice(-50); // Keep only most recent 50
+        
+        const newRefs: Record<string, MutableReference> = {};
+        toKeep.forEach(ref => newRefs[ref.projectId] = ref);
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newRefs));
+        
+        // Try to save current project again
+        newRefs[projectId] = {
+          projectId,
+          rootTxId,
+          latestTxId,
+          projectName,
+          updatedAt: Date.now(),
+          author
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newRefs));
+        console.log('[MutableStorage] Successfully saved after cleanup');
+      } catch (retryError) {
+        console.error('[MutableStorage] Failed to save even after cleanup:', retryError);
+        throw new Error('Storage full. Please clear some browser data and try again.');
+      }
+    } else {
+      console.error('[MutableStorage] Error saving reference:', error);
+      throw error;
+    }
   }
 }
 

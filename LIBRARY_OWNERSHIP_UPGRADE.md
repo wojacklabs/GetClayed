@@ -357,3 +357,6 @@ query {
 
 이제 Library asset은 Royalty를 끄고도 거래할 수 있으며, Marketplace 거래는 모든 레벨(Contract, Irys, UI)에서 완벽하게 동작합니다!
 
+
+
+

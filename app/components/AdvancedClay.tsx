@@ -74,6 +74,8 @@ interface ClayObject {
   thickness?: number // Original thickness parameter
   detail?: number // For sphere detail
   groupId?: string // ID of the group this object belongs to
+  librarySourceId?: string // Library project ID if imported from library
+  librarySourceName?: string // Library name for reference
 }
 
 interface ClayGroup {
@@ -2303,6 +2305,32 @@ export default function AdvancedClay() {
     }
   }, [contextMenu])
   
+  // FIX P0-3: Detect multi-tab editing conflicts
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'clay-current-project' && e.newValue !== e.oldValue) {
+        try {
+          const newProject = e.newValue ? JSON.parse(e.newValue) : null;
+          
+          if (currentProjectInfo && newProject && 
+              currentProjectInfo.projectId === newProject.projectId &&
+              currentProjectInfo.isDirty && newProject.isDirty) {
+            // Conflict detected!
+            showPopup(
+              'This project is being edited in another tab. Please save there first or refresh this tab to avoid conflicts.',
+              'warning'
+            );
+          }
+        } catch (error) {
+          console.error('[MultiTab] Error parsing storage event:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [currentProjectInfo, showPopup])
+  
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistory()
   const cameraRef = useRef<THREE.Camera>(null)
   const folderStructureRef = useRef<FolderStructureHandle>(null)
@@ -2411,32 +2439,137 @@ export default function AdvancedClay() {
       }
     }
     
-    // Check if this project uses libraries and validate minimum price
-    if (usedLibraries.length > 0) {
-      const { calculateMinimumPrice } = await import('../../lib/royaltyService')
-      const { minETH, minUSDC } = await calculateMinimumPrice(usedLibraries)
-      
-      if (ethPrice > 0 && ethPrice < minETH) {
-        showPopup(`ETH price must be at least ${minETH.toFixed(4)} ETH (total royalties)`, 'error')
-        return
-      }
-      
-      if (usdcPrice > 0 && usdcPrice < minUSDC) {
-        showPopup(`USDC price must be at least ${minUSDC.toFixed(2)} USDC (total royalties)`, 'error')
-        return
-      }
-    }
-    
     try {
-      // Get project data to find thumbnailId
+      // STEP 1: Get project data to verify integrity and dependencies
       let thumbnailId: string | undefined;
+      let projectData: any;
+      let dependencyLibraries: any[] = [];
+      
       try {
-        const projectData = await downloadClayProject(libraryProjectId);
+        projectData = await downloadClayProject(libraryProjectId);
         const tags = projectData.tags as Record<string, string> | undefined;
         thumbnailId = tags?.['Thumbnail-ID'];
         console.log('[LibraryUpload] Found thumbnail ID:', thumbnailId);
+        
+        // SECURITY: Verify project integrity before allowing library registration
+        if ((projectData as any).__integrityWarning) {
+          showPopup(
+            `Cannot register as library: ${(projectData as any).__integrityWarning}. Please ensure your project data is valid.`,
+            'error'
+          )
+          setIsRegisteringLibrary(false)
+          return
+        }
+        
+        // DEPENDENCY CHECK: Verify library dependencies are properly tracked
+        if (projectData.usedLibraries && projectData.usedLibraries.length > 0) {
+          const { detectLibraryTampering } = await import('../../lib/projectIntegrityService')
+          const tamperCheck = detectLibraryTampering(projectData)
+          if (tamperCheck.tampered) {
+            showPopup(
+              `Cannot register as library: This project's library dependencies have been tampered with. Missing: ${tamperCheck.missing.join(', ')}`,
+              'error'
+            )
+            setIsRegisteringLibrary(false)
+            return
+          }
+          
+          dependencyLibraries = projectData.usedLibraries;
+        }
       } catch (error) {
-        console.log('[LibraryUpload] No project data found, registering without thumbnail');
+        console.log('[LibraryUpload] No project data found, registering without dependencies check');
+      }
+      
+      // STEP 2: ECONOMICS - Validate minimum price based on CURRENT blockchain state
+      // SECURITY FIX: Use current blockchain values to prevent TOCTOU attacks
+      // This ensures Library ecosystem sustainability:
+      // - If Library A costs 1 ETH NOW, and you use it to create Library B,
+      // - Library B MUST cost more than 1 ETH (current value, not stored value)
+      // - Otherwise users would just use Library B (cheaper) and Library A gets nothing
+      if (dependencyLibraries.length > 0) {
+        const { calculateMinimumPriceFromBlockchain } = await import('../../lib/libraryService')
+        
+        showPopup('Checking current library prices on blockchain...', 'info')
+        
+        const priceCheck = await calculateMinimumPriceFromBlockchain(dependencyLibraries)
+        
+        console.log('[LibraryUpload] Dependencies detected:', dependencyLibraries.length)
+        console.log('[LibraryUpload] Current blockchain minimum - ETH:', priceCheck.minETH, 'USDC:', priceCheck.minUSDC)
+        console.log('[LibraryUpload] Active libraries:', priceCheck.activeLibraries.length)
+        console.log('[LibraryUpload] Deleted libraries:', priceCheck.deletedLibraries.length)
+        console.log('[LibraryUpload] Disabled libraries:', priceCheck.disabledLibraries.length)
+        console.log('[LibraryUpload] User setting - ETH:', ethPrice, 'USDC:', usdcPrice)
+        
+        // Warn about deleted/disabled libraries
+        if (priceCheck.deletedLibraries.length > 0) {
+          const deletedNames = dependencyLibraries
+            .filter(lib => priceCheck.deletedLibraries.includes(lib.projectId))
+            .map(lib => lib.name)
+            .join(', ')
+          
+          showPopup(
+            `⚠️ Warning: ${priceCheck.deletedLibraries.length} of your dependencies have been deleted: ${deletedNames}. ` +
+            `These won't receive royalties, so minimum price is reduced.`,
+            'warning'
+          )
+        }
+        
+        if (priceCheck.disabledLibraries.length > 0) {
+          const disabledNames = dependencyLibraries
+            .filter(lib => priceCheck.disabledLibraries.includes(lib.projectId))
+            .map(lib => lib.name)
+            .join(', ')
+          
+          showPopup(
+            `⚠️ Warning: ${priceCheck.disabledLibraries.length} of your dependencies have disabled royalties: ${disabledNames}. ` +
+            `These won't receive royalties, so minimum price is reduced.`,
+            'warning'
+          )
+        }
+        
+        // Enforce minimum pricing based on CURRENT blockchain values
+        if (ethPrice > 0 && ethPrice <= priceCheck.minETH) {
+          showPopup(
+            `⚠️ Price too low! This project uses ${priceCheck.activeLibraries.length} active library(ies). ` +
+            `To protect the original creators, your royalty must be HIGHER than their CURRENT total royalties. ` +
+            `Current minimum: ${priceCheck.minETH.toFixed(6)} ETH (you set: ${ethPrice.toFixed(6)} ETH). ` +
+            `Suggested: ${(priceCheck.minETH * 1.2).toFixed(6)} ETH or more.`,
+            'error'
+          )
+          setIsRegisteringLibrary(false)
+          return
+        }
+        
+        if (usdcPrice > 0 && usdcPrice <= priceCheck.minUSDC) {
+          showPopup(
+            `⚠️ Price too low! This project uses ${priceCheck.activeLibraries.length} active library(ies). ` +
+            `To protect the original creators, your royalty must be HIGHER than their CURRENT total royalties. ` +
+            `Current minimum: ${priceCheck.minUSDC.toFixed(2)} USDC (you set: ${usdcPrice.toFixed(2)} USDC). ` +
+            `Suggested: ${(priceCheck.minUSDC * 1.2).toFixed(2)} USDC or more.`,
+            'error'
+          )
+          setIsRegisteringLibrary(false)
+          return
+        }
+        
+        // Show helpful info to user
+        if (ethPrice > 0 && ethPrice > priceCheck.minETH) {
+          const message = priceCheck.activeLibraries.length > 0
+            ? `✅ Good pricing! Your royalty (${ethPrice.toFixed(6)} ETH) is higher than current dependencies (${priceCheck.minETH.toFixed(6)} ETH). ` +
+              `Original creators will receive their fair share when someone uses your library.`
+            : `✅ This project has no active library dependencies. You can set any price.`
+          
+          showPopup(message, 'success')
+        }
+        
+        if (usdcPrice > 0 && usdcPrice > priceCheck.minUSDC) {
+          const message = priceCheck.activeLibraries.length > 0
+            ? `✅ Good pricing! Your royalty (${usdcPrice.toFixed(2)} USDC) is higher than current dependencies (${priceCheck.minUSDC.toFixed(2)} USDC). ` +
+              `Original creators will receive their fair share when someone uses your library.`
+            : `✅ This project has no active library dependencies. You can set any price.`
+          
+          showPopup(message, 'success')
+        }
       }
       
       const result = await registerLibraryAsset(
@@ -2514,7 +2647,17 @@ export default function AdvancedClay() {
         // Apply offset to each imported object
         const newPosition = obj.position.clone()
         newPosition.x += offsetX
-        return { ...obj, id: newId, groupId, position: newPosition }
+        // SECURITY: Mark each object with its library source for royalty tracking
+        // If object already has a librarySourceId (nested library), preserve it
+        // Otherwise, mark with current library
+        return { 
+          ...obj, 
+          id: newId, 
+          groupId, 
+          position: newPosition,
+          librarySourceId: obj.librarySourceId || asset.projectId,
+          librarySourceName: obj.librarySourceName || asset.name
+        }
       })
       
       // Add to canvas
@@ -2617,7 +2760,10 @@ export default function AdvancedClay() {
       id: newId,
       position: newPosition,
       geometry: newGeometry,
-      groupId: undefined // Remove group association
+      groupId: undefined, // Remove group association
+      // SECURITY: Preserve library source tracking for royalty enforcement
+      librarySourceId: copiedClay.librarySourceId,
+      librarySourceName: copiedClay.librarySourceName
     }
     
     const newClays = [...clayObjects, newClay]
@@ -3250,8 +3396,26 @@ export default function AdvancedClay() {
       return
     }
     
+    // FIX: Verify network before saving
+    const { verifyAndSwitchNetwork } = await import('../../lib/networkUtils')
+    const isCorrectNetwork = await verifyAndSwitchNetwork(showPopup)
+    if (!isCorrectNetwork) {
+      return
+    }
 
     console.log('[Save] Entering handleSaveProject function')
+    
+    // FIX P0-2: Prevent page close during save
+    let isSaving = true;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isSaving) {
+        e.preventDefault();
+        e.returnValue = 'Project save in progress. Are you sure you want to leave? You may lose royalty payments already made.';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
     
     try {
       console.log('[Save] Inside try block')
@@ -3284,6 +3448,41 @@ export default function AdvancedClay() {
         backgroundColor
       })
       
+      // SECURITY: Auto-detect libraries actually used in the project
+      // This prevents users from removing libraries from usedLibraries array
+      const detectedLibraries = new Map<string, any>()
+      
+      clayObjects.forEach(clay => {
+        if (clay.librarySourceId && clay.librarySourceName) {
+          if (!detectedLibraries.has(clay.librarySourceId)) {
+            // Find the library details from usedLibraries
+            const libDetails = usedLibraries.find(lib => lib.projectId === clay.librarySourceId)
+            if (libDetails) {
+              detectedLibraries.set(clay.librarySourceId, libDetails)
+            } else {
+              // Library not in usedLibraries - this is suspicious!
+              console.warn(`[SECURITY] Object ${clay.id} claims to be from library ${clay.librarySourceId} (${clay.librarySourceName}) but library not found in usedLibraries!`)
+              // Still add it to enforce royalty payment
+              detectedLibraries.set(clay.librarySourceId, {
+                projectId: clay.librarySourceId,
+                name: clay.librarySourceName,
+                royaltyPerImportETH: '0',
+                royaltyPerImportUSDC: '0'
+              })
+            }
+          }
+        }
+      })
+      
+      const finalUsedLibraries = Array.from(detectedLibraries.values())
+      
+      // Log security check results
+      console.log(`[SECURITY] Detected ${finalUsedLibraries.length} libraries from clay objects`)
+      console.log(`[SECURITY] User claimed ${usedLibraries.length} libraries`)
+      if (finalUsedLibraries.length !== usedLibraries.length) {
+        console.warn(`[SECURITY WARNING] Mismatch between detected (${finalUsedLibraries.length}) and claimed (${usedLibraries.length}) libraries!`)
+      }
+      
       // Step 1: Serialize the clay objects
       let serialized;
       try {
@@ -3295,7 +3494,7 @@ export default function AdvancedClay() {
           [], // tags
           backgroundColor,
           clayGroups,
-          usedLibraries.length > 0 ? usedLibraries : undefined
+          finalUsedLibraries.length > 0 ? finalUsedLibraries : undefined
         )
         console.log('[Save] serializeClayProject returned successfully')
       } catch (serializeError) {
@@ -3327,7 +3526,8 @@ export default function AdvancedClay() {
       console.log(`Project size: ${sizeInKB.toFixed(2)} KB`);
       
       // Step 2: Process library purchases and register royalties
-      if (usedLibraries.length > 0) {
+      // SECURITY: Use detected libraries, not user-provided ones
+      if (finalUsedLibraries.length > 0) {
         try {
           onProgress?.('Processing library royalties...')
           
@@ -3340,7 +3540,7 @@ export default function AdvancedClay() {
           const { processLibraryPurchasesAndRoyalties, uploadRoyaltyReceipt } = await import('../../lib/royaltyService')
           const result = await processLibraryPurchasesAndRoyalties(
             serialized.id,
-            usedLibraries,
+            finalUsedLibraries,
             provider,
             (progressMsg) => {
               // Show progress in popup
@@ -3376,7 +3576,7 @@ export default function AdvancedClay() {
             }
           }
           
-          const purchasedCount = usedLibraries.length - result.alreadyOwned
+          const purchasedCount = finalUsedLibraries.length - result.alreadyOwned
           if (purchasedCount > 0) {
             // Build payment message
             const payments = []
@@ -3393,7 +3593,7 @@ export default function AdvancedClay() {
               'success'
             )
           } else {
-            showPopup(`All ${usedLibraries.length} libraries already owned`, 'success')
+            showPopup(`All ${finalUsedLibraries.length} libraries already owned`, 'success')
           }
           
           // Clear used libraries after successful payment
@@ -3402,6 +3602,37 @@ export default function AdvancedClay() {
         } catch (error: any) {
           console.error('[Save] Library purchase failed:', error)
           throw new Error(`Library purchase failed: ${error.message}`)
+        }
+      }
+
+      // Step 2.5: Sign project data for integrity verification
+      // FIX P0-4: SECURITY - This prevents tampering with library dependencies after download
+      // Always sign projects with libraries to ensure integrity
+      if (finalUsedLibraries.length > 0 || serialized.clays.some(c => c.librarySourceId)) {
+        try {
+          onProgress?.('Signing project data...')
+          console.log('[Save] Signing project data for integrity...')
+          
+          // Get provider for signing
+          let provider = null;
+          if (wallets && wallets.length > 0) {
+            provider = await wallets[0].getEthereumProvider();
+          }
+          
+          if (provider) {
+            const { signProjectData } = await import('../../lib/projectIntegrityService')
+            const signature = await signProjectData(serialized, provider)
+            serialized.signature = signature
+            console.log('[Save] ✅ Project signature created')
+          } else {
+            console.error('[Save] ❌ No provider available for signing')
+            // FIX P0-4: More strict warning for missing signature
+            showPopup('Warning: Could not sign project data. Project integrity cannot be verified.', 'warning')
+          }
+        } catch (signError: any) {
+          console.error('[Save] ❌ Failed to sign project:', signError)
+          // FIX P0-4: Warn user about security implications
+          showPopup('Warning: Project signature failed. This project may not be verifiable for royalty payments.', 'warning')
         }
       }
 
@@ -3482,6 +3713,10 @@ export default function AdvancedClay() {
       } else {
         throw new Error('Failed to save project. Please try again.')
       }
+    } finally {
+      // FIX P0-2: Always remove beforeunload listener
+      isSaving = false;
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     }
   }
 
@@ -3595,15 +3830,17 @@ export default function AdvancedClay() {
         }
       }
       
-      // Step 1: Disable royalty from Library (if registered)
+      // Step 1: Delete from Library (if registered)
+      // FIX: Use deleteLibraryAsset instead of disableLibraryRoyalty
+      // This completely removes the asset from Library, not just disables royalty
       try {
-          const { disableLibraryRoyalty } = await import('../../lib/libraryService')
-        const result = await disableLibraryRoyalty(projectId, privyProvider)
+        const { deleteLibraryAsset } = await import('../../lib/libraryService')
+        const result = await deleteLibraryAsset(projectId, privyProvider)
         if (result.success && result.txHash) {
-          console.log('[Delete] Library asset deactivated:', result.txHash)
+          console.log('[Delete] Library asset deleted:', result.txHash)
         }
       } catch (error) {
-        console.log('[Delete] Library deactivate skipped:', error)
+        console.log('[Delete] Library delete skipped:', error)
       }
       
       // Step 2: Cancel Marketplace listing (if listed)

@@ -24,14 +24,14 @@ export const MARKETPLACE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_MARKETPLACE_
 
 // Marketplace contract ABI
 export const MARKETPLACE_CONTRACT_ABI = [
-  "function listAsset(string projectId, uint256 price) external",
+  "function listAsset(string projectId, uint256 price, uint8 paymentToken) external",
   "function buyAsset(string projectId) external payable",
   "function cancelListing(string projectId) external",
-  "function makeOffer(string projectId, uint256 duration) external payable",
+  "function makeOffer(string projectId, uint256 offerPrice, uint8 paymentToken, uint256 duration) external payable",
   "function acceptOffer(uint256 offerId) external",
   "function cancelOffer(uint256 offerId) external",
-  "function listings(string projectId) external view returns (tuple(string projectId, address seller, uint256 price, uint256 listedAt, bool isActive))",
-  "function offers(uint256 offerId) external view returns (tuple(string projectId, address buyer, uint256 offerPrice, uint256 offeredAt, uint256 expiresAt, bool isActive))",
+  "function listings(string projectId) external view returns (tuple(string projectId, address seller, uint256 price, uint8 paymentToken, uint256 listedAt, bool isActive))",
+  "function offers(uint256 offerId) external view returns (tuple(string projectId, address buyer, uint256 offerPrice, uint8 paymentToken, uint256 offeredAt, uint256 expiresAt, bool isActive))",
   "function getProjectOffers(string projectId) external view returns (uint256[])",
   "function getActiveListingsCount() external view returns (uint256)",
   "event AssetListed(string indexed projectId, address indexed seller, uint256 price, uint256 timestamp)",
@@ -43,7 +43,8 @@ export const MARKETPLACE_CONTRACT_ABI = [
 export interface MarketplaceListing {
   projectId: string;
   seller: string;
-  price: string; // in IRYS tokens
+  price: string; // in ETH or USDC
+  paymentToken: 'ETH' | 'USDC';
   listedAt: number;
   isActive: boolean;
   assetName?: string;
@@ -55,7 +56,8 @@ export interface MarketplaceOffer {
   offerId: number;
   projectId: string;
   buyer: string;
-  offerPrice: string; // in IRYS tokens
+  offerPrice: string; // in ETH or USDC
+  paymentToken: 'ETH' | 'USDC';
   offeredAt: number;
   expiresAt: number;
   isActive: boolean;
@@ -63,10 +65,12 @@ export interface MarketplaceOffer {
 
 /**
  * List an asset for sale
+ * @param paymentToken 'ETH' or 'USDC' (defaults to 'ETH')
  */
 export async function listAssetForSale(
   projectId: string,
-  priceInIRYS: number
+  price: number,
+  paymentToken: 'ETH' | 'USDC' = 'ETH'
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
@@ -81,9 +85,22 @@ export async function listAssetForSale(
       signer
     );
     
-    const priceInWei = ethers.parseEther(priceInIRYS.toString());
+    // Convert price based on token type
+    const priceInUnits = paymentToken === 'ETH' 
+      ? ethers.parseEther(price.toString())
+      : ethers.parseUnits(price.toString(), 6); // USDC has 6 decimals
     
-    const tx = await contract.listAsset(projectId, priceInWei);
+    // PaymentToken enum: 0 = ETH, 1 = USDC
+    const paymentTokenEnum = paymentToken === 'ETH' ? 0 : 1;
+    
+    console.log('[MarketplaceService] Listing asset:', {
+      projectId,
+      price,
+      paymentToken,
+      priceInUnits: priceInUnits.toString()
+    });
+    
+    const tx = await contract.listAsset(projectId, priceInUnits, paymentTokenEnum);
     await tx.wait();
     
     return { success: true, txHash: tx.hash };
@@ -99,7 +116,7 @@ export async function listAssetForSale(
 export async function cancelMarketplaceListing(
   projectId: string,
   customProvider?: any
-): Promise<{ success: boolean; txHash?: string; error?: string }> {
+): Promise<{ success: boolean; txHash?: string; error?: string; warning?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
       // Marketplace not deployed, skip silently
@@ -126,8 +143,11 @@ export async function cancelMarketplaceListing(
     );
     
     // Check if listing exists
+    let hasActiveListing = false;
     try {
       const listing = await contract.listings(projectId);
+      hasActiveListing = listing.isActive;
+      
       if (!listing.isActive) {
         // No active listing, skip
         return { success: true };
@@ -137,24 +157,35 @@ export async function cancelMarketplaceListing(
       return { success: true };
     }
     
-    const tx = await contract.cancelListing(projectId);
-    await tx.wait();
-    
-    console.log('[MarketplaceService] Listing cancelled:', projectId);
-    return { success: true, txHash: tx.hash };
+    // IMPORTANT: Try to cancel listing before deleting project
+    try {
+      const tx = await contract.cancelListing(projectId);
+      await tx.wait();
+      
+      console.log('[MarketplaceService] Listing cancelled:', projectId);
+      return { success: true, txHash: tx.hash };
+    } catch (cancelError: any) {
+      console.error('[MarketplaceService] Failed to cancel listing:', cancelError);
+      
+      // CRITICAL WARNING: Listing still active but project will be deleted
+      return { 
+        success: false, 
+        error: getErrorMessage(cancelError),
+        warning: 'Failed to cancel marketplace listing. If you proceed with deletion, the project will remain listed but cannot be purchased, which may confuse buyers. Please try again or contact support.'
+      };
+    }
   } catch (error: any) {
-    console.error('[MarketplaceService] Error cancelling listing:', error);
-    // Don't fail the entire deletion if cancel fails
+    console.error('[MarketplaceService] Error in cancelMarketplaceListing:', error);
     return { success: false, error: getErrorMessage(error) };
   }
 }
 
 /**
  * Buy an asset at listed price
+ * NOTE: Payment token is determined by the listing
  */
 export async function buyListedAsset(
   projectId: string,
-  priceInIRYS: number,
   buyerAddress: string
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
@@ -170,9 +201,46 @@ export async function buyListedAsset(
       signer
     );
     
-    const priceInWei = ethers.parseEther(priceInIRYS.toString());
+    // FIX P1-7: Verify listing is still active (prevent race condition)
+    const listingData = await contract.listings(projectId);
     
-    const tx = await contract.buyAsset(projectId, { value: priceInWei });
+    if (!listingData.isActive) {
+      return { success: false, error: 'This listing is no longer available' };
+    }
+    
+    // CRITICAL FIX: Check if asset still exists in library - MUST NOT continue if deleted
+    const LIBRARY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS;
+    if (LIBRARY_CONTRACT_ADDRESS) {
+      try {
+        const provider = await signer.provider;
+        const libraryContract = new ethers.Contract(
+          LIBRARY_CONTRACT_ADDRESS,
+          ['function getAsset(string projectId) external view returns (string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled)'],
+          provider
+        );
+        
+        const asset = await libraryContract.getAsset(projectId);
+        if (!asset.exists) {
+          return { success: false, error: 'This project has been deleted by the owner and is no longer available for purchase' };
+        }
+      } catch (error) {
+        console.error('[MarketplaceService] Failed to verify asset existence:', error);
+        // SECURITY: Do NOT continue if we can't verify - could be deleted
+        return { success: false, error: 'Unable to verify project status. Please try again later.' };
+      }
+    }
+    
+    console.log('[MarketplaceService] Buying asset:', {
+      projectId,
+      price: listingData.price.toString(),
+      paymentToken: listingData.paymentToken === 0 ? 'ETH' : 'USDC'
+    });
+    
+    // Call buyAsset with ETH if payment token is ETH
+    const tx = listingData.paymentToken === 0
+      ? await contract.buyAsset(projectId, { value: listingData.price })
+      : await contract.buyAsset(projectId);
+    
     const receipt = await tx.wait();
     
     // Transfer ownership on Irys by re-uploading with new owner
@@ -188,10 +256,12 @@ export async function buyListedAsset(
 
 /**
  * Make an offer for an asset
+ * @param paymentToken 'ETH' or 'USDC' (defaults to 'ETH')
  */
 export async function makeAssetOffer(
   projectId: string,
-  offerPriceInIRYS: number,
+  offerPrice: number,
+  paymentToken: 'ETH' | 'USDC' = 'ETH',
   durationInHours: number = 24
 ): Promise<{ success: boolean; offerId?: number; txHash?: string; error?: string }> {
   try {
@@ -207,10 +277,31 @@ export async function makeAssetOffer(
       signer
     );
     
-    const priceInWei = ethers.parseEther(offerPriceInIRYS.toString());
+    // Convert price based on token type
+    const priceInUnits = paymentToken === 'ETH'
+      ? ethers.parseEther(offerPrice.toString())
+      : ethers.parseUnits(offerPrice.toString(), 6);
+    
     const durationInSeconds = durationInHours * 3600;
     
-    const tx = await contract.makeOffer(projectId, durationInSeconds, { value: priceInWei });
+    // PaymentToken enum: 0 = ETH, 1 = USDC
+    const paymentTokenEnum = paymentToken === 'ETH' ? 0 : 1;
+    
+    console.log('[MarketplaceService] Making offer:', {
+      projectId,
+      offerPrice,
+      paymentToken,
+      durationInHours,
+      priceInUnits: priceInUnits.toString()
+    });
+    
+    const tx = await contract.makeOffer(
+      projectId, 
+      priceInUnits,        // offerPrice (2번째)
+      paymentTokenEnum,    // paymentToken (3번째)
+      durationInSeconds,   // duration (4번째)
+      paymentToken === 'ETH' ? { value: priceInUnits } : {}
+    );
     const receipt = await tx.wait();
     
     // Extract offer ID from event logs
@@ -299,6 +390,36 @@ export async function cancelListing(
 }
 
 /**
+ * Cancel an offer and get refund
+ * FIX P1-11: Allow buyers to cancel their expired offers
+ */
+export async function cancelOfferById(
+  offerId: number
+): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    if (!MARKETPLACE_CONTRACT_ADDRESS) {
+      throw new Error('Marketplace contract not deployed');
+    }
+    
+    const { signer } = await getWalletProvider();
+    
+    const contract = new ethers.Contract(
+      MARKETPLACE_CONTRACT_ADDRESS,
+      MARKETPLACE_CONTRACT_ABI,
+      signer
+    );
+    
+    const tx = await contract.cancelOffer(offerId);
+    await tx.wait();
+    
+    return { success: true, txHash: tx.hash };
+  } catch (error: any) {
+    console.error('[MarketplaceService] Error cancelling offer:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/**
  * Get offers for a project
  */
 export async function getProjectOffers(
@@ -326,11 +447,17 @@ export async function getProjectOffers(
     for (const offerId of offerIds) {
       const offerData = await contract.offers(offerId);
       if (offerData.isActive && offerData.expiresAt > Math.floor(Date.now() / 1000)) {
+        // Format price based on payment token
+        const formattedPrice = offerData.paymentToken === 0
+          ? ethers.formatEther(offerData.offerPrice)
+          : ethers.formatUnits(offerData.offerPrice, 6);
+        
         offers.push({
           offerId: Number(offerId),
           projectId: offerData.projectId,
           buyer: offerData.buyer,
-          offerPrice: ethers.formatEther(offerData.offerPrice),
+          offerPrice: formattedPrice,
+          paymentToken: offerData.paymentToken === 0 ? 'ETH' : 'USDC',
           offeredAt: Number(offerData.offeredAt),
           expiresAt: Number(offerData.expiresAt),
           isActive: offerData.isActive
@@ -380,10 +507,16 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
           // Check if listing is still active
           const listingData = await contract.listings(projectId);
           if (listingData.isActive) {
+            // Format price based on payment token
+            const formattedPrice = listingData.paymentToken === 0
+              ? ethers.formatEther(listingData.price)
+              : ethers.formatUnits(listingData.price, 6);
+            
             listings.push({
               projectId,
               seller: listingData.seller,
-              price: ethers.formatEther(listingData.price),
+              price: formattedPrice,
+              paymentToken: listingData.paymentToken === 0 ? 'ETH' : 'USDC',
               listedAt: Number(listingData.listedAt),
               isActive: listingData.isActive
             });
