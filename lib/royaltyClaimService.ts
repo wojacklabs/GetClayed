@@ -1,20 +1,24 @@
 import { ethers } from 'ethers';
 import { getErrorMessage } from './errorHandler';
 
-async function getWalletProvider() {
-  if (typeof window === 'undefined') {
+/**
+ * Get wallet provider - supports Privy and MetaMask
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
+ */
+async function getWalletProvider(customProvider?: any) {
+  if (typeof window === 'undefined' && !customProvider) {
     throw new Error('Window not available');
   }
   
-  // Try window.ethereum first (works with Privy)
-  const ethereum = (window as any).ethereum;
+  // Use custom provider if provided (Privy), otherwise fallback to window.ethereum
+  const ethereum = customProvider || (typeof window !== 'undefined' ? (window as any).ethereum : null);
   
   if (!ethereum) {
     console.error('[RoyaltyClaimService] No ethereum provider found');
     throw new Error('Please connect your wallet first.');
   }
   
-  console.log('[RoyaltyClaimService] Using window.ethereum provider');
+  console.log('[RoyaltyClaimService] Using provider:', customProvider ? 'Privy' : 'window.ethereum');
   const provider = new ethers.BrowserProvider(ethereum);
   const signer = await provider.getSigner();
   
@@ -101,15 +105,9 @@ export async function claimETHRoyalties(customProvider?: any): Promise<string> {
       throw new Error('Contract not configured');
     }
     
-    let signer;
-    if (customProvider) {
-      console.log('[RoyaltyClaimService] Using custom provider (Privy) for ETH claim');
-      const provider = new ethers.BrowserProvider(customProvider);
-      signer = await provider.getSigner();
-    } else {
-      const result = await getWalletProvider();
-      signer = result.signer;
-    }
+    // Always use getWalletProvider which handles both Privy and window.ethereum
+    const result = await getWalletProvider(customProvider);
+    const signer = result.signer;
     
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, signer);
     
@@ -135,15 +133,9 @@ export async function claimUSDCRoyalties(customProvider?: any): Promise<string> 
       throw new Error('Contract not configured');
     }
     
-    let signer;
-    if (customProvider) {
-      console.log('[RoyaltyClaimService] Using custom provider (Privy) for USDC claim');
-      const provider = new ethers.BrowserProvider(customProvider);
-      signer = await provider.getSigner();
-    } else {
-      const result = await getWalletProvider();
-      signer = result.signer;
-    }
+    // Always use getWalletProvider which handles both Privy and window.ethereum
+    const result = await getWalletProvider(customProvider);
+    const signer = result.signer;
     
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, signer);
     

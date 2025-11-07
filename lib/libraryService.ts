@@ -51,23 +51,25 @@ export interface LibraryAsset {
 
 /**
  * Register a project as a library asset
+ * Get wallet provider - supports Privy and MetaMask
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  */
-async function getWalletProvider() {
-  if (typeof window === 'undefined') {
+async function getWalletProvider(customProvider?: any) {
+  if (typeof window === 'undefined' && !customProvider) {
     throw new Error('Window not available');
   }
   
   console.log('[LibraryService] Checking for wallet provider...');
   
-  // Try window.ethereum first (works with both Privy and MetaMask)
-  const ethereum = (window as any).ethereum;
+  // Use custom provider if provided (Privy), otherwise fallback to window.ethereum
+  const ethereum = customProvider || (typeof window !== 'undefined' ? (window as any).ethereum : null);
   
   if (!ethereum) {
     console.error('[LibraryService] No ethereum provider found');
     throw new Error('No wallet connected. Please connect your wallet first using the Connect Wallet button.');
   }
   
-  console.log('[LibraryService] Using window.ethereum provider');
+  console.log('[LibraryService] Using provider:', customProvider ? 'Privy' : 'window.ethereum');
   const provider = new ethers.BrowserProvider(ethereum);
   const signer = await provider.getSigner();
   

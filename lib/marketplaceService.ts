@@ -2,17 +2,23 @@ import { ethers } from 'ethers';
 import { saveMutableReference, getMutableReference } from './mutableStorageService';
 import { getErrorMessage } from './errorHandler';
 
-async function getWalletProvider() {
-  if (typeof window === 'undefined') {
+/**
+ * Get wallet provider - supports Privy and MetaMask
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
+ */
+async function getWalletProvider(customProvider?: any) {
+  if (typeof window === 'undefined' && !customProvider) {
     throw new Error('Window not available');
   }
   
-  const ethereum = (window as any).ethereum;
+  // Use custom provider if provided (Privy), otherwise fallback to window.ethereum
+  const ethereum = customProvider || (typeof window !== 'undefined' ? (window as any).ethereum : null);
   
   if (!ethereum) {
     throw new Error('No wallet connected. Please connect your wallet first.');
   }
   
+  console.log('[MarketplaceService] Using provider:', customProvider ? 'Privy' : 'window.ethereum');
   const provider = new ethers.BrowserProvider(ethereum);
   const signer = await provider.getSigner();
   
@@ -66,18 +72,20 @@ export interface MarketplaceOffer {
 /**
  * List an asset for sale
  * @param paymentToken 'ETH' or 'USDC' (defaults to 'ETH')
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  */
 export async function listAssetForSale(
   projectId: string,
   price: number,
-  paymentToken: 'ETH' | 'USDC' = 'ETH'
+  paymentToken: 'ETH' | 'USDC' = 'ETH',
+  customProvider?: any
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
       throw new Error('Marketplace contract not deployed');
     }
     
-    const { signer } = await getWalletProvider();
+    const { signer } = await getWalletProvider(customProvider);
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -183,17 +191,19 @@ export async function cancelMarketplaceListing(
 /**
  * Buy an asset at listed price
  * NOTE: Payment token is determined by the listing
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  */
 export async function buyListedAsset(
   projectId: string,
-  buyerAddress: string
+  buyerAddress: string,
+  customProvider?: any
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
       throw new Error('Marketplace contract not deployed');
     }
     
-    const { signer } = await getWalletProvider();
+    const { signer } = await getWalletProvider(customProvider);
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -257,19 +267,21 @@ export async function buyListedAsset(
 /**
  * Make an offer for an asset
  * @param paymentToken 'ETH' or 'USDC' (defaults to 'ETH')
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  */
 export async function makeAssetOffer(
   projectId: string,
   offerPrice: number,
   paymentToken: 'ETH' | 'USDC' = 'ETH',
-  durationInHours: number = 24
+  durationInHours: number = 24,
+  customProvider?: any
 ): Promise<{ success: boolean; offerId?: number; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
       throw new Error('Marketplace contract not deployed');
     }
     
-    const { signer } = await getWalletProvider();
+    const { signer } = await getWalletProvider(customProvider);
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -327,18 +339,20 @@ export async function makeAssetOffer(
 
 /**
  * Accept an offer
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  */
 export async function acceptOffer(
   offerId: number,
   projectId: string,
-  buyerAddress: string
+  buyerAddress: string,
+  customProvider?: any
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
       throw new Error('Marketplace contract not deployed');
     }
     
-    const { signer } = await getWalletProvider();
+    const { signer } = await getWalletProvider(customProvider);
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -362,16 +376,18 @@ export async function acceptOffer(
 
 /**
  * Cancel a listing
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  */
 export async function cancelListing(
-  projectId: string
+  projectId: string,
+  customProvider?: any
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
       throw new Error('Marketplace contract not deployed');
     }
     
-    const { signer } = await getWalletProvider();
+    const { signer } = await getWalletProvider(customProvider);
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
@@ -392,16 +408,18 @@ export async function cancelListing(
 /**
  * Cancel an offer and get refund
  * FIX P1-11: Allow buyers to cancel their expired offers
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  */
 export async function cancelOfferById(
-  offerId: number
+  offerId: number,
+  customProvider?: any
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
       throw new Error('Marketplace contract not deployed');
     }
     
-    const { signer } = await getWalletProvider();
+    const { signer } = await getWalletProvider(customProvider);
     
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,

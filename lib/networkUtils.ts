@@ -13,15 +13,19 @@ export const BASE_RPC_URL = 'https://mainnet.base.org';
 
 /**
  * Check if user is on the correct network (Base Mainnet)
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  * @returns true if on Base, false otherwise
  */
-export async function isOnBaseNetwork(): Promise<boolean> {
+export async function isOnBaseNetwork(customProvider?: any): Promise<boolean> {
   try {
-    if (typeof window === 'undefined' || !window.ethereum) {
+    // Use custom provider if provided (Privy), otherwise fallback to window.ethereum
+    const ethereum = customProvider || (typeof window !== 'undefined' ? (window as any).ethereum : null);
+    
+    if (!ethereum) {
       return false;
     }
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = new ethers.BrowserProvider(ethereum);
     const network = await provider.getNetwork();
     
     return network.chainId === BigInt(BASE_CHAIN_ID);
@@ -33,14 +37,18 @@ export async function isOnBaseNetwork(): Promise<boolean> {
 
 /**
  * Get current network name
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  */
-export async function getCurrentNetworkName(): Promise<string> {
+export async function getCurrentNetworkName(customProvider?: any): Promise<string> {
   try {
-    if (typeof window === 'undefined' || !window.ethereum) {
+    // Use custom provider if provided (Privy), otherwise fallback to window.ethereum
+    const ethereum = customProvider || (typeof window !== 'undefined' ? (window as any).ethereum : null);
+    
+    if (!ethereum) {
       return 'Unknown';
     }
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = new ethers.BrowserProvider(ethereum);
     const network = await provider.getNetwork();
     
     switch (Number(network.chainId)) {
@@ -63,16 +71,20 @@ export async function getCurrentNetworkName(): Promise<string> {
 
 /**
  * Switch to Base Mainnet
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  * @returns true if successful, false otherwise
  */
-export async function switchToBaseNetwork(): Promise<boolean> {
+export async function switchToBaseNetwork(customProvider?: any): Promise<boolean> {
   try {
-    if (typeof window === 'undefined' || !window.ethereum) {
+    // Use custom provider if provided (Privy), otherwise fallback to window.ethereum
+    const ethereum = customProvider || (typeof window !== 'undefined' ? (window as any).ethereum : null);
+    
+    if (!ethereum) {
       throw new Error('No wallet detected');
     }
 
     // Try to switch to Base Mainnet
-    await window.ethereum.request({
+    await ethereum.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: BASE_CHAIN_ID_HEX }],
     });
@@ -82,8 +94,11 @@ export async function switchToBaseNetwork(): Promise<boolean> {
     // Error code 4902 means the chain is not added yet
     if (error.code === 4902) {
       try {
+        // Use custom provider if provided (Privy), otherwise fallback to window.ethereum
+        const ethereum = customProvider || (typeof window !== 'undefined' ? (window as any).ethereum : null);
+        
         // Add Base Mainnet to wallet
-        await window.ethereum.request({
+        await ethereum.request({
           method: 'wallet_addEthereumChain',
           params: [{
             chainId: BASE_CHAIN_ID_HEX,
@@ -114,24 +129,29 @@ export async function switchToBaseNetwork(): Promise<boolean> {
  * Verify network before transaction
  * Shows warning and attempts to switch if on wrong network
  * @param showPopup Optional popup function to show messages
+ * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
  * @returns true if on correct network or successfully switched, false otherwise
  */
 export async function verifyAndSwitchNetwork(
-  showPopup?: (message: string, type: 'success' | 'error' | 'warning') => void
+  showPopup?: (message: string, type: 'success' | 'error' | 'warning') => void,
+  customProvider?: any
 ): Promise<boolean> {
-  const isOnBase = await isOnBaseNetwork();
+  const isOnBase = await isOnBaseNetwork(customProvider);
   
   if (isOnBase) {
     return true;
   }
 
-  const currentNetwork = await getCurrentNetworkName();
+  const currentNetwork = await getCurrentNetworkName(customProvider);
   
   // FIX P1-6: Check for pending transactions before switching
   try {
-    if (typeof window !== 'undefined' && window.ethereum) {
+    // Use custom provider if provided (Privy), otherwise fallback to window.ethereum
+    const ethereum = customProvider || (typeof window !== 'undefined' ? (window as any).ethereum : null);
+    
+    if (ethereum) {
       const { ethers } = await import('ethers');
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(ethereum);
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
       
@@ -161,7 +181,7 @@ export async function verifyAndSwitchNetwork(
     );
   }
 
-  const switched = await switchToBaseNetwork();
+  const switched = await switchToBaseNetwork(customProvider);
   
   if (switched) {
     if (showPopup) {
