@@ -3002,15 +3002,50 @@ export default function AdvancedClay() {
             setCurrentProjectInfo(saved.currentProjectInfo);
           }
           
-          // Restore library information
+          // Restore library information (with blockchain verification)
           if (saved.usedLibraries && saved.usedLibraries.length > 0) {
             console.log('[AutoSave] Restoring used libraries:', saved.usedLibraries);
-            setUsedLibraries(saved.usedLibraries);
-          }
-          
-          if (saved.pendingLibraryPurchases && saved.pendingLibraryPurchases.length > 0) {
-            console.log('[AutoSave] Restoring pending library purchases:', saved.pendingLibraryPurchases);
-            setPendingLibraryPurchases(new Set(saved.pendingLibraryPurchases));
+            
+            // SECURITY FIX: Verify libraries still exist on blockchain before restoring
+            // This prevents showing deleted libraries in the library list
+            (async () => {
+              try {
+                const { getLibraryCurrentRoyalties } = await import('../../lib/libraryService');
+                const projectIds = saved.usedLibraries.map((lib: any) => lib.projectId);
+                const currentStates = await getLibraryCurrentRoyalties(projectIds);
+                
+                // Filter out deleted/disabled libraries
+                const activeLibraries = saved.usedLibraries.filter((lib: any) => {
+                  const state = currentStates.get(lib.projectId);
+                  const isActive = state && state.exists && state.enabled;
+                  
+                  if (!isActive) {
+                    console.log(`[AutoSave] Library ${lib.projectId} (${lib.name}) is deleted or disabled - removing from project`);
+                  }
+                  
+                  return isActive;
+                });
+                
+                console.log(`[AutoSave] Filtered libraries: ${activeLibraries.length}/${saved.usedLibraries.length} active`);
+                setUsedLibraries(activeLibraries);
+                
+                // Also filter pending purchases
+                if (saved.pendingLibraryPurchases && saved.pendingLibraryPurchases.length > 0) {
+                  const activePending = saved.pendingLibraryPurchases.filter((projectId: string) => {
+                    const state = currentStates.get(projectId);
+                    return state && state.exists && state.enabled;
+                  });
+                  setPendingLibraryPurchases(new Set(activePending));
+                }
+              } catch (error) {
+                console.error('[AutoSave] Failed to verify libraries:', error);
+                // Fallback: restore as-is if verification fails
+                setUsedLibraries(saved.usedLibraries);
+                if (saved.pendingLibraryPurchases && saved.pendingLibraryPurchases.length > 0) {
+                  setPendingLibraryPurchases(new Set(saved.pendingLibraryPurchases));
+                }
+              }
+            })();
           }
           
           showPopup('Auto-saved project restored', 'info');
@@ -3849,16 +3884,44 @@ export default function AdvancedClay() {
           creator: lib.creator || lib.originalCreator || lib.currentOwner
         }));
         
-        setUsedLibraries(converted);
-        
-        // Mark these libraries as pending purchase
-        // They will be checked during upload - if already owned, no payment needed
-        setPendingLibraryPurchases(new Set(converted.map((lib: any) => lib.projectId)));
-        
-        console.log('[ProjectLoad] Library info restored:', {
-          libraries: converted.length,
-          pendingPurchases: converted.map((lib: any) => lib.projectId)
-        });
+        // SECURITY FIX: Verify libraries still exist on blockchain before restoring
+        // This prevents showing deleted libraries when loading a project
+        (async () => {
+          try {
+            const { getLibraryCurrentRoyalties } = await import('../../lib/libraryService');
+            const projectIds = converted.map((lib: any) => lib.projectId);
+            const currentStates = await getLibraryCurrentRoyalties(projectIds);
+            
+            // Filter out deleted/disabled libraries
+            const activeLibraries = converted.filter((lib: any) => {
+              const state = currentStates.get(lib.projectId);
+              const isActive = state && state.exists && state.enabled;
+              
+              if (!isActive) {
+                console.log(`[ProjectLoad] Library ${lib.projectId} (${lib.name}) is deleted or disabled - removing from project`);
+              }
+              
+              return isActive;
+            });
+            
+            console.log(`[ProjectLoad] Filtered libraries: ${activeLibraries.length}/${converted.length} active`);
+            setUsedLibraries(activeLibraries);
+            
+            // Mark these libraries as pending purchase
+            // They will be checked during upload - if already owned, no payment needed
+            setPendingLibraryPurchases(new Set(activeLibraries.map((lib: any) => lib.projectId)));
+            
+            console.log('[ProjectLoad] Library info restored:', {
+              libraries: activeLibraries.length,
+              pendingPurchases: activeLibraries.map((lib: any) => lib.projectId)
+            });
+          } catch (error) {
+            console.error('[ProjectLoad] Failed to verify libraries:', error);
+            // Fallback: restore as-is if verification fails
+            setUsedLibraries(converted);
+            setPendingLibraryPurchases(new Set(converted.map((lib: any) => lib.projectId)));
+          }
+        })();
       } else {
         // Clear library info if project has no dependencies
         setUsedLibraries([]);
@@ -3974,6 +4037,42 @@ export default function AdvancedClay() {
       // Step 3: Upload deletion marker to Irys
       const deletionId = await deleteClayProject(projectId, walletAddress)
       console.log('[Delete] Irys deletion marker created:', deletionId)
+      
+      // Step 4: Clean up localStorage auto-save if this project was in used libraries
+      try {
+        const autoSaveData = localStorage.getItem('clayAutoSave');
+        if (autoSaveData) {
+          const saved = JSON.parse(autoSaveData);
+          if (saved.usedLibraries && saved.usedLibraries.length > 0) {
+            // Remove this deleted project from used libraries
+            const filteredLibraries = saved.usedLibraries.filter((lib: any) => lib.projectId !== projectId);
+            
+            if (filteredLibraries.length !== saved.usedLibraries.length) {
+              console.log(`[Delete] Removed ${projectId} from localStorage auto-save libraries`);
+              saved.usedLibraries = filteredLibraries;
+              
+              // Also remove from pending purchases
+              if (saved.pendingLibraryPurchases && saved.pendingLibraryPurchases.length > 0) {
+                saved.pendingLibraryPurchases = saved.pendingLibraryPurchases.filter((id: string) => id !== projectId);
+              }
+              
+              localStorage.setItem('clayAutoSave', JSON.stringify(saved));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[Delete] Failed to clean localStorage:', error);
+      }
+      
+      // Step 5: If this project is currently loaded, clear its library references
+      if (currentProjectInfo && currentProjectInfo.projectId === projectId) {
+        setUsedLibraries(prev => prev.filter(lib => lib.projectId !== projectId));
+        setPendingLibraryPurchases(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(projectId);
+          return newSet;
+        });
+      }
       
       // Clear cache to refresh list
       queryCache.delete(`projects-${walletAddress}`)
