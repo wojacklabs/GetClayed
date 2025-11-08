@@ -3,7 +3,6 @@ import { fixedKeyUploader } from './fixedKeyUploadService';
 import { getErrorMessage } from './errorHandler';
 import { uploadInChunks, uploadChunkManifest } from './chunkUploadService';
 import { downloadClayProject, ClayProject } from './clayStorageService';
-import { BASE_RPC_URL } from './networkUtils';
 
 const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
 
@@ -508,7 +507,8 @@ export async function queryLibraryAssets(
       if (LIBRARY_CONTRACT_ADDRESS && typeof window !== 'undefined') {
         try {
           // Use public RPC provider (works without wallet connection)
-          const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
+          const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+          const provider = new ethers.JsonRpcProvider(rpcUrl);
           const contract = new ethers.Contract(
             LIBRARY_CONTRACT_ADDRESS,
             LIBRARY_CONTRACT_ABI,
@@ -659,7 +659,8 @@ export async function getUserLibraryAssets(
     }
     
     // Use public RPC provider (works without wallet connection)
-    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
+    const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
     const contract = new ethers.Contract(
       LIBRARY_CONTRACT_ADDRESS,
       LIBRARY_CONTRACT_ABI,
@@ -680,7 +681,8 @@ export async function getUserLibraryAssets(
  * This prevents TOCTOU attacks and ensures accurate royalty calculations
  */
 export async function getLibraryCurrentRoyalties(
-  projectIds: string[]
+  projectIds: string[],
+  customProvider?: any
 ): Promise<Map<string, {
   ethAmount: number;
   usdcAmount: number;
@@ -695,7 +697,15 @@ export async function getLibraryCurrentRoyalties(
   }
   
   try {
-    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
+    // Use Privy provider if available (avoids CORS issues)
+    let provider;
+    if (customProvider) {
+      provider = new ethers.BrowserProvider(customProvider);
+    } else {
+      const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+      provider = new ethers.JsonRpcProvider(rpcUrl);
+    }
+    
     const contract = new ethers.Contract(
       LIBRARY_CONTRACT_ADDRESS,
       LIBRARY_CONTRACT_ABI,

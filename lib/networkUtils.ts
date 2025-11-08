@@ -7,18 +7,9 @@ export const BASE_CHAIN_ID = 8453;
 export const BASE_CHAIN_ID_HEX = '0x2105';
 
 /**
- * Base Mainnet RPC URL for wallet configuration
- * This is the actual Base RPC URL that wallets will use
+ * Base Mainnet RPC URL
  */
-export const BASE_WALLET_RPC_URL = 'https://mainnet.base.org';
-
-/**
- * Base Mainnet RPC URL for read-only queries
- * Uses Next.js API route proxy to avoid CORS issues
- */
-export const BASE_RPC_URL = typeof window !== 'undefined'
-  ? `${window.location.origin}/api/rpc`  // Client-side: use proxy with full URL to avoid CORS
-  : (process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org');  // Server-side: direct RPC
+export const BASE_RPC_URL = 'https://mainnet.base.org';
 
 /**
  * Check if user is on the correct network (Base Mainnet)
@@ -117,7 +108,7 @@ export async function switchToBaseNetwork(customProvider?: any): Promise<boolean
               symbol: 'ETH',
               decimals: 18,
             },
-            rpcUrls: [BASE_WALLET_RPC_URL],
+            rpcUrls: [BASE_RPC_URL],
             blockExplorerUrls: ['https://basescan.org'],
           }],
         });

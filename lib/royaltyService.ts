@@ -71,7 +71,7 @@ export async function processLibraryPurchasesAndRoyalties(
     // This ensures we don't send excess ETH/USDC that would get stuck in contract
     const { getLibraryCurrentRoyalties } = await import('./libraryService');
     const projectIds = usedLibraries.map(lib => lib.projectId);
-    const currentStates = await getLibraryCurrentRoyalties(projectIds);
+    const currentStates = await getLibraryCurrentRoyalties(projectIds, customProvider);
     
     // Filter to only active libraries first
     const activeLibraries = usedLibraries.filter(lib => {
