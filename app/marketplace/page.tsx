@@ -336,7 +336,7 @@ export default function MarketplacePage() {
                     <p className="text-xs text-gray-500">Seller</p>
                     <Link
                       href={`/user/${selectedListing.seller}`}
-                      className="text-sm text-blue-600 hover:underline"
+                      className="text-sm text-gray-700 hover:text-gray-900 hover:underline"
                     >
                       {selectedListing.seller.slice(0, 6)}...{selectedListing.seller.slice(-4)}
                     </Link>
@@ -376,7 +376,7 @@ export default function MarketplacePage() {
                     <button
                       onClick={() => handleBuy(selectedListing)}
                       disabled={!walletAddress}
-                      className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                      className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
                     >
                       Buy Now
                     </button>
@@ -438,7 +438,7 @@ export default function MarketplacePage() {
                 <button
                   onClick={handleMakeOffer}
                   disabled={!offerPrice || parseFloat(offerPrice) <= 0}
-                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
                 >
                   Submit Offer
                 </button>

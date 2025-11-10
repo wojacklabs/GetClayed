@@ -244,7 +244,7 @@ export default function MarketplaceDetailPage() {
                   <button
                     onClick={handleBuy}
                     disabled={!walletAddress}
-                    className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
+                    className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium disabled:opacity-50"
                   >
                     Buy Now
                   </button>
@@ -301,7 +301,7 @@ export default function MarketplaceDetailPage() {
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">
                             {offer.offerPrice} {offer.paymentToken}
-                            {isBuyer && <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">Your Offer</span>}
+                            {isBuyer && <span className="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">Your Offer</span>}
                           </p>
                           <p className="text-xs text-gray-500">
                             {isBuyer ? 'You made this offer' : `From ${offer.buyer.slice(0, 6)}...${offer.buyer.slice(-4)}`}
@@ -374,7 +374,7 @@ export default function MarketplaceDetailPage() {
                       </div>
                       <Link
                         href={`/library/${lib.projectId}`}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="text-xs text-gray-700 hover:text-gray-900 hover:underline"
                       >
                         View
                       </Link>
@@ -429,7 +429,7 @@ export default function MarketplaceDetailPage() {
                 <button
                   onClick={handleMakeOffer}
                   disabled={!offerPrice || parseFloat(offerPrice) <= 0}
-                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg disabled:opacity-50"
                 >
                   Submit
                 </button>

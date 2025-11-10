@@ -48,6 +48,8 @@ export interface RoyaltyEvent {
   txHash?: string;
   type: 'earned' | 'paid';
   payer?: string;
+  source?: 'library' | 'marketplace'; // Added to distinguish source
+  payerName?: string; // Added for better display
 }
 
 /**
@@ -203,7 +205,8 @@ export async function getRoyaltyEvents(userAddress: string, hoursAgo: number = 2
             timestamp: receipt.timestamp,
             txHash: receipt.txHashes?.paymentETH || receipt.txHashes?.paymentUSDC,
             type: 'earned',
-            payer: receipt.payer
+            payer: receipt.payer,
+            source: 'library' // Library royalties
           });
           break; // Only add once per receipt even if user owns multiple libraries
         }

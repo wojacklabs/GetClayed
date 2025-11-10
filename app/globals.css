@@ -35,6 +35,15 @@ input, textarea {
 canvas {
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Prevent pinch zoom on mobile */
+.no-zoom {
+  touch-action: pan-x pan-y;
 }
 
 @import "tailwindcss";

@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Suspense, useRef, useState, useEffect } from 'react'
+import { Suspense, useRef, useState, useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { downloadClayProject, restoreClayObjects } from '../lib/clayStorageService'
 
@@ -52,31 +52,87 @@ function Scene({ clayObjects }: { clayObjects: any[] }) {
 export default function MiniViewer({ projectId, clayObjects: initialClayObjects, className = '' }: MiniViewerProps) {
   const [clayObjects, setClayObjects] = useState<any[]>(initialClayObjects || [])
   const [loading, setLoading] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+  const [hasError, setHasError] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  
+  // Use Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true)
+          } else {
+            // Optionally hide when out of view to save resources
+            setIsVisible(false)
+          }
+        })
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '50px'
+      }
+    )
+    
+    if (containerRef.current) {
+      observer.observe(containerRef.current)
+    }
+    
+    return () => {
+      if (containerRef.current) {
+        observer.unobserve(containerRef.current)
+      }
+    }
+  }, [])
   
   useEffect(() => {
-    if (!initialClayObjects && projectId) {
+    if (isVisible && !initialClayObjects && projectId && clayObjects.length === 0) {
       loadProjectData()
     }
-  }, [projectId, initialClayObjects])
+  }, [projectId, initialClayObjects, isVisible])
   
   const loadProjectData = async () => {
     if (!projectId) return
     
     setLoading(true)
+    setHasError(false)
     try {
       const projectData = await downloadClayProject(projectId)
       const restored = restoreClayObjects(projectData)
       setClayObjects(restored)
     } catch (error) {
       console.error('[MiniViewer] Failed to load project:', error)
+      setHasError(true)
     } finally {
       setLoading(false)
     }
   }
   
+  // Handle WebGL context lost
+  const handleContextLost = (event: any) => {
+    event.preventDefault()
+    console.warn('[MiniViewer] WebGL context lost, will restore...')
+    setHasError(true)
+  }
+  
+  const handleContextRestored = () => {
+    console.log('[MiniViewer] WebGL context restored')
+    setHasError(false)
+  }
+  
+  if (!isVisible || hasError) {
+    return (
+      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center ${className}`}>
+        <div className="text-2xl font-bold text-gray-300">3D</div>
+      </div>
+    )
+  }
+  
   if (loading) {
     return (
-      <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
+      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center ${className}`}>
         <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
       </div>
     )
@@ -84,17 +140,30 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
   
   if (!clayObjects || clayObjects.length === 0) {
     return (
-      <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
+      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center ${className}`}>
         <div className="text-2xl font-bold text-gray-300">3D</div>
       </div>
     )
   }
   
   return (
-    <div className={className}>
+    <div ref={containerRef} className={className}>
       <Canvas
         camera={{ position: [5, 5, 5], fov: 50 }}
         style={{ background: '#f0f0f0', pointerEvents: 'none' }}
+        gl={{ 
+          preserveDrawingBuffer: true,
+          antialias: false,
+          alpha: false,
+          powerPreference: 'low-power'
+        }}
+        onCreated={({ gl }) => {
+          const canvas = gl.domElement
+          canvasRef.current = canvas
+          canvas.addEventListener('webglcontextlost', handleContextLost)
+          canvas.addEventListener('webglcontextrestored', handleContextRestored)
+        }}
+        frameloop={isVisible ? 'always' : 'never'}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.6} />

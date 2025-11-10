@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, ShoppingCart, TrendingUp, User, Calendar } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, TrendingUp, User, Calendar, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { TrackballControls } from '@react-three/drei'
@@ -13,6 +13,7 @@ import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
 import { useWallets } from '@privy-io/react-auth'
+import { getRoyaltyEvents, RoyaltyEvent } from '@/lib/royaltyClaimService'
 
 function PreviewClay({ clay }: { clay: any }) {
   return (
@@ -38,6 +39,8 @@ export default function LibraryDetailPage() {
   const [loading, setLoading] = useState(true)
   const [thumbnail, setThumbnail] = useState<string | null>(null)
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [royaltyHistory, setRoyaltyHistory] = useState<RoyaltyEvent[]>([])
+  const [totalEarned, setTotalEarned] = useState({ eth: '0', usdc: '0' })
   const { showPopup } = usePopup()
   
   useEffect(() => {
@@ -69,11 +72,44 @@ export default function LibraryDetailPage() {
         const thumb = await downloadProjectThumbnail(foundAsset.thumbnailId)
         if (thumb) setThumbnail(thumb)
       }
+      
+      // Load royalty history
+      loadRoyaltyHistory(foundAsset.originalCreator, assetId)
     } catch (error) {
       console.error('Failed to load asset:', error)
       showPopup('Failed to load asset', 'error')
     } finally {
       setLoading(false)
+    }
+  }
+  
+  const loadRoyaltyHistory = async (creator: string, projectId: string) => {
+    try {
+      // Get all royalty events for the creator (last 365 days)
+      const events = await getRoyaltyEvents(creator, 365, 1000)
+      
+      // Filter events for this specific library asset
+      const libraryEvents = events.filter(event => 
+        event.type === 'earned' && event.projectId === projectId
+      )
+      
+      // Calculate total earnings
+      let totalETH = 0
+      let totalUSDC = 0
+      
+      libraryEvents.forEach(event => {
+        totalETH += parseFloat(event.amountETH || '0')
+        totalUSDC += parseFloat(event.amountUSDC || '0')
+      })
+      
+      setTotalEarned({
+        eth: totalETH.toFixed(6),
+        usdc: totalUSDC.toFixed(2)
+      })
+      
+      setRoyaltyHistory(libraryEvents)
+    } catch (error) {
+      console.error('Failed to load royalty history:', error)
     }
   }
   
@@ -262,6 +298,52 @@ export default function LibraryDetailPage() {
                 </p>
               </div>
             )}
+            
+            {/* Revenue History */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue History</h3>
+              
+              {/* Total Earnings */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs text-gray-500 mb-1">Total ETH Earned</p>
+                  <p className="text-xl font-bold text-gray-900">{totalEarned.eth} ETH</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs text-gray-500 mb-1">Total USDC Earned</p>
+                  <p className="text-xl font-bold text-gray-900">{totalEarned.usdc} USDC</p>
+                </div>
+              </div>
+              
+              {/* History List */}
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {royaltyHistory.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No revenue yet</p>
+                ) : (
+                  royaltyHistory.map((event, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <DollarSign size={16} className="text-green-600" />
+                        <div>
+                          <p className="text-sm text-gray-600">
+                            {new Date(event.timestamp).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">From {event.payerName || (event.payer ? event.payer.slice(0, 6) + '...' + event.payer.slice(-4) : 'Unknown')}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {parseFloat(event.amountETH || '0') > 0 && (
+                          <p className="text-sm font-medium text-gray-900">{event.amountETH} ETH</p>
+                        )}
+                        {parseFloat(event.amountUSDC || '0') > 0 && (
+                          <p className="text-sm font-medium text-gray-900">{event.amountUSDC} USDC</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </main>
