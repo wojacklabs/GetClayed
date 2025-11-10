@@ -125,14 +125,26 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                   </div>
                 ) : (
                   recentEvents.map((event, idx) => (
-                    <div key={idx} className="px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
+                    <Link
+                      key={idx}
+                      href={
+                        event.source === 'marketplace' 
+                          ? '/marketplace' 
+                          : `/user/${walletAddress}` // Library royalties -> user profile
+                      }
+                      className="block px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 cursor-pointer"
+                      onClick={() => setShowDropdown(false)}
+                    >
                       <div className="flex items-start gap-2">
                         <div className="mt-0.5">
                           <DollarSign size={16} className="text-green-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-gray-900 font-medium mb-1">
-                            Royalty from "{event.projectName}"
+                            {event.source === 'marketplace' 
+                              ? `Marketplace sale: "${event.projectName}"`
+                              : `Library royalty from "${event.projectName}"`
+                            }
                           </p>
                           <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
                             {parseFloat(event.amountETH) > 0 && (
@@ -147,7 +159,7 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                           </p>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))
                 )}
               </div>
@@ -200,7 +212,16 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
               ) : (
                 <div className="space-y-3">
                   {recentEvents.map((event, idx) => (
-                    <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <Link
+                      key={idx}
+                      href={
+                        event.source === 'marketplace' 
+                          ? '/marketplace' 
+                          : `/user/${walletAddress}` // Library royalties -> user profile
+                      }
+                      className="block bg-gray-50 rounded-lg p-4 border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
+                      onClick={() => setShowAllNotifications(false)}
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <DollarSign size={16} className="text-green-600" />
                         <span className="text-sm font-medium text-gray-900">{event.type === 'earned' ? 'Earned' : 'Paid'}</span>
@@ -210,7 +231,10 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                       </div>
                       
                       <p className="text-xs text-gray-600 mb-2">
-                        Project: <span className="font-medium">{event.projectName}</span>
+                        {event.source === 'marketplace' 
+                          ? <>Marketplace sale: <span className="font-medium">{event.projectName}</span></>
+                          : <>Library project: <span className="font-medium">{event.projectName}</span></>
+                        }
                       </p>
                       
                       <div className="flex items-center gap-3 text-sm">
@@ -225,7 +249,7 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                           </span>
                         )}
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

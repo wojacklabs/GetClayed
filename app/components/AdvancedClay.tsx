@@ -299,11 +299,16 @@ function Clay({
       }
     }
     
-    const handleMouseDown = (e: MouseEvent) => {
+    const handlePointerStart = (e: MouseEvent | Touch, rect: DOMRect) => {
+      const clientX = e.clientX
+      const clientY = e.clientY
+      
+      // Update mouse position for touch/mouse
+      dragState.current.mousePos.x = ((clientX - rect.left) / rect.width) * 2 - 1
+      dragState.current.mousePos.y = -((clientY - rect.top) / rect.height) * 2 + 1
       
       if (tool === 'move') {
         // Select clay for moving
-        updateMousePosition(e)
         raycaster.setFromCamera(dragState.current.mousePos, camera)
         
         if (meshRef.current && groupRef.current) {
@@ -329,7 +334,6 @@ function Clay({
       if (tool !== 'push' && tool !== 'pull') return
       if (!meshRef.current) return
       
-      updateMousePosition(e)
       dragState.current.initialMousePos.copy(dragState.current.mousePos)  // Store initial mouse position
       
       // Store original geometry for undo
@@ -383,13 +387,16 @@ function Clay({
       onDeformingChange(true)
     }
     
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: MouseEvent | Touch, rect: DOMRect) => {
       if (dragState.current.active) {
-        updateMousePosition(e)
+        const clientX = e.clientX
+        const clientY = e.clientY
+        dragState.current.mousePos.x = ((clientX - rect.left) / rect.width) * 2 - 1
+        dragState.current.mousePos.y = -((clientY - rect.top) / rect.height) * 2 + 1
       }
     }
     
-    const handleMouseUp = () => {
+    const handlePointerEnd = () => {
       if (dragState.current.active) {
         dragState.current.active = false
         dragState.current.targetVertex = -1
@@ -416,6 +423,43 @@ function Clay({
       }
     }
     
+    // Mouse event handlers
+    const handleMouseDown = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      handlePointerStart(e, rect)
+    }
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      handlePointerMove(e, rect)
+    }
+    
+    const handleMouseUp = () => {
+      handlePointerEnd()
+    }
+    
+    // Touch event handlers
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault() // Prevent scrolling
+      if (e.touches.length === 1) {
+        const rect = canvas.getBoundingClientRect()
+        handlePointerStart(e.touches[0], rect)
+      }
+    }
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault() // Prevent scrolling
+      if (e.touches.length === 1) {
+        const rect = canvas.getBoundingClientRect()
+        handlePointerMove(e.touches[0], rect)
+      }
+    }
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.preventDefault()
+      handlePointerEnd()
+    }
+    
     // Register events
     canvas.addEventListener('mousedown', handleMouseDown)
     canvas.addEventListener('mousemove', handleMouseMove)
@@ -424,6 +468,12 @@ function Clay({
     canvas.addEventListener('wheel', handleWheel, { passive: false })
     window.addEventListener('mouseup', handleMouseUp)
     
+    // Touch events
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
+    canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false })
+    
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown)
       canvas.removeEventListener('mousemove', handleMouseMove)
@@ -431,6 +481,12 @@ function Clay({
       canvas.removeEventListener('mouseleave', handleMouseUp)
       canvas.removeEventListener('wheel', handleWheel)
       window.removeEventListener('mouseup', handleMouseUp)
+      
+      // Remove touch events
+      canvas.removeEventListener('touchstart', handleTouchStart)
+      canvas.removeEventListener('touchmove', handleTouchMove)
+      canvas.removeEventListener('touchend', handleTouchEnd)
+      canvas.removeEventListener('touchcancel', handleTouchEnd)
     }
   }, [tool, brushSize, camera, raycaster, gl, onDeformingChange, clay, onUpdate, onSelect, isSelected])
   

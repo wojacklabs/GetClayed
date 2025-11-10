@@ -624,7 +624,7 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
     }
     
     return (
-      <div className="flex gap-3 min-w-max">
+      <div className="flex gap-3 min-w-max px-2">
         {/* Parent folder navigation (if not in root) */}
         {currentPath !== 'root' && (
           <div
@@ -841,8 +841,10 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
         </div>
       </div>
       
-      <div className="flex items-start justify-center py-4 px-2 overflow-x-auto">
-        {renderFolderGrid()}
+      <div className="overflow-x-auto">
+        <div className="inline-flex items-start py-4 min-w-0">
+          {renderFolderGrid()}
+        </div>
       </div>
 
       {/* Context Menu */}

@@ -19,22 +19,57 @@ interface ProjectDetailViewProps {
 }
 
 // Simple clay renderer for view-only mode
-function ViewOnlyClay({ clay }: { clay: any }) {
+function ViewOnlyClay({ clay, isFromLibrary }: { clay: any, isFromLibrary: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null)
+  const [hovered, setHovered] = useState(false)
   
   return (
-    <mesh
-      ref={meshRef}
-      geometry={clay.geometry}
-      position={clay.position}
-      rotation={clay.rotation}
-      scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x, clay.scale.y, clay.scale.z] : clay.scale || 1}
-    >
-      <meshPhongMaterial 
-        color={clay.color}
-        side={THREE.DoubleSide}
-      />
-    </mesh>
+    <group>
+      <mesh
+        ref={meshRef}
+        geometry={clay.geometry}
+        position={clay.position}
+        rotation={clay.rotation}
+        scale={clay.scale instanceof THREE.Vector3 ? [clay.scale.x, clay.scale.y, clay.scale.z] : clay.scale || 1}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+      >
+        <meshPhongMaterial 
+          color={clay.color}
+          side={THREE.DoubleSide}
+          emissive={isFromLibrary ? (hovered ? '#ffff00' : '#ffd700') : undefined}
+          emissiveIntensity={isFromLibrary ? (hovered ? 0.5 : 0.2) : 0}
+        />
+      </mesh>
+      {isFromLibrary && (
+        <>
+          <mesh
+            geometry={clay.geometry}
+            position={clay.position}
+            rotation={clay.rotation}
+            scale={clay.scale instanceof THREE.Vector3 ? 
+              [clay.scale.x * 1.05, clay.scale.y * 1.05, clay.scale.z * 1.05] : 
+              (clay.scale || 1) * 1.05
+            }
+          >
+            <meshBasicMaterial 
+              color="#ffd700"
+              wireframe
+              transparent
+              opacity={0.3}
+              depthTest={false}
+            />
+          </mesh>
+          {hovered && clay.librarySourceName && (
+            <group position={[clay.position.x, clay.position.y + 2, clay.position.z]}>
+              <sprite scale={[3, 1, 1]}>
+                <spriteMaterial color="#000000" opacity={0.8} />
+              </sprite>
+            </group>
+          )}
+        </>
+      )}
+    </group>
   )
 }
 
@@ -351,7 +386,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             
             return (
               <group key={clay.id}>
-                <ViewOnlyClay clay={clay} />
+                <ViewOnlyClay clay={clay} isFromLibrary={!!clay.librarySourceId} />
                 {showGrid && (
                   <group position={clay.position}>
                     {/* XZ horizontal plane with dynamic color based on Z position */}
@@ -409,6 +444,41 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* Library Dependencies Info */}
+      {project?.usedLibraries && project.usedLibraries.length > 0 && (
+        <div className="absolute top-20 left-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-4 max-w-xs z-10">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            Uses Libraries ({project.usedLibraries.length})
+          </h3>
+          <div className="space-y-2">
+            {project.usedLibraries.map((lib: any, idx: number) => (
+              <Link
+                key={idx}
+                href={`/library/${lib.projectId}`}
+                className="block p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors"
+              >
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {lib.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {lib.royaltyPerImportETH ? `${lib.royaltyPerImportETH} ETH` : ''}
+                  {lib.royaltyPerImportUSDC ? `${lib.royaltyPerImportUSDC} USDC` : ''}
+                </p>
+              </Link>
+            ))}
+          </div>
+          <div className="pt-3 mt-3 border-t border-gray-200">
+            <p className="text-xs text-gray-500">
+              Total royalty: {project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0).toFixed(4)} ETH
+            </p>
           </div>
         </div>
       )}
