@@ -87,7 +87,7 @@ export async function registerLibraryAsset(
   walletAddress: string,
   customProvider?: any,
   thumbnailId?: string
-): Promise<{ success: boolean; txHash?: string; error?: string }> {
+): Promise<{ success: boolean; txHash?: string; error?: string; requiresConfirmation?: boolean }> {
   try {
     if (!LIBRARY_CONTRACT_ADDRESS) {
       throw new Error('Library contract not deployed');
@@ -198,26 +198,13 @@ export async function registerLibraryAsset(
         return { success: false, error: userFriendlyError };
       }
       
-      // For other errors, let user decide
-      if (typeof window !== 'undefined') {
-        const proceed = confirm(
-          `${userFriendlyError}\n\n` +
-          `This usually means the transaction will fail.\n` +
-          `Possible reasons:\n` +
-          `- Library already registered\n` +
-          `- Invalid parameters\n` +
-          `- Network issues\n\n` +
-          `Do you want to proceed anyway?\n` +
-          `(Warning: You may lose gas fees if transaction fails)`
-        );
-        
-        if (!proceed) {
-          return { success: false, error: 'Transaction cancelled due to gas estimation failure' };
-        }
-      } else {
-        // Server-side or no window - fail safely
-        return { success: false, error: userFriendlyError };
-      }
+      // For other errors, return error and let the UI handle confirmation
+      // The UI will use showPopup with confirm/cancel buttons
+      return { 
+        success: false, 
+        error: userFriendlyError,
+        requiresConfirmation: true
+      };
     }
     
     // Register asset on blockchain (royalty amounts, not prices!)

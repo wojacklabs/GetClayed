@@ -2366,11 +2366,11 @@ export default function AdvancedClay() {
   
   const handleRemoveFromLibrary = async (projectId: string) => {
     if (!walletAddress) {
-      showPopup('Please connect your wallet first', 'warning');
+      showPopup('Connect wallet', 'warning');
       return;
     }
     
-    showPopup('Remove from Library?', 'warning', {
+    showPopup('Remove?', 'warning', {
       autoClose: false,
       confirmButton: {
         text: 'Remove',
@@ -2392,12 +2392,12 @@ export default function AdvancedClay() {
             const result = await disableLibraryRoyalty(projectId, provider);
             
             if (result.success) {
-              showPopup('Removed from library', 'success');
+              showPopup('Removed', 'success');
             } else {
-              showPopup(result.error || 'Failed to remove', 'error');
+              showPopup(result.error || 'Failed', 'error');
             }
           } catch (error: any) {
-            showPopup(error.message || 'Failed to remove from library', 'error');
+            showPopup(error.message || 'Failed', 'error');
           }
         }
       },
@@ -2414,14 +2414,14 @@ export default function AdvancedClay() {
   
   const handleLibraryUpload = async () => {
     if (!libraryProjectId || !walletAddress || !libraryAssetName) {
-      showPopup('Please fill all required fields', 'warning')
+      showPopup('Fill all fields', 'warning')
       return
     }
     
     const price = parseFloat(libraryPrice || '0')
     
     if (price === 0) {
-      showPopup('Please set a royalty amount', 'warning')
+      showPopup('Set royalty amount', 'warning')
       return
     }
     
@@ -2506,6 +2506,94 @@ export default function AdvancedClay() {
       console.log('[LibraryUpload] Dependency libraries detected:', dependencyLibraries.length);
       if (dependencyLibraries.length > 0) {
         console.log('[LibraryUpload] Dependencies:', dependencyLibraries.map(lib => lib.name).join(', '));
+      }
+      
+      // STEP 1.5: Check if library already exists and handle deleted libraries
+      const LIBRARY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS;
+      if (LIBRARY_CONTRACT_ADDRESS && privyProvider) {
+        try {
+          const { ethers } = await import('ethers');
+          const { LIBRARY_CONTRACT_ABI } = await import('../../lib/libraryService');
+          
+          const provider = new ethers.BrowserProvider(privyProvider);
+          const contract = new ethers.Contract(
+            LIBRARY_CONTRACT_ADDRESS,
+            LIBRARY_CONTRACT_ABI,
+            provider
+          );
+          
+          const existingAsset = await contract.getAsset(libraryProjectId);
+          
+          if (existingAsset.exists) {
+            // Check if it's a deleted library (exists but royalty disabled)
+            if (!existingAsset.royaltyEnabled) {
+              // This is a deleted library - offer to re-register
+              setIsRegisteringLibrary(false);
+              showPopup('Previously deleted library. Re-register?', 'warning', {
+                confirmButton: {
+                  text: 'Re-register',
+                  onConfirm: async () => {
+                    setIsRegisteringLibrary(true);
+                    try {
+                      // Step 1: Delete completely to reset exists flag
+                      const { deleteLibraryAsset } = await import('../../lib/libraryService');
+                      console.log('[LibraryUpload] Deleting old library entry...');
+                      await deleteLibraryAsset(libraryProjectId, privyProvider);
+                      
+                      // Step 2: Wait a bit for blockchain state to update
+                      await new Promise(resolve => setTimeout(resolve, 2000));
+                      
+                      // Step 3: Re-register with new data
+                      console.log('[LibraryUpload] Re-registering library...');
+                      const { registerLibraryAsset } = await import('../../lib/libraryService');
+                      const registerResult = await registerLibraryAsset(
+                        libraryProjectId,
+                        libraryAssetName,
+                        libraryDescription,
+                        ethPrice,
+                        usdcPrice,
+                        walletAddress,
+                        privyProvider,
+                        thumbnailId
+                      );
+                      
+                      if (registerResult.success) {
+                        showPopup('Registered', 'success');
+                        setShowLibraryModal(false);
+                        setLibraryAssetName('');
+                        setLibraryDescription('');
+                        setLibraryPrice('');
+                        setLibraryPriceCurrency('USDC');
+                        setLibraryProjectId(null);
+                      } else {
+                        showPopup(registerResult.error || 'Failed', 'error');
+                      }
+                    } catch (error: any) {
+                      showPopup(error.message || 'Failed', 'error');
+                    } finally {
+                      setIsRegisteringLibrary(false);
+                    }
+                  }
+                },
+                cancelButton: {
+                  text: 'Cancel',
+                  onCancel: () => {
+                    setIsRegisteringLibrary(false);
+                  }
+                },
+                autoClose: false
+              });
+              return;
+            } else {
+              // Active library - cannot register
+              showPopup('Already registered', 'error');
+              setIsRegisteringLibrary(false);
+              return;
+            }
+          }
+        } catch (error) {
+          console.log('[LibraryUpload] Library not found in contract, proceeding with new registration');
+        }
       }
       
       // STEP 2: ECONOMICS - Validate minimum price based on CURRENT blockchain state
@@ -2602,7 +2690,7 @@ export default function AdvancedClay() {
       )
       
       if (result.success) {
-        showPopup('Registered to library', 'success')
+        showPopup('Registered', 'success')
         setShowLibraryModal(false)
         setLibraryAssetName('')
         setLibraryDescription('')
@@ -2610,7 +2698,57 @@ export default function AdvancedClay() {
         setLibraryPriceCurrency('USDC')
         setLibraryProjectId(null)
       } else {
-        showPopup(result.error || 'Registration failed', 'error')
+        // Check if this error requires user confirmation
+        const resultWithConfirm = result as any;
+        if (resultWithConfirm.requiresConfirmation) {
+          showPopup(result.error || 'Transaction may fail', 'warning', {
+            confirmButton: {
+              text: 'Proceed',
+              onConfirm: async () => {
+                // Retry registration without gas check
+                setIsRegisteringLibrary(true);
+                try {
+                  // Direct contract call bypassing gas estimation
+                  const { registerLibraryAsset } = await import('../../lib/libraryService');
+                  const retryResult = await registerLibraryAsset(
+                    libraryProjectId,
+                    libraryAssetName,
+                    libraryDescription,
+                    ethPrice,
+                    usdcPrice,
+                    walletAddress,
+                    privyProvider,
+                    thumbnailId
+                  );
+                  if (retryResult.success) {
+                    showPopup('Registered', 'success');
+                    setShowLibraryModal(false);
+                    setLibraryAssetName('');
+                    setLibraryDescription('');
+                    setLibraryPrice('');
+                    setLibraryPriceCurrency('USDC');
+                    setLibraryProjectId(null);
+                  } else {
+                    showPopup(retryResult.error || 'Failed', 'error');
+                  }
+                } catch (e: any) {
+                  showPopup(e.message || 'Failed', 'error');
+                } finally {
+                  setIsRegisteringLibrary(false);
+                }
+              }
+            },
+            cancelButton: {
+              text: 'Cancel',
+              onCancel: () => {
+                setIsRegisteringLibrary(false);
+              }
+            },
+            autoClose: false
+          });
+        } else {
+          showPopup(result.error || 'Failed', 'error');
+        }
       }
     } catch (error: any) {
       const errorMsg = error.message || 'Registration failed'
@@ -2630,7 +2768,7 @@ export default function AdvancedClay() {
       setLibraryAssets(assets)
     } catch (error) {
       console.error('Failed to load library:', error)
-      showPopup('Failed to load library', 'error')
+      showPopup('Load failed', 'error')
     } finally {
       setLoadingLibrary(false)
     }
@@ -3209,7 +3347,7 @@ export default function AdvancedClay() {
   // Group-related functions
   const createGroup = useCallback((name: string) => {
     if (selectedForGrouping.length < 2) {
-      showPopup('Select 2+ objects to group', 'error')
+      showPopup('Select 2+ objects', 'error')
       return
     }
     
@@ -3261,7 +3399,7 @@ export default function AdvancedClay() {
     
     // Remove the group
     setClayGroups(prev => prev.filter(g => g.id !== groupId))
-    showPopup('Group dissolved', 'success')
+      showPopup('Ungrouped', 'success')
   }, [addToHistory, showPopup])
   
   const updateGroup = useCallback((groupId: string, updates: Partial<ClayGroup>) => {
@@ -3445,7 +3583,7 @@ export default function AdvancedClay() {
 
   const handleSaveProject = async (projectName: string, saveAs: boolean = false, onProgress?: (status: string) => void) => {
     if (!walletAddress) {
-      showPopup('Please connect your wallet first', 'warning')
+      showPopup('Connect wallet', 'warning')
       return
     }
     
@@ -3993,7 +4131,7 @@ export default function AdvancedClay() {
   const handleProjectDelete = async (projectId: string) => {
     try {
       if (!walletAddress) {
-        showPopup('Please connect your wallet first', 'warning')
+        showPopup('Connect wallet', 'warning')
         return
       }
       
@@ -4087,7 +4225,7 @@ export default function AdvancedClay() {
   const handleProjectRename = async (projectId: string, newName: string) => {
     try {
       if (!walletAddress) {
-        showPopup('Please connect your wallet first', 'warning')
+        showPopup('Connect wallet', 'warning')
         return
       }
       
@@ -4114,7 +4252,7 @@ export default function AdvancedClay() {
 
   const handleFolderDelete = async (folderPath: string) => {
     if (!walletAddress) {
-      showPopup('Please connect your wallet first', 'warning')
+      showPopup('Connect wallet', 'warning')
       return
     }
     

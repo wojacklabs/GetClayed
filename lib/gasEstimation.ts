@@ -128,17 +128,19 @@ export async function estimateAndConfirmGas(
       
       if (showWarning) {
         const confirmed = await showWarning(
-          `${reasonableCheck.message}\n\nEstimated cost: ${formatGasEstimate(estimate)}\n\nDo you want to continue?`
+          `High gas cost: ${formatGasEstimate(estimate)}`
         );
         
         return { confirmed, estimate };
       } else {
-        // No warning function provided, use browser confirm
-        const confirmed = confirm(
-          `${reasonableCheck.message}\n\nEstimated cost: ${formatGasEstimate(estimate)}\n\nDo you want to continue?`
-        );
-        
-        return { confirmed, estimate };
+        // No warning function provided - return error that requires confirmation
+        // The caller should handle this with UI modal
+        return { 
+          confirmed: false, 
+          estimate,
+          requiresConfirmation: true,
+          warningMessage: `High gas cost: ${formatGasEstimate(estimate)}`
+        } as any;
       }
     }
     
@@ -150,14 +152,16 @@ export async function estimateAndConfirmGas(
     // Ask user if they want to proceed without gas estimate
     if (showWarning) {
       const confirmed = await showWarning(
-        `Unable to estimate gas cost. The transaction might fail or cost more than expected.\n\nDo you want to continue anyway?`
+        `Unable to estimate gas. Transaction may fail.`
       );
       return { confirmed };
     } else {
-      const confirmed = confirm(
-        `Unable to estimate gas cost. The transaction might fail or cost more than expected.\n\nDo you want to continue anyway?`
-      );
-      return { confirmed };
+      // No warning function provided - return error that requires confirmation
+      return { 
+        confirmed: false,
+        requiresConfirmation: true,
+        warningMessage: 'Unable to estimate gas. Transaction may fail.'
+      } as any;
     }
   }
 }
