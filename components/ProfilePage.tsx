@@ -821,7 +821,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
               {totalRevenueUSDC > 0 && (
                 <div className="bg-green-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-1">Total USDC</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalRevenueUSDC.toFixed(2)} USDC</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalRevenueUSDC.toFixed(6)} USDC</p>
                 </div>
               )}
             </div>

@@ -2731,7 +2731,7 @@ export default function AdvancedClay() {
         
         if (usdcPrice > 0 && usdcPrice <= priceCheck.minUSDC) {
           showPopup(
-            `Price too low. Minimum: ${priceCheck.minUSDC.toFixed(2)} USDC (you set: ${usdcPrice.toFixed(2)}). Suggested: ${(priceCheck.minUSDC * 1.2).toFixed(2)}`,
+            `Price too low. Minimum: ${priceCheck.minUSDC.toFixed(6)} USDC (you set: ${usdcPrice.toFixed(6)}). Suggested: ${(priceCheck.minUSDC * 1.2).toFixed(6)}`,
             'error'
           )
           setIsRegisteringLibrary(false)
@@ -2749,7 +2749,7 @@ export default function AdvancedClay() {
         
         if (usdcPrice > 0 && usdcPrice > priceCheck.minUSDC) {
           const message = priceCheck.activeLibraries.length > 0
-            ? `✅ Price OK (${usdcPrice.toFixed(2)} USDC > ${priceCheck.minUSDC.toFixed(2)} minimum)`
+            ? `✅ Price OK (${usdcPrice.toFixed(6)} USDC > ${priceCheck.minUSDC.toFixed(6)} minimum)`
             : `✅ No dependencies - any price OK`
           
           showPopup(message, 'success')

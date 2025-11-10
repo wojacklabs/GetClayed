@@ -102,7 +102,7 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                     )}
                     {parseFloat(pendingUSDC) > 0 && (
                       <span className="text-sm font-medium text-gray-900">
-                        {parseFloat(pendingUSDC).toFixed(2)} USDC
+                        {parseFloat(pendingUSDC).toFixed(6)} USDC
                       </span>
                     )}
                   </div>
@@ -151,7 +151,7 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                               <span>{parseFloat(event.amountETH).toFixed(6)} ETH</span>
                             )}
                             {parseFloat(event.amountUSDC) > 0 && (
-                              <span>{parseFloat(event.amountUSDC).toFixed(2)} USDC</span>
+                              <span>{parseFloat(event.amountUSDC).toFixed(6)} USDC</span>
                             )}
                           </div>
                           <p className="text-xs text-gray-500">
@@ -245,7 +245,7 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                         )}
                         {parseFloat(event.amountUSDC) > 0 && (
                           <span className="text-gray-900 font-medium">
-                            {parseFloat(event.amountUSDC).toFixed(2)} USDC
+                            {parseFloat(event.amountUSDC).toFixed(6)} USDC
                           </span>
                         )}
                       </div>
