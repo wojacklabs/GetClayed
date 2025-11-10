@@ -7,6 +7,7 @@ import { downloadClayProject, ClayProject } from './clayStorageService';
 const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
 
 // Library contract address (to be deployed)
+// Latest deployment (2025-11-11): 0xC27812Eee59FFC15A947efBd55Fc7131eb05DA20
 export const LIBRARY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS || '';
 
 // USDC token address on Base Mainnet
@@ -92,6 +93,8 @@ export async function registerLibraryAsset(
     if (!LIBRARY_CONTRACT_ADDRESS) {
       throw new Error('Library contract not deployed');
     }
+    
+    console.log('[LibraryService] Using contract address:', LIBRARY_CONTRACT_ADDRESS);
     
     let signer;
     if (customProvider) {

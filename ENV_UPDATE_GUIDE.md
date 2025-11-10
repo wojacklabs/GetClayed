@@ -1,0 +1,43 @@
+# 환경 변수 업데이트 가이드 (2025-11-11)
+
+## 새로운 컨트랙트 주소
+
+```bash
+# 최신 배포 (2025-11-11)
+NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS=0xC27812Eee59FFC15A947efBd55Fc7131eb05DA20
+NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS=0x95D3Ee66435cf3a0Ac4c0725b14E7dF116a5c575
+NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS=0x72CD5B6C5A8D466Db9B24c8697a1504C7F3E904b
+```
+
+## 업데이트 방법
+
+### 1. 로컬 개발 환경
+`.env.local` 파일을 열어서 위 3개 변수를 업데이트:
+```bash
+# 기존 값들을 새로운 값으로 교체
+NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS=0xC27812Eee59FFC15A947efBd55Fc7131eb05DA20
+NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS=0x95D3Ee66435cf3a0Ac4c0725b14E7dF116a5c575
+NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS=0x72CD5B6C5A8D466Db9B24c8697a1504C7F3E904b
+```
+
+### 2. Vercel 프로덕션 환경
+1. https://vercel.com/dashboard 접속
+2. 프로젝트 선택
+3. Settings > Environment Variables
+4. 각 변수를 찾아서 새 값으로 업데이트:
+   - `NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS`
+   - `NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS`
+   - `NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS`
+5. 재배포 트리거
+
+## 이전 컨트랙트 주소 (참고용)
+
+### 이전 배포들:
+- Library v2: `0xA742D5B85DE818F4584134717AC18930B6cAFE1e`
+- Library v1: `0xFdF68975e992ca365aF4452f439A726522156Fb2`
+
+## 주의사항
+
+- 환경변수 변경 후 반드시 개발 서버 재시작
+- 브라우저 캐시 클리어 권장
+- 새 컨트랙트는 이전 데이터를 포함하지 않음

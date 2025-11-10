@@ -2512,89 +2512,106 @@ export default function AdvancedClay() {
       if (privyProvider) {
         try {
           const { ethers } = await import('ethers');
-          const { LIBRARY_CONTRACT_ABI, LIBRARY_CONTRACT_ADDRESS } = await import('../../lib/libraryService');
+          const { LIBRARY_CONTRACT_ABI } = await import('../../lib/libraryService');
           
-          if (!LIBRARY_CONTRACT_ADDRESS) {
-            console.log('[LibraryUpload] No library contract deployed, skipping check');
-          } else {
-            console.log('[LibraryUpload] Checking if library already exists:', libraryProjectId);
-            const provider = new ethers.BrowserProvider(privyProvider);
-            const contract = new ethers.Contract(
-              LIBRARY_CONTRACT_ADDRESS,
-              LIBRARY_CONTRACT_ABI,
-              provider
-            );
+          // Use the actual library contract address from env
+          const { LIBRARY_CONTRACT_ADDRESS } = await import('../../lib/libraryService');
           
-          const existingAsset = await contract.getAsset(libraryProjectId);
-          console.log('[LibraryUpload] Existing asset:', { exists: existingAsset.exists, royaltyEnabled: existingAsset.royaltyEnabled });
+          console.log('[LibraryUpload] Checking if library already exists:', libraryProjectId);
+          console.log('[LibraryUpload] Using contract address for check:', LIBRARY_CONTRACT_ADDRESS);
           
-          if (existingAsset.exists) {
-            // Check if it's a deleted library (exists but royalty disabled)
-            if (!existingAsset.royaltyEnabled) {
-              // This is a deleted library - offer to re-register
-              setIsRegisteringLibrary(false);
-              showPopup('Previously deleted library. Re-register?', 'warning', {
-                confirmButton: {
-                  text: 'Re-register',
-                  onConfirm: async () => {
-                    setIsRegisteringLibrary(true);
-                    try {
-                      // Step 1: Delete completely to reset exists flag
-                      const { deleteLibraryAsset } = await import('../../lib/libraryService');
-                      console.log('[LibraryUpload] Deleting old library entry...');
-                      await deleteLibraryAsset(libraryProjectId, privyProvider);
-                      
-                      // Step 2: Wait a bit for blockchain state to update
-                      await new Promise(resolve => setTimeout(resolve, 2000));
-                      
-                      // Step 3: Re-register with new data
-                      console.log('[LibraryUpload] Re-registering library...');
-                      const { registerLibraryAsset } = await import('../../lib/libraryService');
-                      const registerResult = await registerLibraryAsset(
-                        libraryProjectId,
-                        libraryAssetName,
-                        libraryDescription,
-                        ethPrice,
-                        usdcPrice,
-                        walletAddress,
-                        privyProvider,
-                        thumbnailId
-                      );
-                      
-                      if (registerResult.success) {
-                        showPopup('Registered', 'success');
-                        setShowLibraryModal(false);
-                        setLibraryAssetName('');
-                        setLibraryDescription('');
-                        setLibraryPrice('');
-                        setLibraryPriceCurrency('USDC');
-                        setLibraryProjectId(null);
-                      } else {
-                        showPopup(registerResult.error || 'Failed', 'error');
-                      }
-                    } catch (error: any) {
-                      showPopup(error.message || 'Failed', 'error');
-                    } finally {
+          const provider = new ethers.BrowserProvider(privyProvider);
+          const contract = new ethers.Contract(
+            LIBRARY_CONTRACT_ADDRESS,
+            LIBRARY_CONTRACT_ABI,
+            provider
+          );
+          
+          // Check if asset was ever registered (including deleted ones)
+          let existingAsset;
+          try {
+            existingAsset = await contract.getAsset(libraryProjectId);
+            console.log('[LibraryUpload] Existing asset:', { 
+              exists: existingAsset.exists, 
+              royaltyEnabled: existingAsset.royaltyEnabled,
+              currentOwner: existingAsset.currentOwner,
+              originalCreator: existingAsset.originalCreator
+            });
+          } catch (error) {
+            console.log('[LibraryUpload] Error getting asset, likely never registered:', error);
+            existingAsset = null;
+          }
+          
+          // CRITICAL: In Solidity, default values for unmapped entries are:
+          // exists: false, royaltyEnabled: false, addresses: 0x0000...
+          // We need to check if this entry was EVER created (not just exists flag)
+          
+          // Check if any non-default values exist
+          const hasBeenRegistered = existingAsset && (
+            existingAsset.exists || 
+            existingAsset.name || 
+            existingAsset.originalCreator !== ethers.ZeroAddress ||
+            existingAsset.currentOwner !== ethers.ZeroAddress ||
+            existingAsset.listedAt > 0
+          );
+          
+          if (hasBeenRegistered) {
+            console.log('[LibraryUpload] Asset was previously registered (found non-default values)');
+            
+            if (existingAsset.exists) {
+              // Currently active library
+              if (existingAsset.currentOwner === walletAddress) {
+                // Owner can update their own library
+                showPopup('Update library?', 'warning', {
+                  confirmButton: {
+                    text: 'Update',
+                    onConfirm: async () => {
+                      // Proceed with registration - contract allows owner to re-register
+                      setIsRegisteringLibrary(true);
+                      handleLibraryRegistrationSubmit();
+                    }
+                  },
+                  cancelButton: {
+                    text: 'Cancel',
+                    onCancel: () => {
                       setIsRegisteringLibrary(false);
                     }
-                  }
-                },
-                cancelButton: {
-                  text: 'Cancel',
-                  onCancel: () => {
-                    setIsRegisteringLibrary(false);
-                  }
-                },
-                autoClose: false
-              });
-              return;
+                  },
+                  autoClose: false
+                });
+                return;
+              } else {
+                showPopup('Already registered', 'error');
+                setIsRegisteringLibrary(false);
+                return;
+              }
             } else {
-              // Active library - cannot register
-              showPopup('Already registered', 'error');
-              setIsRegisteringLibrary(false);
-              return;
+              // Deleted library - check ownership
+              if (existingAsset.currentOwner === walletAddress || existingAsset.originalCreator === walletAddress) {
+                // Owner can re-register
+                showPopup('Re-activate library?', 'info', {
+                  confirmButton: {
+                    text: 'Re-activate',
+                    onConfirm: async () => {
+                      setIsRegisteringLibrary(true);
+                      handleLibraryRegistrationSubmit();
+                    }
+                  },
+                  cancelButton: {
+                    text: 'Cancel',
+                    onCancel: () => {
+                      setIsRegisteringLibrary(false);
+                    }
+                  },
+                  autoClose: false
+                });
+                return;
+              } else {
+                showPopup('Only owner can re-register', 'error');
+                setIsRegisteringLibrary(false);
+                return;
+              }
             }
-          }
           }
         } catch (error) {
           console.log('[LibraryUpload] Library not found in contract, proceeding with new registration');
@@ -3173,7 +3190,7 @@ export default function AdvancedClay() {
                 setUsedLibraries(activeLibraries);
                 
                 // Also filter pending purchases
-                if (saved.pendingLibraryPurchases && saved.pendingLibraryPurchases.length > 0) {
+          if (saved.pendingLibraryPurchases && saved.pendingLibraryPurchases.length > 0) {
                   const activePending = saved.pendingLibraryPurchases.filter((projectId: string) => {
                     const state = currentStates.get(projectId);
                     return state && state.exists && state.enabled;
@@ -3185,7 +3202,7 @@ export default function AdvancedClay() {
                 // Fallback: restore as-is if verification fails
                 setUsedLibraries(saved.usedLibraries);
                 if (saved.pendingLibraryPurchases && saved.pendingLibraryPurchases.length > 0) {
-                  setPendingLibraryPurchases(new Set(saved.pendingLibraryPurchases));
+            setPendingLibraryPurchases(new Set(saved.pendingLibraryPurchases));
                 }
               }
             })();
@@ -4049,12 +4066,12 @@ export default function AdvancedClay() {
             
             console.log(`[ProjectLoad] Filtered libraries: ${activeLibraries.length}/${converted.length} active`);
             setUsedLibraries(activeLibraries);
-            
-            // Mark these libraries as pending purchase
-            // They will be checked during upload - if already owned, no payment needed
+        
+        // Mark these libraries as pending purchase
+        // They will be checked during upload - if already owned, no payment needed
             setPendingLibraryPurchases(new Set(activeLibraries.map((lib: any) => lib.projectId)));
-            
-            console.log('[ProjectLoad] Library info restored:', {
+        
+        console.log('[ProjectLoad] Library info restored:', {
               libraries: activeLibraries.length,
               pendingPurchases: activeLibraries.map((lib: any) => lib.projectId)
             });

@@ -3,8 +3,8 @@ const hre = require("hardhat");
 async function main() {
   console.log("🔓 Approving Marketplace in ClayLibrary...\n");
   
-  const LIBRARY_ADDRESS = "0xA742D5B85DE818F4584134717AC18930B6cAFE1e";
-  const MARKETPLACE_ADDRESS = "0x1509b7F1F6FE754C16E9d0875ed324fad0d43779";
+  const LIBRARY_ADDRESS = "0xC27812Eee59FFC15A947efBd55Fc7131eb05DA20"; // Latest deployment (2025-11-11)
+  const MARKETPLACE_ADDRESS = "0x72CD5B6C5A8D466Db9B24c8697a1504C7F3E904b"; // Latest deployment (2025-11-11)
   
   const [deployer] = await hre.ethers.getSigners();
   console.log("💼 Using account:", deployer.address);
