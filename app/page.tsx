@@ -63,7 +63,7 @@ export default function HomePage() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const projectsPerPage = 20
+  const projectsPerPage = 10 // Changed to 10 per page to ensure all canvases are visible
 
   // Remove automatic wallet check - rely on ConnectWallet component instead
 

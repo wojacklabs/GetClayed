@@ -104,7 +104,7 @@ export default function LibraryDetailPage() {
       
       setTotalEarned({
         eth: totalETH.toFixed(6),
-        usdc: totalUSDC.toFixed(2)
+        usdc: totalUSDC.toFixed(6) // Changed to 6 decimals for USDC
       })
       
       setRoyaltyHistory(libraryEvents)
@@ -299,21 +299,22 @@ export default function LibraryDetailPage() {
               </div>
             )}
             
-            {/* Revenue History */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue History</h3>
-              
-              {/* Total Earnings */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 mb-1">Total ETH Earned</p>
-                  <p className="text-xl font-bold text-gray-900">{totalEarned.eth} ETH</p>
+            {/* Revenue History - Only show if there's revenue */}
+            {(parseFloat(totalEarned.eth) > 0 || parseFloat(totalEarned.usdc) > 0) && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue History</h3>
+                
+                {/* Total Earnings */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-xs text-gray-500 mb-1">Total ETH Earned</p>
+                    <p className="text-xl font-bold text-gray-900">{totalEarned.eth} ETH</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-xs text-gray-500 mb-1">Total USDC Earned</p>
+                    <p className="text-xl font-bold text-gray-900">{totalEarned.usdc} USDC</p>
+                  </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 mb-1">Total USDC Earned</p>
-                  <p className="text-xl font-bold text-gray-900">{totalEarned.usdc} USDC</p>
-                </div>
-              </div>
               
               {/* History List */}
               <div className="space-y-3 max-h-60 overflow-y-auto">
@@ -343,7 +344,8 @@ export default function LibraryDetailPage() {
                   ))
                 )}
               </div>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
