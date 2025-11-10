@@ -9,9 +9,9 @@
 
 ## 📋 배포된 스마트 컨트랙트
 
-### ClayLibrary
-- **주소**: `0xA742D5B85DE818F4584134717AC18930B6cAFE1e`
-- **Explorer**: https://basescan.org/address/0xA742D5B85DE818F4584134717AC18930B6cAFE1e
+### ClayLibrary (v3.0 - 2025-11-11)
+- **주소**: `0xC27812Eee59FFC15A947efBd55Fc7131eb05DA20`
+- **Explorer**: https://basescan.org/address/0xC27812Eee59FFC15A947efBd55Fc7131eb05DA20
 - **기능**:
   - Library 에셋 등록 (사용 라이센스 판매)
   - ETH/USDC로 구매

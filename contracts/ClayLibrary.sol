@@ -127,7 +127,21 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         require(bytes(projectId).length > 0, "Project ID cannot be empty");
         // FIX: Allow free libraries (0 ETH, 0 USDC) for community contributions
         // require(royaltyPerImportETH > 0 || royaltyPerImportUSDC > 0, "At least one royalty must be set");
-        require(!libraryAssets[projectId].exists, "Asset already registered");
+        
+        LibraryAsset storage existingAsset = libraryAssets[projectId];
+        
+        // Allow re-registration if:
+        // 1. Never registered before (originalCreator == address(0))
+        // 2. Was deleted (exists == false)
+        // 3. Same owner re-registering (currentOwner == msg.sender)
+        if (existingAsset.originalCreator != address(0)) {
+            // Asset was registered before
+            require(!existingAsset.exists || existingAsset.currentOwner == msg.sender, 
+                    "Only owner can re-register or asset must be deleted");
+        }
+        
+        // For re-registration, preserve original creator
+        address creator = existingAsset.originalCreator == address(0) ? msg.sender : existingAsset.originalCreator;
         
         LibraryAsset memory newAsset = LibraryAsset({
             projectId: projectId,
@@ -136,15 +150,22 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
             royaltyPerImportETH: royaltyPerImportETH,
             royaltyPerImportUSDC: royaltyPerImportUSDC,
             currentOwner: msg.sender,
-            originalCreator: msg.sender,
+            originalCreator: creator,
             listedAt: block.timestamp,
             exists: true,
             royaltyEnabled: true
         });
         
         libraryAssets[projectId] = newAsset;
-        userOwnedAssets[msg.sender].push(projectId);
-        allAssetIds.push(projectId);
+        
+        // Only add to arrays if this is a new registration
+        if (existingAsset.originalCreator == address(0)) {
+            userOwnedAssets[msg.sender].push(projectId);
+            allAssetIds.push(projectId);
+        } else if (!existingAsset.exists) {
+            // Re-registration after deletion - add back to owner's list
+            userOwnedAssets[msg.sender].push(projectId);
+        }
         
         emit AssetRegistered(projectId, msg.sender, name, royaltyPerImportETH);
     }
