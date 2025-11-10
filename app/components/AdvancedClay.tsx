@@ -2509,20 +2509,24 @@ export default function AdvancedClay() {
       }
       
       // STEP 1.5: Check if library already exists and handle deleted libraries
-      const LIBRARY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS;
-      if (LIBRARY_CONTRACT_ADDRESS && privyProvider) {
+      if (privyProvider) {
         try {
           const { ethers } = await import('ethers');
-          const { LIBRARY_CONTRACT_ABI } = await import('../../lib/libraryService');
+          const { LIBRARY_CONTRACT_ABI, LIBRARY_CONTRACT_ADDRESS } = await import('../../lib/libraryService');
           
-          const provider = new ethers.BrowserProvider(privyProvider);
-          const contract = new ethers.Contract(
-            LIBRARY_CONTRACT_ADDRESS,
-            LIBRARY_CONTRACT_ABI,
-            provider
-          );
+          if (!LIBRARY_CONTRACT_ADDRESS) {
+            console.log('[LibraryUpload] No library contract deployed, skipping check');
+          } else {
+            console.log('[LibraryUpload] Checking if library already exists:', libraryProjectId);
+            const provider = new ethers.BrowserProvider(privyProvider);
+            const contract = new ethers.Contract(
+              LIBRARY_CONTRACT_ADDRESS,
+              LIBRARY_CONTRACT_ABI,
+              provider
+            );
           
           const existingAsset = await contract.getAsset(libraryProjectId);
+          console.log('[LibraryUpload] Existing asset:', { exists: existingAsset.exists, royaltyEnabled: existingAsset.royaltyEnabled });
           
           if (existingAsset.exists) {
             // Check if it's a deleted library (exists but royalty disabled)
@@ -2590,6 +2594,7 @@ export default function AdvancedClay() {
               setIsRegisteringLibrary(false);
               return;
             }
+          }
           }
         } catch (error) {
           console.log('[LibraryUpload] Library not found in contract, proceeding with new registration');
