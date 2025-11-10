@@ -2568,7 +2568,7 @@ export default function AdvancedClay() {
                     onConfirm: async () => {
                       // Proceed with registration - contract allows owner to re-register
                       setIsRegisteringLibrary(true);
-                      handleLibraryRegistrationSubmit();
+                      handleLibraryUpload();
                     }
                   },
                   cancelButton: {
@@ -2594,7 +2594,7 @@ export default function AdvancedClay() {
                     text: 'Re-activate',
                     onConfirm: async () => {
                       setIsRegisteringLibrary(true);
-                      handleLibraryRegistrationSubmit();
+                      handleLibraryUpload();
                     }
                   },
                   cancelButton: {
