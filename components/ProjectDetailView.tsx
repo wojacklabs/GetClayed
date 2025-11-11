@@ -451,25 +451,49 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       </div>
       
       {/* Bottom UI Controls - Minimal style */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white rounded-md border border-gray-200 p-1 z-10">
-        <button
-          onClick={() => setShowGrid(!showGrid)}
-          className={`px-3 py-1.5 rounded transition-all text-sm ${
-            showGrid
-              ? 'bg-gray-800 text-white'
-              : 'hover:bg-gray-100 text-gray-700'
-          }`}
-          title={showGrid ? 'Hide grid' : 'Show grid per clay'}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
+        {/* Desktop buttons */}
+        <div className="hidden sm:flex items-center gap-2 bg-white rounded-md border border-gray-200 p-1">
+          <button
+            onClick={() => setShowGrid(!showGrid)}
+            className={`px-3 py-1.5 rounded transition-all text-sm ${
+              showGrid
+                ? 'bg-gray-800 text-white'
+                : 'hover:bg-gray-100 text-gray-700'
+            }`}
+            title={showGrid ? 'Hide grid' : 'Show grid per clay'}
+          >
+            <span>Grid</span>
+          </button>
+          <button
+            onClick={handleResetCamera}
+            className="px-3 py-1.5 hover:bg-gray-100 text-gray-700 rounded transition-all text-sm"
+            title="Reset camera"
+          >
+            <span>Reset</span>
+          </button>
+        </div>
+        
+        {/* Mobile select */}
+        <select
+          value={showGrid ? 'grid' : 'view'}
+          onChange={(e) => {
+            if (e.target.value === 'grid') {
+              setShowGrid(true)
+            } else if (e.target.value === 'view') {
+              setShowGrid(false)
+            } else if (e.target.value === 'reset') {
+              handleResetCamera()
+              // Reset select to previous value
+              e.target.value = showGrid ? 'grid' : 'view'
+            }
+          }}
+          className="sm:hidden px-3 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
         >
-          <span>Grid</span>
-        </button>
-        <button
-          onClick={handleResetCamera}
-          className="px-3 py-1.5 hover:bg-gray-100 text-gray-700 rounded transition-all text-sm"
-          title="Reset camera"
-        >
-          <span>Reset</span>
-        </button>
+          <option value="view">Normal View</option>
+          <option value="grid">Grid View</option>
+          <option value="reset">Reset Camera</option>
+        </select>
       </div>
       
       {/* Description - Minimal style */}
