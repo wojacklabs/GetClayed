@@ -174,10 +174,10 @@ export default function LibraryDetailPage() {
       </header>
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           {/* Preview */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gray-100 aspect-square lg:h-[600px]">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden lg:sticky lg:top-6">
+            <div className="bg-gray-100 aspect-square">
               {project ? (
                 <Canvas camera={{ position: [5, 5, 5], fov: 50 }}>
                   <Suspense fallback={null}>
@@ -363,7 +363,10 @@ export default function LibraryDetailPage() {
               {/* History List */}
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {royaltyHistory.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">No revenue yet</p>
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500">No revenue history yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Revenue will appear here when your library assets are used</p>
+                  </div>
                 ) : (
                   royaltyHistory.map((event, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

@@ -39,11 +39,11 @@ function ViewOnlyClay({ clay, isFromLibrary, isHighlighted }: { clay: any, isFro
         <meshPhongMaterial 
           color={clay.color}
           side={THREE.DoubleSide}
-          emissive={isFromLibrary ? (isHighlighted || hovered ? '#ffff00' : '#ffd700') : undefined}
-          emissiveIntensity={isFromLibrary ? (isHighlighted || hovered ? 0.5 : 0.2) : 0}
+          emissive={isFromLibrary && (isHighlighted || hovered) ? '#ffff00' : undefined}
+          emissiveIntensity={isFromLibrary && (isHighlighted || hovered) ? 0.5 : 0}
         />
       </mesh>
-      {isFromLibrary && (
+      {isFromLibrary && (isHighlighted || hovered) && (
         <>
           <mesh
             geometry={clay.geometry}
@@ -58,7 +58,7 @@ function ViewOnlyClay({ clay, isFromLibrary, isHighlighted }: { clay: any, isFro
               color="#ffd700"
               wireframe
               transparent
-              opacity={isHighlighted ? 0.6 : 0.3}
+              opacity={isHighlighted ? 0.6 : 0.4}
               depthTest={false}
             />
           </mesh>
@@ -137,6 +137,14 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       
       const restoredObjects = restoreClayObjects(projectData)
       setClayObjects(restoredObjects)
+      
+      // Debug: Log clay objects and their library sources
+      console.log('[ProjectDetail] Clay objects:', restoredObjects.map(obj => ({
+        id: obj.id,
+        librarySourceId: obj.librarySourceId,
+        isFromLibrary: !!obj.librarySourceId
+      })))
+      console.log('[ProjectDetail] Used libraries:', projectData.usedLibraries)
       
       const likes = await getProjectLikeCount(projectId)
       setLikeCount(likes)
