@@ -51,6 +51,9 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
     // Array of all registered asset IDs
     string[] public allAssetIds;
     
+    // For hierarchical royalty system - track library dependencies
+    mapping(string => string[]) public libraryDependencies; // projectId => array of dependency projectIds
+    
     // Platform fee percentage (e.g., 250 = 2.5%)
     uint256 public platformFeePercentage = 250; // 2.5%
     uint256 public constant FEE_DENOMINATOR = 10000;
@@ -113,20 +116,40 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
      * @param description Asset description
      * @param royaltyPerImportETH Royalty per import in ETH (wei)
      * @param royaltyPerImportUSDC Royalty per import in USDC (6 decimals)
-     * @dev TODO: Add dependency-based minimum price validation on-chain
-     *      Currently validated client-side in AdvancedClay.tsx
-     *      Future enhancement: Add dependencyIds[] parameter and verify royalty > sum(dependencies)
+     * @param dependencyProjectIds Array of library project IDs this asset depends on
+     * @dev HIERARCHICAL: Now validates minimum price based on dependencies
      */
     function registerAsset(
         string memory projectId,
         string memory name,
         string memory description,
         uint256 royaltyPerImportETH,
-        uint256 royaltyPerImportUSDC
+        uint256 royaltyPerImportUSDC,
+        string[] memory dependencyProjectIds
     ) external {
         require(bytes(projectId).length > 0, "Project ID cannot be empty");
         // FIX: Allow free libraries (0 ETH, 0 USDC) for community contributions
         // require(royaltyPerImportETH > 0 || royaltyPerImportUSDC > 0, "At least one royalty must be set");
+        
+        // HIERARCHICAL: Validate minimum price based on dependencies
+        uint256 minRequiredETH = 0;
+        uint256 minRequiredUSDC = 0;
+        
+        for (uint256 i = 0; i < dependencyProjectIds.length; i++) {
+            LibraryAsset storage dep = libraryAssets[dependencyProjectIds[i]];
+            if (dep.exists && dep.royaltyEnabled) {
+                minRequiredETH += dep.royaltyPerImportETH;
+                minRequiredUSDC += dep.royaltyPerImportUSDC;
+            }
+        }
+        
+        // Ensure library price is higher than sum of dependencies
+        if (minRequiredETH > 0 || minRequiredUSDC > 0) {
+            require(
+                royaltyPerImportETH > minRequiredETH || royaltyPerImportUSDC > minRequiredUSDC,
+                "Library royalty must be higher than sum of dependencies"
+            );
+        }
         
         LibraryAsset storage existingAsset = libraryAssets[projectId];
         
@@ -157,6 +180,12 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
         });
         
         libraryAssets[projectId] = newAsset;
+        
+        // Store dependencies
+        delete libraryDependencies[projectId]; // Clear existing dependencies
+        for (uint256 i = 0; i < dependencyProjectIds.length; i++) {
+            libraryDependencies[projectId].push(dependencyProjectIds[i]);
+        }
         
         // Only add to arrays if this is a new registration
         if (existingAsset.originalCreator == address(0)) {
@@ -341,6 +370,15 @@ contract ClayLibrary is Ownable2Step, ReentrancyGuard {
     }
     
     // Platform fees removed - Marketplace handles all transactions and fees
+    
+    /**
+     * @notice Get library dependencies
+     * @param projectId The project ID
+     * @return Array of dependency project IDs
+     */
+    function getLibraryDependencies(string memory projectId) external view returns (string[] memory) {
+        return libraryDependencies[projectId];
+    }
     
     /**
      * @dev Internal function to remove an asset from user's list

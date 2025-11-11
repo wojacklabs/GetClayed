@@ -369,7 +369,11 @@ export default function MarketplaceDetailPage() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">{lib.name}</p>
                         <p className="text-xs text-gray-500">
-                          Royalty: {(parseFloat(lib.priceETH || lib.priceUSDC || '0') * 0.1).toFixed(4)}
+                          Royalty: {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 
+                            ? `${lib.royaltyPerImportETH} ETH` 
+                            : lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 
+                            ? `${lib.royaltyPerImportUSDC} USDC` 
+                            : 'Free'}
                         </p>
                       </div>
                       <Link

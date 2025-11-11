@@ -2282,6 +2282,23 @@ export default function AdvancedClay() {
     creator?: string;
   }>>([])
   const [pendingLibraryPurchases, setPendingLibraryPurchases] = useState<Set<string>>(new Set())
+  const [directImports, setDirectImports] = useState<Set<string>>(new Set()) // Track only direct imports for hierarchical royalties
+  const [showRoyaltyBreakdown, setShowRoyaltyBreakdown] = useState(false)
+  const [royaltyBreakdown, setRoyaltyBreakdown] = useState<{
+    directDependencies: any[]
+    totalETH: number
+    totalUSDC: number
+    distributions: any[]
+  } | null>(null)
+  const [expandedDistributions, setExpandedDistributions] = useState<Set<number>>(new Set())
+  const [pendingSaveInfo, setPendingSaveInfo] = useState<{
+    projectName: string
+    saveAs: boolean
+    onProgress?: (status: string) => void
+    serialized?: any
+    projectId?: string
+    finalUsedLibraries?: any[]
+  } | null>(null)
   
   // Tool guide data
   const toolGuides = [
@@ -2758,6 +2775,9 @@ export default function AdvancedClay() {
         }
       }
       
+      // Get dependency project IDs
+      const dependencyIds = dependencyLibraries.map(lib => lib.projectId);
+      
       const result = await registerLibraryAsset(
         libraryProjectId,
         libraryAssetName,
@@ -2766,7 +2786,8 @@ export default function AdvancedClay() {
         usdcPrice,
         walletAddress,
         privyProvider,
-        thumbnailId
+        thumbnailId,
+        dependencyIds
       )
       
       if (result.success) {
@@ -2798,7 +2819,8 @@ export default function AdvancedClay() {
                     usdcPrice,
                     walletAddress,
                     privyProvider,
-                    thumbnailId
+                    thumbnailId,
+                    dependencyIds
                   );
                   if (retryResult.success) {
                     showPopup('Registered', 'success');
@@ -2913,16 +2935,17 @@ export default function AdvancedClay() {
       setClayGroups(prev => [...prev, newGroup])
       addToHistory(newClays)
       
-      // Track this library AND all its dependencies (recursive)
-      const librariesToAdd = [{
+      // HIERARCHICAL: Track only direct import
+      const directLibrary = {
         projectId: asset.projectId,
         name: asset.name,
         royaltyPerImportETH: asset.royaltyPerImportETH || '0',
         royaltyPerImportUSDC: asset.royaltyPerImportUSDC || '0',
         creator: asset.originalCreator || asset.currentOwner
-      }]
+      }
       
-      // Add nested dependencies if they exist (convert old format to new)
+      // Track all dependencies (for display/reference)
+      const allLibraries = [directLibrary]
       if (project.usedLibraries && project.usedLibraries.length > 0) {
         const converted = project.usedLibraries.map((lib: any) => ({
           projectId: lib.projectId,
@@ -2931,23 +2954,51 @@ export default function AdvancedClay() {
           royaltyPerImportUSDC: lib.royaltyPerImportUSDC || lib.priceUSDC || '0',
           creator: lib.creator
         }));
-        librariesToAdd.push(...converted);
+        allLibraries.push(...converted);
       }
       
-      // Avoid duplicates
+      // Update used libraries (all dependencies for tracking)
       setUsedLibraries(prev => {
         const existing = new Set(prev.map(lib => lib.projectId))
-        const newLibs = librariesToAdd.filter(lib => !existing.has(lib.projectId))
+        const newLibs = allLibraries.filter(lib => !existing.has(lib.projectId))
         return [...prev, ...newLibs]
+      })
+      
+      // HIERARCHICAL: Mark only the directly imported library
+      setDirectImports(prev => {
+        const newSet = new Set(prev)
+        newSet.add(asset.projectId) // Only the direct import
+        return newSet
       })
       
       setPendingLibraryPurchases(prev => {
         const newSet = new Set(prev)
-        librariesToAdd.forEach(lib => newSet.add(lib.projectId))
+        newSet.add(asset.projectId) // Only track direct import as pending
         return newSet
       })
       
-      showPopup(`Imported (${librariesToAdd.length} dependencies)`, 'success')
+      // Calculate total cost for this import
+      let importCostETH = 0
+      let importCostUSDC = 0
+      
+      // Only the direct import costs money
+      if (asset.royaltyPerImportETH) {
+        importCostETH = parseFloat(asset.royaltyPerImportETH)
+      }
+      if (asset.royaltyPerImportUSDC) {
+        importCostUSDC = parseFloat(asset.royaltyPerImportUSDC)
+      }
+      
+      let costMessage = ''
+      if (importCostETH > 0 || importCostUSDC > 0) {
+        const costs = []
+        if (importCostETH > 0) costs.push(`${importCostETH.toFixed(6)} ETH`)
+        if (importCostUSDC > 0) costs.push(`${importCostUSDC.toFixed(4)} USDC`)
+        costMessage = ` (${costs.join(' + ')} when saving)`
+      }
+      
+      const dependencyInfo = allLibraries.length > 1 ? ` + ${allLibraries.length - 1} nested dependencies` : ''
+      showPopup(`Imported ${asset.name}${dependencyInfo}${costMessage}`, 'success')
       setShowLibrarySearch(false)
     } catch (error: any) {
       showPopup(error.message || 'Import failed', 'error')
@@ -3661,6 +3712,219 @@ export default function AdvancedClay() {
     addToHistory([initialClay])
   }
 
+  // Calculate royalty distribution breakdown
+  const calculateRoyaltyDistribution = async (directLibraries: LibraryDependency[]) => {
+    const distributions: any[] = []
+    let totalETH = 0
+    let totalUSDC = 0
+    
+    // Get current state for all libraries
+    const { getLibraryCurrentRoyalties } = await import('../../lib/libraryService')
+    const allProjectIds = usedLibraries.map(lib => lib.projectId)
+    const currentStates = await getLibraryCurrentRoyalties(allProjectIds)
+    
+    // Get library dependencies from contract
+    const LIBRARY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS
+    if (!LIBRARY_CONTRACT_ADDRESS) return { distributions, totalETH, totalUSDC }
+    
+    const { ethers } = await import('ethers')
+    let provider = null
+    if (wallets && wallets.length > 0) {
+      provider = await wallets[0].getEthereumProvider()
+    }
+    if (!provider && typeof window !== 'undefined' && window.ethereum) {
+      provider = new ethers.BrowserProvider(window.ethereum)
+    }
+    
+    const contract = new ethers.Contract(
+      LIBRARY_CONTRACT_ADDRESS,
+      ['function getLibraryDependencies(string projectId) view returns (string[])'],
+      provider
+    )
+    
+    // Calculate distributions for each direct library
+    for (const lib of directLibraries) {
+      const state = currentStates.get(lib.projectId)
+      if (!state || !state.exists || !state.enabled) continue
+      
+      const libETH = state.ethAmount
+      const libUSDC = state.usdcAmount
+      totalETH += libETH
+      totalUSDC += libUSDC
+      
+      // Check for price changes
+      const registeredETH = parseFloat(lib.royaltyPerImportETH || '0')
+      const registeredUSDC = parseFloat(lib.royaltyPerImportUSDC || '0')
+      const priceChanged = registeredETH !== libETH || registeredUSDC !== libUSDC
+      
+      const distribution: any = {
+        name: lib.name,
+        projectId: lib.projectId,
+        totalETH: libETH,
+        totalUSDC: libUSDC,
+        subDistributions: [],
+        deletedDependencies: [],
+        priceChanged,
+        registeredETH,
+        registeredUSDC,
+        currentETH: libETH,
+        currentUSDC: libUSDC
+      }
+      
+      // Get this library's dependencies from contract
+      try {
+        const libDependencyIds = await contract.getLibraryDependencies(lib.projectId)
+        
+        let subTotalETH = 0
+        let subTotalUSDC = 0
+        
+        for (const depId of libDependencyIds) {
+          const depLib = usedLibraries.find(l => l.projectId === depId)
+          if (!depLib) continue
+          
+          const subState = currentStates.get(depId)
+          if (subState && subState.exists && subState.enabled) {
+            subTotalETH += subState.ethAmount
+            subTotalUSDC += subState.usdcAmount
+            
+            distribution.subDistributions.push({
+              name: depLib.name,
+              projectId: depId,
+              amountETH: subState.ethAmount,
+              amountUSDC: subState.usdcAmount
+            })
+          } else if (subState && !subState.exists) {
+            // Library was deleted
+            distribution.deletedDependencies.push({
+              name: depLib.name,
+              projectId: depId,
+              amountETH: parseFloat(depLib.royaltyPerImportETH || '0'),
+              amountUSDC: parseFloat(depLib.royaltyPerImportUSDC || '0')
+            })
+          }
+        }
+        
+        // Library owner profit
+        distribution.profitETH = Math.max(0, libETH - subTotalETH)
+        distribution.profitUSDC = Math.max(0, libUSDC - subTotalUSDC)
+      } catch (error) {
+        console.error('Failed to get library dependencies:', error)
+        // If we can't get dependencies, assume all goes to library owner
+        distribution.profitETH = libETH
+        distribution.profitUSDC = libUSDC
+      }
+      
+      distributions.push(distribution)
+    }
+    
+    // Estimate gas costs
+    let estimatedGas = 0
+    if (distributions.length > 0) {
+      // Base gas for registerProjectRoyalties: ~200k
+      // Additional gas per distribution: ~50k
+      estimatedGas = 200000 + (distributions.length * 50000)
+      if (totalETH > 0) estimatedGas += 100000 // ETH payment gas
+      if (totalUSDC > 0) estimatedGas += 150000 // USDC approval + payment gas
+    }
+    
+    return { distributions, totalETH, totalUSDC, estimatedGas }
+  }
+
+  // Continue save process after royalty confirmation
+  const continueSaveProcess = async (
+    projectName: string, 
+    projectId: string, 
+    saveAs: boolean,
+    serialized: any,
+    onProgress?: (status: string) => void
+  ) => {
+    const { currentProjectInfo } = useProjectStore.getState()
+    
+    // Step 2.5: Sign project data for integrity verification
+    const finalUsedLibraries = Array.from(directImports)
+      .map(projectId => usedLibraries.find(lib => lib.projectId === projectId))
+      .filter(lib => lib !== undefined) as LibraryDependency[]
+      
+    if (finalUsedLibraries.length > 0 || serialized.clays.some((c: any) => c.librarySourceId)) {
+      try {
+        onProgress?.('Signing project data...')
+        console.log('[Save] Signing project data for integrity...')
+        
+        // Get provider for signing
+        let provider = null;
+        if (wallets && wallets.length > 0) {
+          provider = await wallets[0].getEthereumProvider();
+        }
+        
+        if (provider) {
+          const { signProjectData } = await import('../../lib/projectIntegrityService')
+          const signature = await signProjectData(serialized, provider)
+          serialized.signature = signature
+          console.log('[Save] ✅ Project signature created')
+        } else {
+          console.error('[Save] ❌ No provider available for signing')
+          showPopup('Could not sign project data', 'warning')
+        }
+      } catch (signError: any) {
+        console.error('[Save] ❌ Failed to sign project:', signError)
+        showPopup('Project signature failed', 'warning')
+      }
+    }
+
+    // Step 3: Upload to Irys
+    console.log('[Save] Starting Irys upload...')
+    onProgress?.('Uploading project to Irys...')
+    
+    let uploadResult;
+    try {
+      uploadResult = await uploadClayProject(
+        serialized,
+        currentFolder,
+        rootTxId,
+        (progress: ChunkProgressType) => {
+          console.log('[Save] Upload progress:', progress)
+          const percent = Math.round(progress.percentage)
+          onProgress?.(`Uploading chunks... ${percent}%`)
+        },
+        undefined
+      )
+      console.log('[Save] Upload completed, result:', uploadResult)
+    } catch (uploadError: any) {
+      console.error('[Save] Irys upload failed:', uploadError)
+      showPopup('Failed to upload project. Please try again.', 'error')
+      return
+    }
+
+    // Step 4: Save references
+    const result = uploadResult;
+    
+    // Save mutable reference
+    saveMutableReference(
+      projectId,
+      result.rootTxId,
+      result.transactionId,
+      projectName,
+      walletAddress
+    );
+    
+    // Update current project info
+    setCurrentProjectInfo({
+      id: projectId,
+      name: projectName,
+      tx: result.transactionId,
+      rootTxId: result.rootTxId,
+      isLibrary: currentProjectInfo?.isLibrary || false,
+      isDirty: false
+    });
+    
+    // Clear dirty flag
+    setIsDirty(false);
+    
+    // Show success
+    console.log('[Save] ✅ Project saved successfully')
+    showPopup('Project saved!', 'success');
+  }
+
   const handleSaveProject = async (projectName: string, saveAs: boolean = false, onProgress?: (status: string) => void) => {
     if (!walletAddress) {
       showPopup('Connect wallet', 'warning')
@@ -3745,38 +4009,66 @@ export default function AdvancedClay() {
       // This prevents:
       // 1. User removing all objects from a library but still claiming it
       // 2. User deleting usedLibraries entries to avoid payment
+      // HIERARCHICAL: Also filter to only direct imports for payment
       const finalUsedLibraries = usedLibraries.filter(lib => {
         const stillUsed = detectedLibraryIds.has(lib.projectId)
+        const isDirect = directImports.has(lib.projectId)
+        
         if (!stillUsed && usedLibraries.length > 0) {
           console.log(`[SECURITY] Library ${lib.name} (${lib.projectId}) was imported but all objects removed - not charging`)
+          return false
         }
-        return stillUsed
+        
+        // Only include direct imports for payment
+        if (!isDirect && stillUsed) {
+          console.log(`[HIERARCHICAL] Library ${lib.name} (${lib.projectId}) is indirect dependency - parent will pay`)
+        }
+        
+        return stillUsed && isDirect
       })
       
       // SECURITY: Check for objects claiming libraries not in usedLibraries
+      // HIERARCHICAL: Only add if it should be a direct import
+      const addedLibraryIds = new Set<string>()
       clayObjects.forEach(clay => {
-        if (clay.librarySourceId) {
+        if (clay.librarySourceId && !addedLibraryIds.has(clay.librarySourceId)) {
           const isKnown = usedLibraries.some(lib => lib.projectId === clay.librarySourceId)
-          if (!isKnown) {
-            console.warn(`[SECURITY] Object ${clay.id} claims library ${clay.librarySourceId} (${clay.librarySourceName}) not in usedLibraries - adding it!`)
-            // Add it to ensure payment
-            finalUsedLibraries.push({
-              projectId: clay.librarySourceId,
-              name: clay.librarySourceName || 'Unknown',
-              royaltyPerImportETH: '0',
-              royaltyPerImportUSDC: '0',
-              creator: undefined
-            })
+          const alreadyIncluded = finalUsedLibraries.some(lib => lib.projectId === clay.librarySourceId)
+          
+          if (!isKnown && !alreadyIncluded) {
+            // Check if this should be a direct import
+            // It's direct if no other library in our objects contains objects from this library
+            const isDirect = !clayObjects.some(otherClay => 
+              otherClay.librarySourceId && 
+              otherClay.librarySourceId !== clay.librarySourceId &&
+              usedLibraries.some(lib => 
+                lib.projectId === otherClay.librarySourceId &&
+                directImports.has(lib.projectId)
+              )
+            )
+            
+            if (isDirect) {
+              console.warn(`[SECURITY] Object ${clay.id} claims library ${clay.librarySourceId} (${clay.librarySourceName}) not in usedLibraries - adding as direct import!`)
+              finalUsedLibraries.push({
+                projectId: clay.librarySourceId,
+                name: clay.librarySourceName || 'Unknown',
+                royaltyPerImportETH: '0',
+                royaltyPerImportUSDC: '0',
+                creator: undefined
+              })
+              addedLibraryIds.add(clay.librarySourceId)
+            }
           }
         }
       })
       
       // Log results
       console.log(`[Save] usedLibraries state: ${usedLibraries.length} libraries`)
+      console.log(`[Save] directImports: ${directImports.size} libraries`)
       console.log(`[Save] Detected in clayObjects: ${detectedLibraryIds.size} libraries`)
-      console.log(`[Save] Final libraries to pay: ${finalUsedLibraries.length}`)
+      console.log(`[Save] Final libraries to pay (direct only): ${finalUsedLibraries.length}`)
       if (finalUsedLibraries.length > 0) {
-        console.log(`[Save] Libraries:`, finalUsedLibraries.map(lib => lib.name).join(', '))
+        console.log(`[Save] Direct libraries to pay:`, finalUsedLibraries.map(lib => lib.name).join(', '))
       }
       
       // Step 1: Serialize the clay objects
@@ -3790,7 +4082,8 @@ export default function AdvancedClay() {
           [], // tags
           backgroundColor,
           clayGroups,
-          finalUsedLibraries.length > 0 ? finalUsedLibraries : undefined
+          finalUsedLibraries.length > 0 ? finalUsedLibraries : undefined,
+          directImports.size > 0 ? Array.from(directImports) : undefined
         )
         console.log('[Save] serializeClayProject returned successfully')
       } catch (serializeError) {
@@ -3825,6 +4118,35 @@ export default function AdvancedClay() {
       // SECURITY: Use detected libraries, not user-provided ones
       if (finalUsedLibraries.length > 0) {
         try {
+          // Calculate and show distribution breakdown first
+          const breakdown = await calculateRoyaltyDistribution(finalUsedLibraries)
+          if (breakdown.totalETH > 0 || breakdown.totalUSDC > 0) {
+            setRoyaltyBreakdown({
+              directDependencies: finalUsedLibraries,
+              ...breakdown
+            })
+            setShowRoyaltyBreakdown(true)
+            // Auto-expand distributions with sub-distributions or changes
+            const autoExpand = new Set<number>()
+            breakdown.distributions.forEach((dist: any, idx: number) => {
+              if (dist.subDistributions.length > 0 || dist.deletedDependencies.length > 0 || dist.priceChanged) {
+                autoExpand.add(idx)
+              }
+            })
+            setExpandedDistributions(autoExpand)
+            setPendingSaveInfo({
+              projectName,
+              saveAs,
+              onProgress,
+              serialized,
+              projectId,
+              finalUsedLibraries
+            })
+            
+            // Wait for user confirmation
+            return // Exit here, will continue in modal confirm handler
+          }
+          
           onProgress?.('Processing library royalties...')
           
           // Get Privy provider
@@ -3836,7 +4158,7 @@ export default function AdvancedClay() {
           const { processLibraryPurchasesAndRoyalties, uploadRoyaltyReceipt } = await import('../../lib/royaltyService')
           const result = await processLibraryPurchasesAndRoyalties(
             serialized.id,
-            finalUsedLibraries,
+            finalUsedLibraries, // Direct imports only
             provider,
             (progressMsg) => {
               // Show progress in popup
@@ -3844,7 +4166,8 @@ export default function AdvancedClay() {
                 autoClose: false,
                 showCloseButton: false
               })
-            }
+            },
+            usedLibraries // All dependencies for registration
           )
           
           if (!result.success) {
@@ -3901,6 +4224,7 @@ export default function AdvancedClay() {
           // Clear used libraries after successful payment
           setUsedLibraries([])
           setPendingLibraryPurchases(new Set())
+          setDirectImports(new Set())
         } catch (error: any) {
           console.error('[Save] Library purchase failed:', error)
           throw new Error(`Library purchase failed: ${error.message}`)
@@ -4128,22 +4452,31 @@ export default function AdvancedClay() {
         // Mark these libraries as pending purchase
         // They will be checked during upload - if already owned, no payment needed
             setPendingLibraryPurchases(new Set(activeLibraries.map((lib: any) => lib.projectId)));
+            
+            // HIERARCHICAL: Restore direct imports (for now, assume all are direct when loading old projects)
+            // TODO: In future, save directImports in project data
+            const directSet = new Set<string>();
+            activeLibraries.forEach((lib: any) => directSet.add(lib.projectId));
+            setDirectImports(directSet);
         
         console.log('[ProjectLoad] Library info restored:', {
               libraries: activeLibraries.length,
-              pendingPurchases: activeLibraries.map((lib: any) => lib.projectId)
+              pendingPurchases: activeLibraries.map((lib: any) => lib.projectId),
+              directImports: activeLibraries.length
             });
           } catch (error) {
             console.error('[ProjectLoad] Failed to verify libraries:', error);
             // Fallback: restore as-is if verification fails
             setUsedLibraries(converted);
             setPendingLibraryPurchases(new Set(converted.map((lib: any) => lib.projectId)));
+            setDirectImports(new Set(converted.map((lib: any) => lib.projectId)));
           }
         })();
       } else {
         // Clear library info if project has no dependencies
         setUsedLibraries([]);
         setPendingLibraryPurchases(new Set());
+        setDirectImports(new Set());
       }
       
       // Set current project info
@@ -4445,6 +4778,7 @@ export default function AdvancedClay() {
     // CRITICAL FIX: Clear library information when creating new project
     setUsedLibraries([])
     setPendingLibraryPurchases(new Set())
+    setDirectImports(new Set())
     
     setShowNewFileModal(false)
     showPopup('New project', 'success')
@@ -5936,13 +6270,18 @@ export default function AdvancedClay() {
                           <h4 className="text-sm font-medium text-gray-900 truncate mb-1">{asset.name}</h4>
                           <p className="text-xs text-gray-500 mb-2 truncate">{asset.description}</p>
                           <div className="text-xs mb-2">
-                            {parseFloat(asset.royaltyPerImportETH || '0') > 0 && (
-                              <div className="font-bold text-gray-900">{asset.royaltyPerImportETH} ETH</div>
+                            {(parseFloat(asset.royaltyPerImportETH || '0') > 0 || parseFloat(asset.royaltyPerImportUSDC || '0') > 0) ? (
+                              <>
+                                <div className="font-bold text-gray-900">
+                                  {parseFloat(asset.royaltyPerImportETH || '0') > 0 && `${asset.royaltyPerImportETH} ETH`}
+                                  {parseFloat(asset.royaltyPerImportETH || '0') > 0 && parseFloat(asset.royaltyPerImportUSDC || '0') > 0 && ' + '}
+                                  {parseFloat(asset.royaltyPerImportUSDC || '0') > 0 && `${asset.royaltyPerImportUSDC} USDC`}
+                                </div>
+                                <div className="text-gray-500">Cost when saving</div>
+                              </>
+                            ) : (
+                              <div className="text-gray-500">Free to use</div>
                             )}
-                            {parseFloat(asset.royaltyPerImportUSDC || '0') > 0 && (
-                              <div className="font-bold text-gray-900">{asset.royaltyPerImportUSDC} USDC</div>
-                            )}
-                            <div className="text-gray-500">per import</div>
                           </div>
                           <button
                             onClick={() => handleImportFromLibrary(asset)}
@@ -6288,6 +6627,276 @@ export default function AdvancedClay() {
           </div>
         )
       })()}
+
+      {/* Royalty Distribution Breakdown Modal */}
+      {showRoyaltyBreakdown && royaltyBreakdown && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-lg w-full mx-4 max-h-[80vh] sm:max-h-[80vh] max-h-[90vh] overflow-hidden flex flex-col">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Royalty Distribution</h3>
+            
+            <div className="overflow-y-auto flex-1 mb-6">
+              <div className="space-y-4">
+                {royaltyBreakdown.distributions.map((dist, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900">{dist.name}</span>
+                        {dist.priceChanged && (
+                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                            Price updated
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-600">
+                        {dist.totalETH > 0 && `${dist.totalETH.toFixed(6)} ETH`}
+                        {dist.totalETH > 0 && dist.totalUSDC > 0 && ' + '}
+                        {dist.totalUSDC > 0 && `${dist.totalUSDC.toFixed(4)} USDC`}
+                      </span>
+                    </div>
+                    
+                    {dist.priceChanged && (
+                      <div className="mt-2 p-2 bg-yellow-50 rounded text-xs">
+                        <p className="text-yellow-800 font-medium">Price changed since project load:</p>
+                        <p className="text-yellow-700 mt-1">
+                          Previous: {dist.registeredETH > 0 && `${dist.registeredETH.toFixed(6)} ETH`}
+                          {dist.registeredETH > 0 && dist.registeredUSDC > 0 && ' + '}
+                          {dist.registeredUSDC > 0 && `${dist.registeredUSDC.toFixed(4)} USDC`}
+                          {dist.registeredETH === 0 && dist.registeredUSDC === 0 && 'Free'}
+                        </p>
+                        <p className="text-yellow-700">
+                          Current: {dist.currentETH > 0 && `${dist.currentETH.toFixed(6)} ETH`}
+                          {dist.currentETH > 0 && dist.currentUSDC > 0 && ' + '}
+                          {dist.currentUSDC > 0 && `${dist.currentUSDC.toFixed(4)} USDC`}
+                          {dist.currentETH === 0 && dist.currentUSDC === 0 && 'Free'}
+                        </p>
+                        <p className="text-yellow-600 mt-1">You'll pay the current price</p>
+                      </div>
+                    )}
+                    
+                    {(dist.subDistributions.length > 0 || dist.deletedDependencies.length > 0) && (
+                      <>
+                        <button
+                          onClick={() => {
+                            const newExpanded = new Set(expandedDistributions)
+                            if (newExpanded.has(idx)) {
+                              newExpanded.delete(idx)
+                            } else {
+                              newExpanded.add(idx)
+                            }
+                            setExpandedDistributions(newExpanded)
+                          }}
+                          className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-800 transition-colors mt-2"
+                        >
+                          <span className={`transform transition-transform ${expandedDistributions.has(idx) ? 'rotate-90' : ''}`}>
+                            ▶
+                          </span>
+                          Show distribution details ({dist.subDistributions.length + dist.deletedDependencies.length})
+                        </button>
+                        
+                        {expandedDistributions.has(idx) && (
+                          <div className="ml-4 mt-2 space-y-1">
+                            {dist.subDistributions.length > 0 && (
+                              <>
+                                <p className="text-xs text-gray-500 mb-1">Distributes to:</p>
+                                {dist.subDistributions.map((sub: any, subIdx: number) => (
+                              <div key={subIdx} className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600">└ {sub.name}</span>
+                                <span className="text-gray-500">
+                                  {sub.amountETH > 0 && `${sub.amountETH.toFixed(6)} ETH`}
+                                  {sub.amountETH > 0 && sub.amountUSDC > 0 && ' + '}
+                                  {sub.amountUSDC > 0 && `${sub.amountUSDC.toFixed(4)} USDC`}
+                                </span>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                        
+                        {dist.deletedDependencies.length > 0 && (
+                          <div className="mt-2 p-2 bg-yellow-50 rounded">
+                            <p className="text-xs text-yellow-800 font-medium mb-1">⚠️ Deleted dependencies:</p>
+                            {dist.deletedDependencies.map((del: any, delIdx: number) => (
+                              <div key={delIdx} className="text-xs text-yellow-700">
+                                {del.name} ({del.amountETH > 0 ? `${del.amountETH.toFixed(6)} ETH` : ''}
+                                {del.amountETH > 0 && del.amountUSDC > 0 ? ' + ' : ''}
+                                {del.amountUSDC > 0 ? `${del.amountUSDC.toFixed(4)} USDC` : ''})
+                              </div>
+                            ))}
+                            <p className="text-xs text-yellow-600 mt-1">
+                              {dist.name} will receive less than the listed price
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between text-sm mt-2 pt-2 border-t border-gray-100">
+                          <span className="text-gray-700">{dist.name} profit:</span>
+                          <span className="text-gray-900 font-medium">
+                            {dist.profitETH > 0 && `${dist.profitETH.toFixed(6)} ETH`}
+                            {dist.profitETH > 0 && dist.profitUSDC > 0 && ' + '}
+                            {dist.profitUSDC > 0 && `${dist.profitUSDC.toFixed(4)} USDC`}
+                          </span>
+                        </div>
+                      </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-base font-semibold text-gray-900">Total Payment</span>
+                  <span className="text-base font-semibold text-gray-900">
+                    {royaltyBreakdown.totalETH > 0 && `${royaltyBreakdown.totalETH.toFixed(6)} ETH`}
+                    {royaltyBreakdown.totalETH > 0 && royaltyBreakdown.totalUSDC > 0 && ' + '}
+                    {royaltyBreakdown.totalUSDC > 0 && `${royaltyBreakdown.totalUSDC.toFixed(4)} USDC`}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  This amount will be automatically distributed to all library creators
+                </p>
+                
+                {royaltyBreakdown.estimatedGas > 0 && (
+                  <div className="mt-3 p-2 bg-gray-50 rounded">
+                    <p className="text-xs text-gray-600">
+                      <strong>Estimated gas:</strong> ~{(royaltyBreakdown.estimatedGas / 1000).toFixed(0)}k gas
+                      {' '}(~{((royaltyBreakdown.estimatedGas * 0.000000001) * 2000).toFixed(4)} ETH at 1 gwei)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRoyaltyBreakdown(false)
+                  setRoyaltyBreakdown(null)
+                }}
+                className="flex-1 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setShowRoyaltyBreakdown(false)
+                  if (pendingSaveInfo) {
+                    // Continue with the save process where we left off
+                    const { projectName, saveAs, onProgress, serialized, projectId, finalUsedLibraries } = pendingSaveInfo
+                    setPendingSaveInfo(null)
+                    
+                    // Continue from library royalty processing
+                    try {
+                      onProgress?.('Processing library royalties...')
+                      
+                      // Get Privy provider
+                      let provider = null;
+                      if (wallets && wallets.length > 0) {
+                        provider = await wallets[0].getEthereumProvider();
+                      }
+                      
+                      const { processLibraryPurchasesAndRoyalties, uploadRoyaltyReceipt } = await import('../../lib/royaltyService')
+                      const result = await processLibraryPurchasesAndRoyalties(
+                        serialized.id,
+                        finalUsedLibraries,
+                        provider,
+                        (progressMsg) => {
+                          showPopup(progressMsg, 'info', {
+                            autoClose: false,
+                            showCloseButton: false
+                          })
+                        },
+                        usedLibraries
+                      )
+                      
+                      if (!result.success) {
+                        throw new Error(result.error || 'Failed to process library purchases')
+                      }
+                      
+                      // Upload royalty receipt with distribution info
+                      if (result.librariesWithOwners && result.txHashes) {
+                        onProgress?.('Uploading royalty receipt...')
+                        
+                        // Add distribution info from royaltyBreakdown
+                        const librariesWithDistribution = result.librariesWithOwners.map((lib: any) => {
+                          const distribution = royaltyBreakdown?.distributions.find(
+                            d => d.projectId === lib.projectId
+                          )
+                          
+                          if (distribution) {
+                            return {
+                              ...lib,
+                              distributions: distribution.subDistributions.map((sub: any) => ({
+                                projectId: sub.projectId,
+                                name: sub.name,
+                                owner: '', // We don't have owner info here
+                                amountETH: sub.amountETH.toString(),
+                                amountUSDC: sub.amountUSDC.toString()
+                              })),
+                              profitETH: distribution.profitETH.toString(),
+                              profitUSDC: distribution.profitUSDC.toString()
+                            }
+                          }
+                          return lib
+                        })
+                        
+                        const receipt = {
+                          projectId: serialized.id,
+                          projectName: projectName,
+                          payer: walletAddress,
+                          libraries: librariesWithDistribution,
+                          totalPaidETH: result.totalCostETH.toString(),
+                          totalPaidUSDC: result.totalCostUSDC.toString(),
+                          timestamp: Date.now(),
+                          txHashes: result.txHashes
+                        }
+                        
+                        const receiptId = await uploadRoyaltyReceipt(receipt)
+                        if (receiptId) {
+                          console.log('[Save] Royalty receipt uploaded:', receiptId)
+                        }
+                      }
+                      
+                      // Show success message
+                      const actuallyPaid = result.totalCostETH > 0 || result.totalCostUSDC > 0
+                      if (actuallyPaid) {
+                        const payments = []
+                        if (result.totalCostETH > 0) {
+                          payments.push(`${result.totalCostETH.toFixed(6)} ETH`)
+                        }
+                        if (result.totalCostUSDC > 0) {
+                          payments.push(`${result.totalCostUSDC.toFixed(4)} USDC`)
+                        }
+                        const paymentStr = payments.join(' + ')
+                        const purchasedCount = finalUsedLibraries.length - result.alreadyOwned
+                        
+                        showPopup(
+                          `Royalty paid: ${paymentStr} for ${purchasedCount} library asset${purchasedCount > 1 ? 's' : ''}${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 
+                          'success'
+                        )
+                      }
+                      
+                      // Clear used libraries
+                      setUsedLibraries([])
+                      setPendingLibraryPurchases(new Set())
+                      setDirectImports(new Set())
+                      
+                      // Continue with the rest of the save process
+                      continueSaveProcess(projectName, projectId, saveAs, serialized, onProgress)
+                    } catch (error: any) {
+                      console.error('[Save] Library purchase failed:', error)
+                      showPopup(`Library purchase failed: ${error.message}`, 'error')
+                    }
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
+              >
+                Confirm & Pay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
     </div>
   )

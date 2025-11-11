@@ -292,33 +292,45 @@ export default function LibraryDetailPage() {
               </div>
             </div>
             
-            {/* Dependencies (if any) */}
+            {/* Dependencies with Direct/Indirect Distinction */}
             {project?.usedLibraries && project.usedLibraries.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Imported Libraries</h3>
                 <div className="space-y-3">
-                  {project.usedLibraries.map((lib: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{lib.name}</p>
-                        <p className="text-xs text-gray-500">
-                          Royalty: {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 ? `${lib.royaltyPerImportETH} ETH` : 
-                                   lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 ? `${lib.royaltyPerImportUSDC} USDC` : ''}
-                        </p>
+                  {project.usedLibraries.map((lib: any, idx: number) => {
+                    const isDirect = project.directImports ? project.directImports.includes(lib.projectId) : true
+                    
+                    return (
+                      <div key={idx} className={`flex items-center justify-between p-3 rounded-lg ${isDirect ? 'bg-gray-50' : 'bg-gray-50/50 ml-4'}`}>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            {!isDirect && <span className="text-xs text-gray-400">└</span>}
+                            <p className={`text-sm font-medium ${isDirect ? 'text-gray-900' : 'text-gray-600'}`}>{lib.name}</p>
+                          </div>
+                          <p className={`text-xs ${isDirect ? 'text-gray-500' : 'text-gray-400'}`}>
+                            Royalty: {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 ? `${lib.royaltyPerImportETH} ETH` : 
+                                     lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 ? `${lib.royaltyPerImportUSDC} USDC` : ''}
+                            {!isDirect && ' (included)'}
+                          </p>
+                        </div>
+                        <Link
+                          href={`/library/${lib.projectId}`}
+                          className="text-xs text-gray-700 hover:text-gray-900 hover:underline"
+                        >
+                          View
+                        </Link>
                       </div>
-                      <Link
-                        href={`/library/${lib.projectId}`}
-                        className="text-xs text-gray-700 hover:text-gray-900 hover:underline"
-                      >
-                        View
-                      </Link>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 <p className="text-xs text-gray-500 mt-4">
-                  Total royalties: {(() => {
-                    const totalETH = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
-                    const totalUSDC = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
+                  This library pays: {(() => {
+                    const directLibs = project.directImports 
+                      ? project.usedLibraries.filter((lib: any) => project.directImports.includes(lib.projectId))
+                      : project.usedLibraries
+                    
+                    const totalETH = directLibs.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
+                    const totalUSDC = directLibs.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
                     
                     if (totalETH > 0 && totalUSDC > 0) {
                       return `${totalETH.toFixed(4)} ETH + ${totalUSDC.toFixed(2)} USDC`;
@@ -338,7 +350,7 @@ export default function LibraryDetailPage() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue History</h3>
                 
-                {/* Total Earnings */}
+                {/* Total Earnings with Distribution Info */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-xs text-gray-500 mb-1">Total ETH Revenue</p>
@@ -359,6 +371,47 @@ export default function LibraryDetailPage() {
                     )}
                   </div>
                 </div>
+                
+                {/* Revenue Distribution Info */}
+                {project?.usedLibraries && project.usedLibraries.length > 0 && (
+                  <div className="mb-6 p-3 bg-yellow-50 rounded-lg">
+                    <p className="text-xs text-yellow-800 font-medium mb-2">Revenue Distribution</p>
+                    <p className="text-xs text-yellow-700">
+                      When this library is used, royalties are automatically distributed:
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      {(() => {
+                        const directDeps = project.directImports 
+                          ? project.usedLibraries.filter((lib: any) => project.directImports.includes(lib.projectId))
+                          : project.usedLibraries
+                        
+                        const totalDepETH = directDeps.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0)
+                        const totalDepUSDC = directDeps.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0)
+                        
+                        const libraryETH = parseFloat(asset.royaltyPerImportETH || '0')
+                        const libraryUSDC = parseFloat(asset.royaltyPerImportUSDC || '0')
+                        
+                        const profitETH = Math.max(0, libraryETH - totalDepETH)
+                        const profitUSDC = Math.max(0, libraryUSDC - totalDepUSDC)
+                        
+                        return (
+                          <>
+                            <div className="text-xs text-yellow-700">
+                              • Dependencies receive: {totalDepETH > 0 && `${totalDepETH.toFixed(6)} ETH`}
+                              {totalDepETH > 0 && totalDepUSDC > 0 && ' + '}
+                              {totalDepUSDC > 0 && `${totalDepUSDC.toFixed(4)} USDC`}
+                            </div>
+                            <div className="text-xs text-yellow-700 font-medium">
+                              • You keep: {profitETH > 0 && `${profitETH.toFixed(6)} ETH`}
+                              {profitETH > 0 && profitUSDC > 0 && ' + '}
+                              {profitUSDC > 0 && `${profitUSDC.toFixed(4)} USDC`}
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                )}
               
               {/* History List */}
               <div className="space-y-3 max-h-60 overflow-y-auto">
