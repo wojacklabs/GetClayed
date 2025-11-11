@@ -329,7 +329,7 @@ export default function LibraryDetailPage() {
                           <p className="text-sm text-gray-600">
                             {new Date(event.timestamp).toLocaleDateString()}
                           </p>
-                          <p className="text-xs text-gray-500">From {event.payerName || (event.payer ? event.payer.slice(0, 6) + '...' + event.payer.slice(-4) : 'Unknown')}</p>
+                          <p className="text-xs text-gray-500">From {event.payerName || 'Unknown project'} ({event.payer ? event.payer.slice(0, 6) + '...' + event.payer.slice(-4) : 'Unknown'})</p>
                         </div>
                       </div>
                       <div className="text-right">

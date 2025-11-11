@@ -197,8 +197,8 @@ export async function getRoyaltyEvents(userAddress: string, hoursAgo: number = 2
       for (const lib of receipt.libraries) {
         if (lib.owner.toLowerCase() === userAddress.toLowerCase()) {
           events.push({
-            projectId: receipt.projectId,
-            projectName: receipt.projectName,
+            projectId: lib.projectId, // Use library's projectId, not the purchasing project's
+            projectName: lib.name, // Use library name
             recipient: lib.owner,
             amountETH: lib.royaltyETH,
             amountUSDC: lib.royaltyUSDC,
@@ -206,9 +206,9 @@ export async function getRoyaltyEvents(userAddress: string, hoursAgo: number = 2
             txHash: receipt.txHashes?.paymentETH || receipt.txHashes?.paymentUSDC,
             type: 'earned',
             payer: receipt.payer,
-            source: 'library' // Library royalties
+            source: 'library', // Library royalties
+            payerName: receipt.projectName // Store purchasing project name
           });
-          break; // Only add once per receipt even if user owns multiple libraries
         }
       }
     }
