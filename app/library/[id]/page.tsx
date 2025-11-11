@@ -13,7 +13,7 @@ import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
 import { useWallets } from '@privy-io/react-auth'
-import { getRoyaltyEvents, RoyaltyEvent } from '@/lib/royaltyClaimService'
+import { getRoyaltyEvents, RoyaltyEvent, getPendingRoyalties } from '@/lib/royaltyClaimService'
 
 function PreviewClay({ clay }: { clay: any }) {
   return (
@@ -41,6 +41,7 @@ export default function LibraryDetailPage() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [royaltyHistory, setRoyaltyHistory] = useState<RoyaltyEvent[]>([])
   const [totalEarned, setTotalEarned] = useState({ eth: '0', usdc: '0' })
+  const [pendingRoyalties, setPendingRoyalties] = useState({ eth: '0', usdc: '0' })
   const { showPopup } = usePopup()
   
   useEffect(() => {
@@ -99,7 +100,7 @@ export default function LibraryDetailPage() {
         event.type === 'earned' && event.projectId === projectId
       )
       
-      // Calculate total earnings
+      // Calculate total claimed earnings
       let totalETH = 0
       let totalUSDC = 0
       
@@ -107,6 +108,18 @@ export default function LibraryDetailPage() {
         totalETH += parseFloat(event.amountETH || '0')
         totalUSDC += parseFloat(event.amountUSDC || '0')
       })
+      
+      // Get pending royalties
+      try {
+        const pending = await getPendingRoyalties(creator)
+        setPendingRoyalties(pending)
+        
+        // Add pending royalties to total
+        totalETH += parseFloat(pending.eth || '0')
+        totalUSDC += parseFloat(pending.usdc || '0')
+      } catch (error) {
+        console.error('Failed to load pending royalties:', error)
+      }
       
       setTotalEarned({
         eth: totalETH.toFixed(6),
@@ -159,10 +172,10 @@ export default function LibraryDetailPage() {
       </header>
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:h-[calc(100vh-120px)]">
           {/* Preview */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="aspect-square bg-gray-100">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden lg:h-full">
+            <div className="bg-gray-100 aspect-square lg:aspect-auto lg:h-full lg:max-h-[600px]">
               {project ? (
                 <Canvas camera={{ position: [5, 5, 5], fov: 50 }}>
                   <Suspense fallback={null}>
@@ -183,7 +196,7 @@ export default function LibraryDetailPage() {
           </div>
           
           {/* Info */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:overflow-y-auto lg:h-full">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{asset.name}</h1>
               <p className="text-gray-600 mb-4">{asset.description || 'No description'}</p>
@@ -326,12 +339,22 @@ export default function LibraryDetailPage() {
                 {/* Total Earnings */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 mb-1">Total ETH Earned</p>
+                    <p className="text-xs text-gray-500 mb-1">Total ETH Revenue</p>
                     <p className="text-xl font-bold text-gray-900">{totalEarned.eth} ETH</p>
+                    {parseFloat(pendingRoyalties.eth) > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        (includes {parseFloat(pendingRoyalties.eth).toFixed(6)} ETH pending)
+                      </p>
+                    )}
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 mb-1">Total USDC Earned</p>
+                    <p className="text-xs text-gray-500 mb-1">Total USDC Revenue</p>
                     <p className="text-xl font-bold text-gray-900">{totalEarned.usdc} USDC</p>
+                    {parseFloat(pendingRoyalties.usdc) > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        (includes {parseFloat(pendingRoyalties.usdc).toFixed(6)} USDC pending)
+                      </p>
+                    )}
                   </div>
                 </div>
               
