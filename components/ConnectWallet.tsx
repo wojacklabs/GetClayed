@@ -83,10 +83,11 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   return (
     <button
       onClick={handleConnect}
-      className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium"
+      className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium"
     >
       <LogIn size={18} />
-      <span>Connect Wallet</span>
+      <span className="sm:inline hidden">Connect Wallet</span>
+      <span className="sm:hidden">Connect</span>
     </button>
   )
 }

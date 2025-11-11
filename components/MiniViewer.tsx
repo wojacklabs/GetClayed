@@ -54,7 +54,7 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
   const [loading, setLoading] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const [backgroundColor, setBackgroundColor] = useState('#f0f0f0')
+  const [backgroundColor, setBackgroundColor] = useState('#f8f9fa')
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   
@@ -103,9 +103,11 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
       const projectData = await downloadClayProject(projectId)
       const restored = restoreClayObjects(projectData)
       setClayObjects(restored)
-      // Set background color from project data
-      if (projectData.backgroundColor) {
-        setBackgroundColor(projectData.backgroundColor)
+      // Set background color from project data, ensure it's a valid color
+      if (projectData.backgroundColor && typeof projectData.backgroundColor === 'string') {
+        // Validate the color string
+        const validColor = projectData.backgroundColor.startsWith('#') ? projectData.backgroundColor : '#f8f9fa'
+        setBackgroundColor(validColor)
       }
     } catch (error) {
       console.error('[MiniViewer] Failed to load project:', error)
