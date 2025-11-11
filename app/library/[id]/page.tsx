@@ -47,6 +47,12 @@ export default function LibraryDetailPage() {
     loadAssetDetail()
   }, [assetId])
   
+  useEffect(() => {
+    if (wallets.length > 0) {
+      setWalletAddress(wallets[0].address)
+    }
+  }, [wallets])
+  
   const loadAssetDetail = async () => {
     try {
       setLoading(true)
@@ -274,14 +280,15 @@ export default function LibraryDetailPage() {
             {/* Dependencies (if any) */}
             {project?.usedLibraries && project.usedLibraries.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Uses Library Assets</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Imported Libraries</h3>
                 <div className="space-y-3">
                   {project.usedLibraries.map((lib: any, idx: number) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <p className="text-sm font-medium text-gray-900">{lib.name}</p>
                         <p className="text-xs text-gray-500">
-                          Royalty: {lib.royaltyPerImportETH || lib.royaltyPerImportUSDC} {lib.royaltyPerImportETH ? 'ETH' : 'USDC'}
+                          Royalty: {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 ? `${lib.royaltyPerImportETH} ETH` : 
+                                   lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 ? `${lib.royaltyPerImportUSDC} USDC` : ''}
                         </p>
                       </div>
                       <Link
@@ -294,13 +301,25 @@ export default function LibraryDetailPage() {
                   ))}
                 </div>
                 <p className="text-xs text-gray-500 mt-4">
-                  Total royalties: {project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0).toFixed(4)} ETH
+                  Total royalties: {(() => {
+                    const totalETH = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
+                    const totalUSDC = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
+                    
+                    if (totalETH > 0 && totalUSDC > 0) {
+                      return `${totalETH.toFixed(4)} ETH + ${totalUSDC.toFixed(2)} USDC`;
+                    } else if (totalETH > 0) {
+                      return `${totalETH.toFixed(4)} ETH`;
+                    } else if (totalUSDC > 0) {
+                      return `${totalUSDC.toFixed(2)} USDC`;
+                    }
+                    return '0';
+                  })()}
                 </p>
               </div>
             )}
             
-            {/* Revenue History - Only show if there's revenue */}
-            {(parseFloat(totalEarned.eth) > 0 || parseFloat(totalEarned.usdc) > 0) && (
+            {/* Revenue History - Only show to asset owner */}
+            {walletAddress && asset.originalCreator.toLowerCase() === walletAddress.toLowerCase() && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue History</h3>
                 
