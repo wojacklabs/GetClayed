@@ -31,7 +31,8 @@ import {
   X,
   Copy,
   Clipboard,
-  Video
+  Video,
+  MoreVertical
 } from 'lucide-react'
 import SaveButton from '../../components/SaveButton'
 import FolderStructure, { FolderStructureHandle } from '../../components/FolderStructure'
@@ -2272,6 +2273,7 @@ export default function AdvancedClay() {
   const [librarySearchQuery, setLibrarySearchQuery] = useState('')
   const [libraryAssets, setLibraryAssets] = useState<any[]>([])
   const [loadingLibrary, setLoadingLibrary] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [usedLibraries, setUsedLibraries] = useState<Array<{
     projectId: string;
     name: string;
@@ -4918,9 +4920,9 @@ export default function AdvancedClay() {
       {/* Bottom Toolbar */}
       <div className="bg-white shadow-lg border-t border-gray-200">
         <div className="flex flex-col">
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between p-2 sm:p-4 gap-2">
           {/* Left side - Profile and Connect Wallet */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Profile Button - Only show when wallet is connected */}
             {walletAddress && (
               <div className="relative profile-menu-container">
@@ -4970,7 +4972,7 @@ export default function AdvancedClay() {
           </div>
           
           {/* Center - Main tools */}
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex-1 flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto">
           {/* Main Tools - Desktop */}
           <div className="hidden sm:flex gap-2 bg-gray-100 rounded-lg p-2">
               {/* Camera rotation removed - now always available by dragging background */}
@@ -5152,7 +5154,7 @@ export default function AdvancedClay() {
             </button>
           </div>
           
-          <div className="w-px h-10 bg-gray-300" />
+          <div className="w-px h-10 bg-gray-300 hidden sm:block" />
           
           {/* Delete Tool */}
           <button
@@ -5168,13 +5170,13 @@ export default function AdvancedClay() {
             <Eraser size={16} className="sm:w-5 sm:h-5" />
           </button>
           
-          <div className="w-px h-10 bg-gray-300" />
+          <div className="w-px h-10 bg-gray-300 hidden sm:block" />
           
-          {/* Copy/Paste Tools */}
+          {/* Copy/Paste Tools - Desktop only */}
           <button
             onClick={handleCopy}
             disabled={!selectedClayId}
-            className={`p-2 sm:p-3 rounded-lg transition-all ${
+            className={`hidden sm:block p-2 sm:p-3 rounded-lg transition-all ${
               selectedClayId
                 ? 'bg-white hover:bg-gray-50 text-gray-700'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -5186,7 +5188,7 @@ export default function AdvancedClay() {
           <button
             onClick={handlePaste}
             disabled={!copiedClay}
-            className={`p-2 sm:p-3 rounded-lg transition-all ${
+            className={`hidden sm:block p-2 sm:p-3 rounded-lg transition-all ${
               copiedClay
                 ? 'bg-white hover:bg-gray-50 text-gray-700'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -5196,32 +5198,32 @@ export default function AdvancedClay() {
             <Clipboard size={16} className="sm:w-5 sm:h-5" />
           </button>
           
-          <div className="w-px h-10 bg-gray-300" />
+          <div className="w-px h-10 bg-gray-300 hidden sm:block" />
           
-          {/* New File Button */}
+          {/* New File Button - Desktop only */}
           <button
             onClick={handleNewFile}
-            className="p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
+            className="hidden sm:block p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
             title="New File"
           >
             <FilePlus size={16} className="sm:w-5 sm:h-5" />
           </button>
           
-          {/* Save Button */}
-                      <SaveButton 
-                        onSave={handleSaveProject} 
-                        isConnected={!!walletAddress}
-                        currentProjectName={currentProjectInfo?.name}
-                        isDirty={currentProjectInfo?.isDirty}
-                      />
+          {/* Save Button - Always visible */}
+          <SaveButton 
+            onSave={handleSaveProject} 
+            isConnected={!!walletAddress}
+            currentProjectName={currentProjectInfo?.name}
+            isDirty={currentProjectInfo?.isDirty}
+          />
           
-          {/* Help Guide Button */}
+          {/* Help Guide Button - Desktop only */}
           <button
             onClick={() => {
               setShowGuide(!showGuide)
               setGuideStep(0)
             }}
-            className={`p-2 sm:p-3 rounded-lg transition-all ${
+            className={`hidden sm:block p-2 sm:p-3 rounded-lg transition-all ${
               showGuide 
                 ? 'bg-gray-800 text-white' 
                 : 'bg-white hover:bg-gray-50 text-gray-700'
@@ -5231,10 +5233,10 @@ export default function AdvancedClay() {
             <HelpCircle size={16} className="sm:w-5 sm:h-5" />
           </button>
           
-          {/* Export GLB Button */}
+          {/* Export GLB Button - Desktop only */}
           <button
             onClick={handleExportGLB}
-            className="p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
+            className="hidden sm:block p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
             title="Export as GLB"
           >
             <Download size={16} className="sm:w-5 sm:h-5" />
