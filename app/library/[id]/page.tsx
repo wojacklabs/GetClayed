@@ -119,6 +119,8 @@ export default function LibraryDetailPage() {
         totalUSDC += parseFloat(pending.usdc || '0')
       } catch (error) {
         console.error('Failed to load pending royalties:', error)
+        // Set default values on error
+        setPendingRoyalties({ eth: '0', usdc: '0' })
       }
       
       setTotalEarned({
@@ -172,10 +174,10 @@ export default function LibraryDetailPage() {
       </header>
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:h-[calc(100vh-120px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Preview */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden lg:h-full">
-            <div className="bg-gray-100 aspect-square lg:aspect-auto lg:h-full lg:max-h-[600px]">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-gray-100 aspect-square lg:h-[600px]">
               {project ? (
                 <Canvas camera={{ position: [5, 5, 5], fov: 50 }}>
                   <Suspense fallback={null}>
@@ -196,7 +198,7 @@ export default function LibraryDetailPage() {
           </div>
           
           {/* Info */}
-          <div className="space-y-6 lg:overflow-y-auto lg:h-full">
+          <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{asset.name}</h1>
               <p className="text-gray-600 mb-4">{asset.description || 'No description'}</p>
