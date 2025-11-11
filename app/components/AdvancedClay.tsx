@@ -42,6 +42,7 @@ import { useWallets } from '@privy-io/react-auth'
 import MiniViewer from '../../components/MiniViewer'
 import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject, uploadProjectThumbnail, downloadProjectThumbnail } from '../../lib/clayStorageService'
 import { registerLibraryAsset } from '../../lib/libraryService'
+import type { LibraryDependency } from '../../lib/royaltyService'
 import { captureSceneThumbnail, compressImageDataUrl } from '../../lib/thumbnailService'
 import { ethers } from 'ethers'
 import { downloadAsGLB } from '../../lib/glbService'
@@ -2274,13 +2275,7 @@ export default function AdvancedClay() {
   const [libraryAssets, setLibraryAssets] = useState<any[]>([])
   const [loadingLibrary, setLoadingLibrary] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
-  const [usedLibraries, setUsedLibraries] = useState<Array<{
-    projectId: string;
-    name: string;
-    royaltyPerImportETH: string;
-    royaltyPerImportUSDC: string;
-    creator?: string;
-  }>>([])
+  const [usedLibraries, setUsedLibraries] = useState<LibraryDependency[]>([])
   const [pendingLibraryPurchases, setPendingLibraryPurchases] = useState<Set<string>>(new Set())
   const [directImports, setDirectImports] = useState<Set<string>>(new Set()) // Track only direct imports for hierarchical royalties
   const [showRoyaltyBreakdown, setShowRoyaltyBreakdown] = useState(false)
@@ -2289,6 +2284,7 @@ export default function AdvancedClay() {
     totalETH: number
     totalUSDC: number
     distributions: any[]
+    estimatedGas?: number
   } | null>(null)
   const [expandedDistributions, setExpandedDistributions] = useState<Set<number>>(new Set())
   const [pendingSaveInfo, setPendingSaveInfo] = useState<{
@@ -3728,9 +3724,12 @@ export default function AdvancedClay() {
     if (!LIBRARY_CONTRACT_ADDRESS) return { distributions, totalETH, totalUSDC }
     
     const { ethers } = await import('ethers')
-    let provider = null
+    let provider: ethers.Provider | null = null
     if (wallets && wallets.length > 0) {
-      provider = await wallets[0].getEthereumProvider()
+      const eip1193Provider = await wallets[0].getEthereumProvider()
+      if (eip1193Provider) {
+        provider = new ethers.BrowserProvider(eip1193Provider)
+      }
     }
     if (!provider && typeof window !== 'undefined' && window.ethereum) {
       provider = new ethers.BrowserProvider(window.ethereum)
@@ -3838,7 +3837,6 @@ export default function AdvancedClay() {
     serialized: any,
     onProgress?: (status: string) => void
   ) => {
-    const { currentProjectInfo } = useProjectStore.getState()
     
     // Step 2.5: Sign project data for integrity verification
     const finalUsedLibraries = Array.from(directImports)
@@ -3879,8 +3877,8 @@ export default function AdvancedClay() {
     try {
       uploadResult = await uploadClayProject(
         serialized,
-        currentFolder,
-        rootTxId,
+        undefined, // currentFolder
+        undefined, // rootTxId
         (progress: ChunkProgressType) => {
           console.log('[Save] Upload progress:', progress)
           const percent = Math.round(progress.percentage)
@@ -3899,26 +3897,23 @@ export default function AdvancedClay() {
     const result = uploadResult;
     
     // Save mutable reference
-    saveMutableReference(
-      projectId,
-      result.rootTxId,
-      result.transactionId,
-      projectName,
-      walletAddress
-    );
+    if (walletAddress) {
+      saveMutableReference(
+        projectId,
+        result.rootTxId,
+        result.transactionId,
+        projectName,
+        walletAddress
+      );
+    }
     
     // Update current project info
     setCurrentProjectInfo({
-      id: projectId,
+      projectId: projectId,
       name: projectName,
-      tx: result.transactionId,
       rootTxId: result.rootTxId,
-      isLibrary: currentProjectInfo?.isLibrary || false,
       isDirty: false
     });
-    
-    // Clear dirty flag
-    setIsDirty(false);
     
     // Show success
     console.log('[Save] ✅ Project saved successfully')
@@ -6756,7 +6751,7 @@ export default function AdvancedClay() {
                   This amount will be automatically distributed to all library creators
                 </p>
                 
-                {royaltyBreakdown.estimatedGas > 0 && (
+                {royaltyBreakdown.estimatedGas && royaltyBreakdown.estimatedGas > 0 && (
                   <div className="mt-3 p-2 bg-gray-50 rounded">
                     <p className="text-xs text-gray-600">
                       <strong>Estimated gas:</strong> ~{(royaltyBreakdown.estimatedGas / 1000).toFixed(0)}k gas
@@ -6798,7 +6793,7 @@ export default function AdvancedClay() {
                       const { processLibraryPurchasesAndRoyalties, uploadRoyaltyReceipt } = await import('../../lib/royaltyService')
                       const result = await processLibraryPurchasesAndRoyalties(
                         serialized.id,
-                        finalUsedLibraries,
+                        finalUsedLibraries || [],
                         provider,
                         (progressMsg) => {
                           showPopup(progressMsg, 'info', {
@@ -6843,7 +6838,7 @@ export default function AdvancedClay() {
                         const receipt = {
                           projectId: serialized.id,
                           projectName: projectName,
-                          payer: walletAddress,
+                          payer: walletAddress || '',
                           libraries: librariesWithDistribution,
                           totalPaidETH: result.totalCostETH.toString(),
                           totalPaidUSDC: result.totalCostUSDC.toString(),
@@ -6868,7 +6863,7 @@ export default function AdvancedClay() {
                           payments.push(`${result.totalCostUSDC.toFixed(4)} USDC`)
                         }
                         const paymentStr = payments.join(' + ')
-                        const purchasedCount = finalUsedLibraries.length - result.alreadyOwned
+                        const purchasedCount = (finalUsedLibraries?.length || 0) - result.alreadyOwned
                         
                         showPopup(
                           `Royalty paid: ${paymentStr} for ${purchasedCount} library asset${purchasedCount > 1 ? 's' : ''}${result.alreadyOwned > 0 ? ` (${result.alreadyOwned} already owned)` : ''}`, 
@@ -6882,7 +6877,7 @@ export default function AdvancedClay() {
                       setDirectImports(new Set())
                       
                       // Continue with the rest of the save process
-                      continueSaveProcess(projectName, projectId, saveAs, serialized, onProgress)
+                      continueSaveProcess(projectName, projectId || '', saveAs, serialized, onProgress)
                     } catch (error: any) {
                       console.error('[Save] Library purchase failed:', error)
                       showPopup(`Library purchase failed: ${error.message}`, 'error')
