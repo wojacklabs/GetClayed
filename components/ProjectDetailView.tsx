@@ -11,6 +11,8 @@ import { likeProject, favoriteProject, unfavoriteProject, hasUserLikedProject, g
 import { usePopup } from './PopupNotification'
 import { AnimatedClayLogo } from './AnimatedClayLogo'
 import RoyaltyTree from './RoyaltyTree'
+import { queryMarketplaceListings } from '../lib/marketplaceService'
+import { queryLibraryAssets } from '../lib/libraryService'
 
 interface ProjectDetailViewProps {
   projectId: string
@@ -103,9 +105,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   const cameraRef = useRef<THREE.Camera | null>(null)
   const controlsRef = useRef<any>(null)
   const [authorProfile, setAuthorProfile] = useState<{ displayName?: string } | null>(null)
-  const [libraryInfo, setLibraryInfo] = useState<{ royaltyETH: string; royaltyUSDC: string; totalRevenue: number } | null>(null)
-  const [marketplaceInfo, setMarketplaceInfo] = useState<{ price: string; currency: string } | null>(null)
-  const [showLibraryTab, setShowLibraryTab] = useState(true)
+  const [marketplaceListing, setMarketplaceListing] = useState<{ price: string; currency: string } | null>(null)
+  const [libraryListing, setLibraryListing] = useState<{ royaltyETH: string; royaltyUSDC: string; name: string } | null>(null)
+  const [loadingListings, setLoadingListings] = useState(true)
   
   useEffect(() => {
     loadProject()
@@ -158,6 +160,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         setViewCount(views + 1)
         setHasRecordedView(true)
       }
+      
+      // Check if project is listed in marketplace or library
+      checkListings()
     } catch (error: any) {
       console.error('Failed to load project:', error)
       
@@ -169,6 +174,37 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       }
     } finally {
       setLoading(false)
+    }
+  }
+  
+  const checkListings = async () => {
+    try {
+      setLoadingListings(true)
+      
+      // Check marketplace listing
+      const marketplaceListings = await queryMarketplaceListings()
+      const marketplaceListing = marketplaceListings.find(l => l.projectId === projectId)
+      if (marketplaceListing) {
+        setMarketplaceListing({
+          price: marketplaceListing.price,
+          currency: marketplaceListing.paymentToken
+        })
+      }
+      
+      // Check library listing
+      const libraryAssets = await queryLibraryAssets(100)
+      const libraryAsset = libraryAssets.find(a => a.projectId === projectId)
+      if (libraryAsset) {
+        setLibraryListing({
+          royaltyETH: libraryAsset.royaltyPerImportETH,
+          royaltyUSDC: libraryAsset.royaltyPerImportUSDC,
+          name: libraryAsset.name
+        })
+      }
+    } catch (error) {
+      console.error('Failed to check listings:', error)
+    } finally {
+      setLoadingListings(false)
     }
   }
   
@@ -441,52 +477,119 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         </div>
       )}
       
-      {/* Library Dependencies Info */}
-      {project?.usedLibraries && project.usedLibraries.length > 0 && (
-        <div className="absolute top-20 left-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-4 max-w-xs z-10">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-            Imported Libraries ({project.usedLibraries.length})
-          </h3>
-          <div className="space-y-2">
-            {project.usedLibraries.map((lib: any, idx: number) => (
+      {/* Left side info panel */}
+      <div className="absolute top-20 left-6 space-y-4 z-10">
+        {/* Marketplace Info */}
+        {marketplaceListing && (
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-4 max-w-xs">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 3h18v18H3V3z"/>
+                <path d="M3 9h18"/>
+                <path d="M9 21V9"/>
+              </svg>
+              Marketplace
+            </h3>
+            <div className="space-y-2">
+              <div>
+                <p className="text-xs text-gray-500">Listed for</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {marketplaceListing.price} {marketplaceListing.currency}
+                </p>
+              </div>
               <Link
-                key={idx}
-                href={`/library/${lib.projectId}`}
-                className="block p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors"
+                href={`/marketplace/${projectId}`}
+                className="block w-full text-center px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-medium"
               >
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {lib.name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 ? `${lib.royaltyPerImportETH} ETH` : 
-                   lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 ? `${lib.royaltyPerImportUSDC} USDC` : ''}
-                </p>
+                View in Marketplace
               </Link>
-            ))}
+            </div>
           </div>
-          <div className="pt-3 mt-3 border-t border-gray-200">
-            <p className="text-xs text-gray-500">
-              Total royalty: {(() => {
-                const totalETH = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
-                const totalUSDC = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
-                
-                if (totalETH > 0 && totalUSDC > 0) {
-                  return `${totalETH.toFixed(4)} ETH + ${totalUSDC.toFixed(2)} USDC`;
-                } else if (totalETH > 0) {
-                  return `${totalETH.toFixed(4)} ETH`;
-                } else if (totalUSDC > 0) {
-                  return `${totalUSDC.toFixed(2)} USDC`;
-                }
-                return '0';
-              })()}
-            </p>
+        )}
+        
+        {/* Library Info */}
+        {libraryListing && (
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-4 max-w-xs">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              Library
+            </h3>
+            <div className="space-y-2">
+              <div>
+                <p className="text-xs text-gray-500">Royalty per import</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {parseFloat(libraryListing.royaltyETH) > 0 && `${libraryListing.royaltyETH} ETH`}
+                  {parseFloat(libraryListing.royaltyUSDC) > 0 && `${libraryListing.royaltyUSDC} USDC`}
+                </p>
+              </div>
+              <Link
+                href={`/library/${projectId}`}
+                className="block w-full text-center px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-medium"
+              >
+                View in Library
+              </Link>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        
+        {/* Imported Libraries */}
+        {project?.usedLibraries && project.usedLibraries.length > 0 && (
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-4 max-w-xs">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+              </svg>
+              Imported Libraries ({project.usedLibraries.length})
+            </h3>
+            <div className="space-y-2">
+              {project.usedLibraries.map((lib: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="group p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {lib.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 ? `${lib.royaltyPerImportETH} ETH` : 
+                         lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 ? `${lib.royaltyPerImportUSDC} USDC` : ''}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/library/${lib.projectId}`}
+                      className="ml-2 px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-800 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      View
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="pt-3 mt-3 border-t border-gray-200">
+              <p className="text-xs text-gray-500">
+                Total royalty: {(() => {
+                  const totalETH = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
+                  const totalUSDC = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
+                  
+                  if (totalETH > 0 && totalUSDC > 0) {
+                    return `${totalETH.toFixed(4)} ETH + ${totalUSDC.toFixed(2)} USDC`;
+                  } else if (totalETH > 0) {
+                    return `${totalETH.toFixed(4)} ETH`;
+                  } else if (totalUSDC > 0) {
+                    return `${totalUSDC.toFixed(2)} USDC`;
+                  }
+                  return '0';
+                })()}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
