@@ -21,7 +21,7 @@ interface ProjectDetailViewProps {
 }
 
 // Simple clay renderer for view-only mode
-function ViewOnlyClay({ clay, isFromLibrary }: { clay: any, isFromLibrary: boolean }) {
+function ViewOnlyClay({ clay, isFromLibrary, isHighlighted }: { clay: any, isFromLibrary: boolean, isHighlighted: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const [hovered, setHovered] = useState(false)
   
@@ -39,8 +39,8 @@ function ViewOnlyClay({ clay, isFromLibrary }: { clay: any, isFromLibrary: boole
         <meshPhongMaterial 
           color={clay.color}
           side={THREE.DoubleSide}
-          emissive={isFromLibrary ? (hovered ? '#ffff00' : '#ffd700') : undefined}
-          emissiveIntensity={isFromLibrary ? (hovered ? 0.5 : 0.2) : 0}
+          emissive={isFromLibrary ? (isHighlighted || hovered ? '#ffff00' : '#ffd700') : undefined}
+          emissiveIntensity={isFromLibrary ? (isHighlighted || hovered ? 0.5 : 0.2) : 0}
         />
       </mesh>
       {isFromLibrary && (
@@ -58,7 +58,7 @@ function ViewOnlyClay({ clay, isFromLibrary }: { clay: any, isFromLibrary: boole
               color="#ffd700"
               wireframe
               transparent
-              opacity={0.3}
+              opacity={isHighlighted ? 0.6 : 0.3}
               depthTest={false}
             />
           </mesh>
@@ -108,6 +108,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   const [marketplaceListing, setMarketplaceListing] = useState<{ price: string; currency: string } | null>(null)
   const [libraryListing, setLibraryListing] = useState<{ royaltyETH: string; royaltyUSDC: string; name: string } | null>(null)
   const [loadingListings, setLoadingListings] = useState(true)
+  const [hoveredLibraryId, setHoveredLibraryId] = useState<string | null>(null)
   
   useEffect(() => {
     loadProject()
@@ -415,7 +416,11 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             
             return (
               <group key={clay.id}>
-                <ViewOnlyClay clay={clay} isFromLibrary={!!clay.librarySourceId} />
+                <ViewOnlyClay 
+                  clay={clay} 
+                  isFromLibrary={!!clay.librarySourceId}
+                  isHighlighted={!!clay.librarySourceId && hoveredLibraryId === clay.librarySourceId}
+                />
                 {showGrid && (
                   <group position={clay.position}>
                     {/* XZ horizontal plane with dynamic color based on Z position */}
@@ -549,6 +554,8 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
                 <div
                   key={idx}
                   className="group p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all"
+                  onMouseEnter={() => setHoveredLibraryId(lib.projectId)}
+                  onMouseLeave={() => setHoveredLibraryId(null)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
