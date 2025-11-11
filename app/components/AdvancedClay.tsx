@@ -4896,10 +4896,10 @@ export default function AdvancedClay() {
       <button
         ref={(el) => { toolButtonsRef.current['library'] = el }}
         onClick={handleOpenLibrarySearch}
-        className="absolute bottom-4 right-4 p-4 rounded-full bg-gray-800 hover:bg-gray-700 text-white shadow-lg transition-all z-20 hover:scale-110"
+        className="absolute bottom-4 right-4 p-3 sm:p-4 rounded-full bg-gray-800 hover:bg-gray-700 text-white shadow-lg transition-all z-20 hover:scale-110"
         title="Import from Library"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="sm:w-6 sm:h-6">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
         </svg>
@@ -4926,10 +4926,10 @@ export default function AdvancedClay() {
               <div className="relative profile-menu-container">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
+                  className="p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
                   title="Profile"
                 >
-                  <User size={20} />
+                  <User size={16} className="sm:w-5 sm:h-5" />
                 </button>
                 
                 {/* Profile Menu */}
@@ -4971,8 +4971,8 @@ export default function AdvancedClay() {
           
           {/* Center - Main tools */}
           <div className="flex items-center justify-center gap-2">
-          {/* Main Tools */}
-          <div className="flex gap-2 bg-gray-100 rounded-lg p-2">
+          {/* Main Tools - Desktop */}
+          <div className="hidden sm:flex gap-2 bg-gray-100 rounded-lg p-2">
               {/* Camera rotation removed - now always available by dragging background */}
               <button
                 ref={(el) => { toolButtonsRef.current['rotateObject'] = el }}
@@ -5094,33 +5094,61 @@ export default function AdvancedClay() {
             </button>
           </div>
           
+          {/* Main Tools - Mobile Select */}
+          <div className="sm:hidden">
+            <select
+              value={tool || 'rotate'}
+              onChange={(e) => {
+                const newTool = e.target.value as 'rotate' | 'rotateObject' | 'push' | 'pull' | 'paint' | 'add' | 'move' | 'delete' | 'resize' | 'group'
+                setTool(newTool)
+                if (newTool === 'group') {
+                  setShowGroupingPanel(true)
+                } else {
+                  setShowGroupingPanel(false)
+                  setSelectedForGrouping([])
+                  setMainObjectForGroup(null)
+                }
+              }}
+              className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
+            >
+              <option value="rotate">Rotate View</option>
+              <option value="rotateObject">Rotate Object</option>
+              <option value="resize">Resize</option>
+              <option value="push">Sculpt</option>
+              <option value="paint">Paint</option>
+              <option value="add">Add</option>
+              <option value="move">Move</option>
+              <option value="group">Group</option>
+            </select>
+          </div>
+          
           <div className="w-px h-10 bg-gray-300" />
           
           {/* History Controls */}
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2">
             <button
               onClick={handleUndo}
               disabled={!canUndo}
-              className={`p-3 rounded-lg transition-all ${
+              className={`p-2 sm:p-3 rounded-lg transition-all ${
                 canUndo 
                   ? 'bg-gray-800 text-white shadow-md' 
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
               title="Undo (Ctrl/Cmd+Z)"
             >
-              <Undo size={20} />
+              <Undo size={16} className="sm:w-5 sm:h-5" />
             </button>
             <button
               onClick={handleRedo}
               disabled={!canRedo}
-              className={`p-3 rounded-lg transition-all ${
+              className={`p-2 sm:p-3 rounded-lg transition-all ${
                 canRedo 
                   ? 'bg-gray-800 text-white shadow-md' 
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
               title="Redo (Ctrl/Cmd+Y)"
             >
-              <Redo size={20} />
+              <Redo size={16} className="sm:w-5 sm:h-5" />
             </button>
           </div>
           
@@ -5130,14 +5158,14 @@ export default function AdvancedClay() {
           <button
             ref={(el) => { toolButtonsRef.current['delete'] = el }}
             onClick={() => setTool('delete')}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-2 sm:p-3 rounded-lg transition-all ${
               tool === 'delete' 
                 ? 'bg-red-500 text-white shadow-md' 
                 : 'bg-white hover:bg-gray-50 text-gray-700'
             }`}
             title="Delete Clay"
           >
-            <Eraser size={20} />
+            <Eraser size={16} className="sm:w-5 sm:h-5" />
           </button>
           
           <div className="w-px h-10 bg-gray-300" />
@@ -5146,26 +5174,26 @@ export default function AdvancedClay() {
           <button
             onClick={handleCopy}
             disabled={!selectedClayId}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-2 sm:p-3 rounded-lg transition-all ${
               selectedClayId
                 ? 'bg-white hover:bg-gray-50 text-gray-700'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
             title="Copy (Ctrl/Cmd+C)"
           >
-            <Copy size={20} />
+            <Copy size={16} className="sm:w-5 sm:h-5" />
           </button>
           <button
             onClick={handlePaste}
             disabled={!copiedClay}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-2 sm:p-3 rounded-lg transition-all ${
               copiedClay
                 ? 'bg-white hover:bg-gray-50 text-gray-700'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
             title="Paste (Ctrl/Cmd+V)"
           >
-            <Clipboard size={20} />
+            <Clipboard size={16} className="sm:w-5 sm:h-5" />
           </button>
           
           <div className="w-px h-10 bg-gray-300" />
@@ -5173,10 +5201,10 @@ export default function AdvancedClay() {
           {/* New File Button */}
           <button
             onClick={handleNewFile}
-            className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
+            className="p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
             title="New File"
           >
-            <FilePlus size={20} />
+            <FilePlus size={16} className="sm:w-5 sm:h-5" />
           </button>
           
           {/* Save Button */}
@@ -5193,23 +5221,23 @@ export default function AdvancedClay() {
               setShowGuide(!showGuide)
               setGuideStep(0)
             }}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-2 sm:p-3 rounded-lg transition-all ${
               showGuide 
                 ? 'bg-gray-800 text-white' 
                 : 'bg-white hover:bg-gray-50 text-gray-700'
             }`}
             title="Tool Guide"
           >
-            <HelpCircle size={20} />
+            <HelpCircle size={16} className="sm:w-5 sm:h-5" />
           </button>
           
           {/* Export GLB Button */}
           <button
             onClick={handleExportGLB}
-            className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
+            className="p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
             title="Export as GLB"
           >
-            <Download size={20} />
+            <Download size={16} className="sm:w-5 sm:h-5" />
           </button>
         </div>
             {/* Right side - Auto-save indicator */}
@@ -5225,88 +5253,156 @@ export default function AdvancedClay() {
           {/* Context-specific controls - rotate tool removed */}
           
           {tool === 'paint' && !showGroupingPanel && (
-            <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-2">
-              {[
-                '#ff6b6b', '#ffd93d', '#6bcf7f', '#4dabf7',
-                '#f783ac', '#ffd43b', '#51cf66', '#339af0'
-              ].map((color) => (
-                <button
-                  key={color}
-                  onClick={() => {
-                    setCurrentColor(color)
-                    // If an object is selected, apply color immediately
-                    if (selectedClayId) {
-                      const selectedClay = clayObjects.find(c => c.id === selectedClayId)
-                      if (selectedClay) {
-                        updateClay({ ...selectedClay, color })
-                        showPopup('Color changed', 'success')
+            <div className="border-t border-gray-200 px-4 py-2">
+              {/* Desktop - Full color palette */}
+              <div className="hidden sm:flex items-center justify-center gap-2">
+                {[
+                  '#ff6b6b', '#ffd93d', '#6bcf7f', '#4dabf7',
+                  '#f783ac', '#ffd43b', '#51cf66', '#339af0'
+                ].map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => {
+                      setCurrentColor(color)
+                      // If an object is selected, apply color immediately
+                      if (selectedClayId) {
+                        const selectedClay = clayObjects.find(c => c.id === selectedClayId)
+                        if (selectedClay) {
+                          updateClay({ ...selectedClay, color })
+                          showPopup('Color changed', 'success')
+                        }
                       }
-                    }
-                  }}
-                  className={`w-8 h-8 rounded-full transition-all ${
-                    currentColor === color ? 'ring-2 ring-gray-800 scale-110' : ''
-                  }`}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-              <div className="w-px h-8 bg-gray-300 mx-1" />
-              <label className="relative cursor-pointer group">
-                <input
-                  type="color"
-                  value={currentColor}
-                  onChange={(e) => setCurrentColor(e.target.value)}
-                  className="sr-only"
-                />
-                <div 
-                  className="w-8 h-8 rounded-full border-2 border-gray-400 group-hover:border-gray-600 transition-all"
-                  style={{ 
-                    background: `${currentColor}`
-                  }}
-                  title="Custom Color"
-                />
-              </label>
-              <div className="w-px h-8 bg-gray-300 mx-1" />
-              {/* Background color button */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600">BG:</span>
+                    }}
+                    className={`w-8 h-8 rounded-full transition-all ${
+                      currentColor === color ? 'ring-2 ring-gray-800 scale-110' : ''
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+                <div className="w-px h-8 bg-gray-300 mx-1" />
                 <label className="relative cursor-pointer group">
                   <input
                     type="color"
-                    value={backgroundColor}
-                    onChange={(e) => setBackgroundColor(e.target.value)}
+                    value={currentColor}
+                    onChange={(e) => setCurrentColor(e.target.value)}
                     className="sr-only"
                   />
                   <div 
-                    className="w-8 h-8 rounded-full border-2 border-gray-300 group-hover:border-gray-500 transition-all shadow-sm"
-                    style={{ backgroundColor }}
-                    title="Background Color"
+                    className="w-8 h-8 rounded-full border-2 border-gray-400 group-hover:border-gray-600 transition-all"
+                    style={{ 
+                      background: `${currentColor}`
+                    }}
+                    title="Custom Color"
                   />
                 </label>
+                <div className="w-px h-8 bg-gray-300 mx-1" />
+                {/* Background color button */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">BG:</span>
+                  <label className="relative cursor-pointer group">
+                    <input
+                      type="color"
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      className="sr-only"
+                    />
+                    <div 
+                      className="w-8 h-8 rounded-full border-2 border-gray-300 group-hover:border-gray-500 transition-all shadow-sm"
+                      style={{ backgroundColor }}
+                      title="Background Color"
+                    />
+                  </label>
+                </div>
+              </div>
+              
+              {/* Mobile - Scrollable color palette */}
+              <div className="sm:hidden">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {[
+                    '#ff6b6b', '#ffd93d', '#6bcf7f', '#4dabf7',
+                    '#f783ac', '#ffd43b', '#51cf66', '#339af0'
+                  ].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => {
+                        setCurrentColor(color)
+                        // If an object is selected, apply color immediately
+                        if (selectedClayId) {
+                          const selectedClay = clayObjects.find(c => c.id === selectedClayId)
+                          if (selectedClay) {
+                            updateClay({ ...selectedClay, color })
+                            showPopup('Color changed', 'success')
+                          }
+                        }
+                      }}
+                      className={`w-8 h-8 rounded-full transition-all flex-shrink-0 ${
+                        currentColor === color ? 'ring-2 ring-gray-800 scale-110' : ''
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <div className="w-px h-8 bg-gray-300 mx-1 flex-shrink-0" />
+                  <label className="relative cursor-pointer group flex-shrink-0">
+                    <input
+                      type="color"
+                      value={currentColor}
+                      onChange={(e) => setCurrentColor(e.target.value)}
+                      className="sr-only"
+                    />
+                    <div 
+                      className="w-8 h-8 rounded-full border-2 border-gray-400 group-hover:border-gray-600 transition-all"
+                      style={{ 
+                        background: `${currentColor}`
+                      }}
+                      title="Custom Color"
+                    />
+                  </label>
+                  <div className="w-px h-8 bg-gray-300 mx-1 flex-shrink-0" />
+                  {/* Background color button */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs text-gray-600">BG:</span>
+                    <label className="relative cursor-pointer group">
+                      <input
+                        type="color"
+                        value={backgroundColor}
+                        onChange={(e) => setBackgroundColor(e.target.value)}
+                        className="sr-only"
+                      />
+                      <div 
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 group-hover:border-gray-500 transition-all shadow-sm"
+                        style={{ backgroundColor }}
+                        title="Background Color"
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           )}
           
           {tool === 'add' && !showGroupingPanel && (
-            <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-center gap-4">
-              {/* Shape Category Select */}
-              <select
-                value={shapeCategory}
-                onChange={(e) => {
-                  setShapeCategory(e.target.value as '3d' | 'line' | '2d')
-                  // Set default shape for each category
-                  if (e.target.value === '3d') setSelectedShape('sphere')
-                  else if (e.target.value === 'line') setSelectedShape('line')
-                  else if (e.target.value === '2d') setSelectedShape('rectangle')
-                }}
-                className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              >
-                <option value="3d">3D Shapes</option>
-                <option value="line">Lines</option>
-                <option value="2d">2D Shapes</option>
-              </select>
-              
-              {/* Shape buttons based on category */}
-              <div className="flex items-center gap-2">
+            <div className="border-t border-gray-200 px-4 py-2">
+              {/* Desktop - Full layout */}
+              <div className="hidden sm:flex items-center justify-center gap-4">
+                {/* Shape Category Select */}
+                <select
+                  value={shapeCategory}
+                  onChange={(e) => {
+                    setShapeCategory(e.target.value as '3d' | 'line' | '2d')
+                    // Set default shape for each category
+                    if (e.target.value === '3d') setSelectedShape('sphere')
+                    else if (e.target.value === 'line') setSelectedShape('line')
+                    else if (e.target.value === '2d') setSelectedShape('rectangle')
+                  }}
+                  className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                >
+                  <option value="3d">3D Shapes</option>
+                  <option value="line">Lines</option>
+                  <option value="2d">2D Shapes</option>
+                </select>
+                
+                {/* Shape buttons based on category */}
+                <div className="flex items-center gap-2">
                 {shapeCategory === '3d' && (
                   <>
                     <button
@@ -5398,6 +5494,122 @@ export default function AdvancedClay() {
                     </button>
                   </>
                 )}
+              </div>
+              </div>
+              
+              {/* Mobile - Scrollable layout */}
+              <div className="sm:hidden">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {/* Shape Category Select */}
+                  <select
+                    value={shapeCategory}
+                    onChange={(e) => {
+                      setShapeCategory(e.target.value as '3d' | 'line' | '2d')
+                      // Set default shape for each category
+                      if (e.target.value === '3d') setSelectedShape('sphere')
+                      else if (e.target.value === 'line') setSelectedShape('line')
+                      else if (e.target.value === '2d') setSelectedShape('rectangle')
+                    }}
+                    className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 flex-shrink-0"
+                  >
+                    <option value="3d">3D Shapes</option>
+                    <option value="line">Lines</option>
+                    <option value="2d">2D Shapes</option>
+                  </select>
+                  
+                  {/* Shape buttons based on category */}
+                  {shapeCategory === '3d' && (
+                    <>
+                      <button
+                        onClick={() => setSelectedShape('sphere')}
+                        className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                          selectedShape === 'sphere'
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-white hover:bg-gray-50 text-gray-700'
+                        }`}
+                        title="Sphere"
+                      >
+                        <Circle size={16} />
+                      </button>
+                      <button
+                        onClick={() => setSelectedShape('cube')}
+                        className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                          selectedShape === 'cube'
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-white hover:bg-gray-50 text-gray-700'
+                        }`}
+                        title="Cube"
+                      >
+                        <Square size={16} />
+                      </button>
+                    </>
+                  )}
+                  
+                  {shapeCategory === 'line' && (
+                    <>
+                      <button
+                        onClick={() => setSelectedShape('line')}
+                        className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                          selectedShape === 'line'
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-white hover:bg-gray-50 text-gray-700'
+                        }`}
+                        title="Line"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <button
+                        onClick={() => setSelectedShape('curve')}
+                        className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                          selectedShape === 'curve'
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-white hover:bg-gray-50 text-gray-700'
+                        }`}
+                        title="Curve"
+                      >
+                        <Spline size={16} />
+                      </button>
+                      <button
+                        onClick={() => setSelectedShape('freehand')}
+                        className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                          selectedShape === 'freehand'
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-white hover:bg-gray-50 text-gray-700'
+                        }`}
+                        title="Freehand Draw"
+                      >
+                        <PenTool size={16} />
+                      </button>
+                    </>
+                  )}
+                  
+                  {shapeCategory === '2d' && (
+                    <>
+                      <button
+                        onClick={() => setSelectedShape('rectangle')}
+                        className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                          selectedShape === 'rectangle'
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-white hover:bg-gray-50 text-gray-700'
+                        }`}
+                        title="Rectangle"
+                      >
+                        <Square size={16} />
+                      </button>
+                      <button
+                        onClick={() => setSelectedShape('circle')}
+                        className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                          selectedShape === 'circle'
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-white hover:bg-gray-50 text-gray-700'
+                        }`}
+                        title="Circle"
+                      >
+                        <Circle size={16} />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}

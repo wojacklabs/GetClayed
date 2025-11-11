@@ -78,10 +78,10 @@ export default function SaveButton({ onSave, isConnected, currentProjectName, is
     <>
       <button
         onClick={handleClick}
-        className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
+        className="p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all"
         title="Save Project"
       >
-        <Save size={20} />
+        <Save size={16} className="sm:w-5 sm:h-5" />
       </button>
 
       {/* Save Dialog - Rendered as Portal */}

@@ -63,23 +63,31 @@ function Clay({
   useEffect(() => {
     const canvas = gl.domElement
     
-    const updateMousePosition = (e: MouseEvent) => {
+    const updatePosition = (clientX: number, clientY: number) => {
       const rect = canvas.getBoundingClientRect()
-      dragState.current.mousePos.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-      dragState.current.mousePos.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+      dragState.current.mousePos.x = ((clientX - rect.left) / rect.width) * 2 - 1
+      dragState.current.mousePos.y = -((clientY - rect.top) / rect.height) * 2 + 1
+    }
+    
+    const updateMousePosition = (e: MouseEvent) => {
+      updatePosition(e.clientX, e.clientY)
+    }
+    
+    const updateTouchPosition = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        updatePosition(e.touches[0].clientX, e.touches[0].clientY)
+      }
     }
     
     const handleWheel = (e: WheelEvent) => {
       // Not used for push/pull tools
     }
     
-    const handleMouseDown = (e: MouseEvent) => {
-      if (e.button !== 0) return
-      
+    const handleStart = (clientX: number, clientY: number) => {
       if (tool !== 'push' && tool !== 'pull' && tool !== 'deform') return
       if (!meshRef.current) return
       
-      updateMousePosition(e)
+      updatePosition(clientX, clientY)
       dragState.current.initialMousePos.copy(dragState.current.mousePos)
       
       // Store original geometry for undo
@@ -132,13 +140,32 @@ function Clay({
       onDeformingChange(true)
     }
     
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return
+      handleStart(e.clientX, e.clientY)
+    }
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        e.preventDefault()
+        handleStart(e.touches[0].clientX, e.touches[0].clientY)
+      }
+    }
+    
     const handleMouseMove = (e: MouseEvent) => {
       if (dragState.current.active) {
         updateMousePosition(e)
       }
     }
     
-    const handleMouseUp = () => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (dragState.current.active && e.touches.length === 1) {
+        e.preventDefault()
+        updateTouchPosition(e)
+      }
+    }
+    
+    const handleEnd = () => {
       if (dragState.current.active) {
         dragState.current.active = false
         dragState.current.targetVertex = -1
@@ -157,18 +184,31 @@ function Clay({
     // Register events
     canvas.addEventListener('mousedown', handleMouseDown)
     canvas.addEventListener('mousemove', handleMouseMove)
-    canvas.addEventListener('mouseup', handleMouseUp)
-    canvas.addEventListener('mouseleave', handleMouseUp)
+    canvas.addEventListener('mouseup', handleEnd)
+    canvas.addEventListener('mouseleave', handleEnd)
     canvas.addEventListener('wheel', handleWheel, { passive: false })
-    window.addEventListener('mouseup', handleMouseUp)
+    
+    // Touch events
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+    canvas.addEventListener('touchend', handleEnd)
+    canvas.addEventListener('touchcancel', handleEnd)
+    
+    window.addEventListener('mouseup', handleEnd)
     
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown)
       canvas.removeEventListener('mousemove', handleMouseMove)
-      canvas.removeEventListener('mouseup', handleMouseUp)
-      canvas.removeEventListener('mouseleave', handleMouseUp)
+      canvas.removeEventListener('mouseup', handleEnd)
+      canvas.removeEventListener('mouseleave', handleEnd)
       canvas.removeEventListener('wheel', handleWheel)
-      window.removeEventListener('mouseup', handleMouseUp)
+      
+      canvas.removeEventListener('touchstart', handleTouchStart)
+      canvas.removeEventListener('touchmove', handleTouchMove)
+      canvas.removeEventListener('touchend', handleEnd)
+      canvas.removeEventListener('touchcancel', handleEnd)
+      
+      window.removeEventListener('mouseup', handleEnd)
     }
   }, [tool, brushSize, camera, raycaster, gl, onDeformingChange, clay])
   
@@ -350,6 +390,11 @@ function Scene({ tool, brushSize, clayRef }: { tool: string; brushSize: number; 
         enabled={tool === 'rotate' && !isDeforming}
         minDistance={3}
         maxDistance={12}
+        enableDamping={false}
+        touches={{
+          ONE: THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN
+        }}
       />
     </>
   )

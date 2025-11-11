@@ -298,7 +298,7 @@ export default function HomePage() {
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-48 px-3 py-1.5 pr-8 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 border border-gray-200"
+                  className="w-32 sm:w-48 px-2.5 sm:px-3 py-1.5 pr-8 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 border border-gray-200"
                 />
                 <Search className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               </div>
@@ -320,10 +320,10 @@ export default function HomePage() {
                 <div className="flex items-center gap-2">
                   <Link
                     href="/project/new"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
                   >
                     <Plus size={16} />
-                    <span>New</span>
+                    <span className="sm:inline hidden">New</span>
                   </Link>
                   
                   {/* Royalty Notifications */}
@@ -490,50 +490,62 @@ export default function HomePage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">Projects</h2>
-            <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSortBy('recent')}
-              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                sortBy === 'recent' 
-                  ? 'bg-gray-800 text-white' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Recent
-            </button>
-            <button
-              onClick={() => setSortBy('popular')}
-              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                sortBy === 'popular' 
-                  ? 'bg-gray-800 text-white' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Popular
-            </button>
-            <button
-              onClick={() => setSortBy('trending')}
-              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                sortBy === 'trending' 
-                  ? 'bg-gray-800 text-white' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Trending
-            </button>
-            {walletAddress && (
+            {/* Desktop: Button Group, Mobile: Select */}
+            <div className="hidden sm:flex items-center gap-2">
               <button
-                onClick={() => setSortBy('following')}
+                onClick={() => setSortBy('recent')}
                 className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                  sortBy === 'following' 
+                  sortBy === 'recent' 
                     ? 'bg-gray-800 text-white' 
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Following
+                Recent
               </button>
-            )}
+              <button
+                onClick={() => setSortBy('popular')}
+                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                  sortBy === 'popular' 
+                    ? 'bg-gray-800 text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Popular
+              </button>
+              <button
+                onClick={() => setSortBy('trending')}
+                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                  sortBy === 'trending' 
+                    ? 'bg-gray-800 text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Trending
+              </button>
+              {walletAddress && (
+                <button
+                  onClick={() => setSortBy('following')}
+                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                    sortBy === 'following' 
+                      ? 'bg-gray-800 text-white' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Following
+                </button>
+              )}
             </div>
+            {/* Mobile Select */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'recent' | 'popular' | 'trending' | 'following')}
+              className="sm:hidden px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200"
+            >
+              <option value="recent">Recent</option>
+              <option value="popular">Popular</option>
+              <option value="trending">Trending</option>
+              {walletAddress && <option value="following">Following</option>}
+            </select>
           </div>
 
           {/* Projects Grid */}
