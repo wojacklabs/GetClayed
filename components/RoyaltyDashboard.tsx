@@ -264,6 +264,30 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
                             <div className="text-gray-500 mt-1">
                               Owner: {lib.owner.slice(0, 6)}...{lib.owner.slice(-4)}
                             </div>
+                            
+                            {lib.distributions && lib.distributions.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-gray-100">
+                                <p className="text-xs text-gray-500 mb-1">Auto-distributed to:</p>
+                                {lib.distributions.map((dist, distIdx) => (
+                                  <div key={distIdx} className="flex items-center justify-between text-xs text-gray-600 ml-2">
+                                    <span>└ {dist.name}</span>
+                                    <span>
+                                      {parseFloat(dist.amountETH) > 0 && `${parseFloat(dist.amountETH).toFixed(6)} ETH`}
+                                      {parseFloat(dist.amountUSDC) > 0 && `${parseFloat(dist.amountUSDC).toFixed(4)} USDC`}
+                                    </span>
+                                  </div>
+                                ))}
+                                {(lib.profitETH || lib.profitUSDC) && (
+                                  <div className="flex items-center justify-between text-xs text-gray-700 mt-1 font-medium">
+                                    <span>{lib.name} profit:</span>
+                                    <span>
+                                      {lib.profitETH && parseFloat(lib.profitETH) > 0 && `${parseFloat(lib.profitETH).toFixed(6)} ETH`}
+                                      {lib.profitUSDC && parseFloat(lib.profitUSDC) > 0 && `${parseFloat(lib.profitUSDC).toFixed(4)} USDC`}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

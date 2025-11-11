@@ -54,6 +54,7 @@ export interface ClayProject {
   backgroundColor?: string;
   thumbnailId?: string; // Transaction ID for the thumbnail
   usedLibraries?: UsedLibrary[]; // Library dependencies for royalty tracking
+  directImports?: string[]; // Project IDs of directly imported libraries (for hierarchical royalties)
   // Ownership transfer fields
   originalCreator?: string; // Original creator (immutable)
   transferredFrom?: string; // Previous owner (if transferred)
@@ -81,7 +82,8 @@ export function serializeClayProject(
   tags: string[] = [],
   backgroundColor?: string,
   groups?: any[],
-  usedLibraries?: UsedLibrary[]
+  usedLibraries?: UsedLibrary[],
+  directImports?: string[]
 ): ClayProject {
   const serializedClays: ClayData[] = clays.map((clay) => {
     // Extract only essential data for recreation
@@ -230,7 +232,8 @@ export function serializeClayProject(
     groups: serializedGroups,
     tags,
     backgroundColor,
-    usedLibraries: usedLibraries && usedLibraries.length > 0 ? usedLibraries : undefined
+    usedLibraries: usedLibraries && usedLibraries.length > 0 ? usedLibraries : undefined,
+    directImports: directImports && directImports.length > 0 ? directImports : undefined
   };
   
   return project;

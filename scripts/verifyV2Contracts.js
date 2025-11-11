@@ -1,22 +1,17 @@
 const { ethers } = require('ethers');
-require('dotenv').config();
+
+// V2 Contract addresses
+const LIBRARY_ADDRESS = '0xe90BB6281B7Af6211519e5721A5b4985Ea693a49';
+const ROYALTY_ADDRESS = '0x8a1EDFFD51E20E80cdBC4649f3c5790dd1E83D4a';
+const MARKETPLACE_ADDRESS = '0x7f993C490aA7934A537950dB8b5f22F8B5843884';
 
 // Contract ABIs (minimal)
-const LIBRARY_ABI = ['function royaltyContract() view returns (address)'];
+const LIBRARY_ABI = ['function royaltyContract() view returns (address)', 'function approvedMarketplaces(address) view returns (bool)'];
 const MARKETPLACE_ABI = ['function royaltyContract() view returns (address)', 'function libraryContract() view returns (address)'];
 const ROYALTY_ABI = ['function libraryContract() view returns (address)'];
 
 async function main() {
-  console.log("🔍 Verifying Contract Links...\n");
-  
-  const LIBRARY_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS;
-  const ROYALTY_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
-  const MARKETPLACE_ADDRESS = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS;
-  
-  if (!LIBRARY_ADDRESS || !ROYALTY_ADDRESS || !MARKETPLACE_ADDRESS) {
-    console.error("❌ Missing contract addresses in environment");
-    return;
-  }
+  console.log("🔍 Verifying V2 Contract Links...\n");
   
   console.log("📋 Contract Addresses:");
   console.log("   Library    :", LIBRARY_ADDRESS);
@@ -25,7 +20,7 @@ async function main() {
   console.log("");
   
   // Connect to Base network
-  const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL || 'https://mainnet.base.org');
+  const provider = new ethers.JsonRpcProvider('https://mainnet.base.org');
   
   // Create contract instances
   const library = new ethers.Contract(LIBRARY_ADDRESS, LIBRARY_ABI, provider);
@@ -62,6 +57,11 @@ async function main() {
     console.log("   Expected:", ROYALTY_ADDRESS);
     console.log("   Actual  :", marketplaceRoyaltyLink);
     console.log("   Status  :", marketplaceRoyaltyLink.toLowerCase() === ROYALTY_ADDRESS.toLowerCase() ? "✅ PASS" : "❌ FAIL");
+    
+    // Check Marketplace approval
+    const marketplaceApproved = await library.approvedMarketplaces(MARKETPLACE_ADDRESS);
+    console.log("\n5. Marketplace Approved in Library:");
+    console.log("   Status  :", marketplaceApproved ? "✅ PASS" : "❌ FAIL");
     
     console.log("\n✨ Verification complete!");
     

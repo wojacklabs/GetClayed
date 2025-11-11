@@ -34,6 +34,7 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
         uint256 royaltyPercentage;  // Royalty percentage (1000 = 10%)
         uint256 fixedRoyaltyETH;    // Fixed royalty in ETH (based on dependency price at registration)
         uint256 fixedRoyaltyUSDC;   // Fixed royalty in USDC (based on dependency price at registration)
+        bool isDirect;              // Whether this is a direct import (new field for hierarchical royalties)
     }
     
     struct ProjectRoyalties {
@@ -53,6 +54,12 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
     // This prevents marketplace underpricing by ensuring sale price > paid royalties
     mapping(string => uint256) public totalRoyaltiesPaidETH;
     mapping(string => uint256) public totalRoyaltiesPaidUSDC;
+    
+    // For hierarchical royalty distribution
+    mapping(string => string[]) public projectDirectDependencies; // Track only direct imports
+    // DEPRECATED: No longer needed with auto-distribution
+    // mapping(address => mapping(string => uint256)) public pendingDistributionsETH;
+    // mapping(address => mapping(string => uint256)) public pendingDistributionsUSDC;
     
     // Events
     event RoyaltiesRegistered(
@@ -89,10 +96,12 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
      * @notice Register library dependencies for a project
      * @param projectId The project being registered
      * @param dependencyProjectIds Array of library project IDs used
+     * @param directDependencyIds Array of direct import library project IDs (for hierarchical royalties)
      */
     function registerProjectRoyalties(
         string memory projectId,
-        string[] memory dependencyProjectIds
+        string[] memory dependencyProjectIds,
+        string[] memory directDependencyIds
     ) external {
         require(!projectRoyalties[projectId].hasRoyalties, "Royalties already registered");
         
@@ -100,15 +109,30 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
         royalty.projectId = projectId;
         royalty.hasRoyalties = true;
         
+        // Store direct dependencies
+        for (uint256 j = 0; j < directDependencyIds.length; j++) {
+            projectDirectDependencies[projectId].push(directDependencyIds[j]);
+        }
+        
         for (uint256 i = 0; i < dependencyProjectIds.length; i++) {
             // Get current royalty fee from Library at registration time
             (uint256 feeETH, uint256 feeUSDC) = libraryContract.getRoyaltyFee(dependencyProjectIds[i]);
+            
+            // Check if this is a direct dependency
+            bool isDirect = false;
+            for (uint256 k = 0; k < directDependencyIds.length; k++) {
+                if (keccak256(bytes(directDependencyIds[k])) == keccak256(bytes(dependencyProjectIds[i]))) {
+                    isDirect = true;
+                    break;
+                }
+            }
             
             LibraryDependency memory dep = LibraryDependency({
                 dependencyProjectId: dependencyProjectIds[i],
                 royaltyPercentage: 10000, // Not used anymore, kept for compatibility
                 fixedRoyaltyETH: feeETH,
-                fixedRoyaltyUSDC: feeUSDC
+                fixedRoyaltyUSDC: feeUSDC,
+                isDirect: isDirect
             });
             
             royalty.dependencies.push(dep);
@@ -120,9 +144,10 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
     /**
      * @notice Calculate total royalties for a project (fixed amounts)
      * @dev FIX: Only counts active libraries (not deleted ones)
+     * @dev HIERARCHICAL: Only counts DIRECT dependencies for user payment
      * @param projectId The project ID
-     * @return totalETH Total ETH royalties from active libraries
-     * @return totalUSDC Total USDC royalties from active libraries
+     * @return totalETH Total ETH royalties from active DIRECT libraries
+     * @return totalUSDC Total USDC royalties from active DIRECT libraries
      */
     function calculateTotalRoyalties(string memory projectId) public view returns (uint256 totalETH, uint256 totalUSDC) {
         ProjectRoyalties storage royalty = projectRoyalties[projectId];
@@ -131,9 +156,14 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
             return (0, 0);
         }
         
-        // FIX: Sum up fixed royalties only for existing libraries
+        // HIERARCHICAL: Sum up fixed royalties only for DIRECT dependencies
         for (uint256 i = 0; i < royalty.dependencies.length; i++) {
             LibraryDependency memory dep = royalty.dependencies[i];
+            
+            // Skip indirect dependencies (they will be paid by their parent libraries)
+            if (!dep.isDirect) {
+                continue;
+            }
             
             // Check if library still exists
             address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
@@ -165,10 +195,16 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
         if (paymentToken == PaymentToken.ETH) {
             require(msg.value > 0, "No ETH sent");
             
-            // FIX: Calculate actual total needed (excluding deleted libraries)
+            // HIERARCHICAL: Calculate total needed for DIRECT dependencies only
             uint256 totalETHNeeded = 0;
             for (uint256 i = 0; i < royalty.dependencies.length; i++) {
                 LibraryDependency memory dep = royalty.dependencies[i];
+                
+                // Skip indirect dependencies
+                if (!dep.isDirect) {
+                    continue;
+                }
+                
                 address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
                 
                 // Only count if library still exists (owner != 0)
@@ -179,9 +215,14 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
             
             require(msg.value >= totalETHNeeded, "Insufficient ETH sent");
             
-            // Record fixed royalties for each dependency
+            // HIERARCHICAL: Auto-distribute royalties to all dependencies
             for (uint256 i = 0; i < royalty.dependencies.length; i++) {
                 LibraryDependency memory dep = royalty.dependencies[i];
+                
+                // Skip indirect dependencies
+                if (!dep.isDirect) {
+                    continue;
+                }
                 
                 // Get current owner of dependency (dynamic ownership support)
                 address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
@@ -190,8 +231,30 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
                 uint256 royaltyAmount = dep.fixedRoyaltyETH;
                 
                 if (royaltyAmount > 0 && owner != address(0)) {
-                    pendingRoyaltiesETH[owner] += royaltyAmount;
-                    emit RoyaltyRecorded(projectId, owner, royaltyAmount, 0);
+                    // Calculate how much this library needs to pay its own dependencies
+                    uint256 subDependenciesTotal = 0;
+                    ProjectRoyalties storage libRoyalty = projectRoyalties[dep.dependencyProjectId];
+                    
+                    // Auto-distribute to sub-dependencies
+                    if (libRoyalty.hasRoyalties) {
+                        for (uint256 j = 0; j < libRoyalty.dependencies.length; j++) {
+                            LibraryDependency memory subDep = libRoyalty.dependencies[j];
+                            address subOwner = libraryContract.getCurrentOwner(subDep.dependencyProjectId);
+                            
+                            if (subDep.fixedRoyaltyETH > 0 && subOwner != address(0)) {
+                                pendingRoyaltiesETH[subOwner] += subDep.fixedRoyaltyETH;
+                                subDependenciesTotal += subDep.fixedRoyaltyETH;
+                                emit RoyaltyRecorded(dep.dependencyProjectId, subOwner, subDep.fixedRoyaltyETH, 0);
+                            }
+                        }
+                    }
+                    
+                    // Library owner gets the remainder (their profit)
+                    require(royaltyAmount >= subDependenciesTotal, "Library royalty less than dependencies");
+                    uint256 libraryProfit = royaltyAmount - subDependenciesTotal;
+                    
+                    pendingRoyaltiesETH[owner] += libraryProfit;
+                    emit RoyaltyRecorded(projectId, owner, libraryProfit, 0);
                 }
             }
             
@@ -206,10 +269,16 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
         } else {
             require(msg.value == 0, "Do not send ETH for USDC royalties");
             
-            // FIX: Calculate total USDC needed (excluding deleted libraries)
+            // HIERARCHICAL: Calculate total USDC needed for DIRECT dependencies only
             uint256 totalUSDC = 0;
             for (uint256 i = 0; i < royalty.dependencies.length; i++) {
                 LibraryDependency memory dep = royalty.dependencies[i];
+                
+                // Skip indirect dependencies
+                if (!dep.isDirect) {
+                    continue;
+                }
+                
                 address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
                 
                 // Only count if library still exists (owner != 0)
@@ -226,9 +295,14 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
                 "USDC transfer to contract failed"
             );
             
-            // Record fixed USDC royalties for each dependency
+            // HIERARCHICAL: Auto-distribute USDC royalties to all dependencies
             for (uint256 i = 0; i < royalty.dependencies.length; i++) {
                 LibraryDependency memory dep = royalty.dependencies[i];
+                
+                // Skip indirect dependencies
+                if (!dep.isDirect) {
+                    continue;
+                }
                 
                 // Get current owner of dependency (dynamic ownership support)
                 address owner = libraryContract.getCurrentOwner(dep.dependencyProjectId);
@@ -237,8 +311,30 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
                 uint256 royaltyAmount = dep.fixedRoyaltyUSDC;
                 
                 if (royaltyAmount > 0 && owner != address(0)) {
-                    pendingRoyaltiesUSDC[owner] += royaltyAmount;
-                    emit RoyaltyRecorded(projectId, owner, 0, royaltyAmount);
+                    // Calculate how much this library needs to pay its own dependencies
+                    uint256 subDependenciesTotal = 0;
+                    ProjectRoyalties storage libRoyalty = projectRoyalties[dep.dependencyProjectId];
+                    
+                    // Auto-distribute to sub-dependencies
+                    if (libRoyalty.hasRoyalties) {
+                        for (uint256 j = 0; j < libRoyalty.dependencies.length; j++) {
+                            LibraryDependency memory subDep = libRoyalty.dependencies[j];
+                            address subOwner = libraryContract.getCurrentOwner(subDep.dependencyProjectId);
+                            
+                            if (subDep.fixedRoyaltyUSDC > 0 && subOwner != address(0)) {
+                                pendingRoyaltiesUSDC[subOwner] += subDep.fixedRoyaltyUSDC;
+                                subDependenciesTotal += subDep.fixedRoyaltyUSDC;
+                                emit RoyaltyRecorded(dep.dependencyProjectId, subOwner, 0, subDep.fixedRoyaltyUSDC);
+                            }
+                        }
+                    }
+                    
+                    // Library owner gets the remainder (their profit)
+                    require(royaltyAmount >= subDependenciesTotal, "Library royalty less than dependencies");
+                    uint256 libraryProfit = royaltyAmount - subDependenciesTotal;
+                    
+                    pendingRoyaltiesUSDC[owner] += libraryProfit;
+                    emit RoyaltyRecorded(projectId, owner, 0, libraryProfit);
                 }
             }
             
@@ -290,6 +386,15 @@ contract ClayRoyalty is Ownable, ReentrancyGuard {
      */
     function getProjectDependencies(string memory projectId) external view returns (LibraryDependency[] memory) {
         return projectRoyalties[projectId].dependencies;
+    }
+    
+    /**
+     * @notice DEPRECATED: No longer needed with auto-distribution
+     * @dev Royalties are now automatically distributed to all dependencies at payment time
+     * @param libraryProjectId The library project ID (unused)
+     */
+    function distributeNestedRoyalties(string memory libraryProjectId) external pure {
+        revert("Function deprecated: Royalties are now auto-distributed at payment time");
     }
     
     /**

@@ -572,7 +572,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
           </div>
         )}
         
-        {/* Imported Libraries */}
+        {/* Imported Libraries with Direct/Indirect Distinction */}
         {project?.usedLibraries && project.usedLibraries.length > 0 && (
           <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-4 max-w-xs">
             <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -582,38 +582,52 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
               Imported Libraries ({project.usedLibraries.length})
             </h3>
             <div className="space-y-2">
-              {project.usedLibraries.map((lib: any, idx: number) => (
-                <div
-                  key={idx}
-                  className="group p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all"
-                  onMouseEnter={() => setHoveredLibraryId(lib.projectId)}
-                  onMouseLeave={() => setHoveredLibraryId(null)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {lib.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 ? `${lib.royaltyPerImportETH} ETH` : 
-                         lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 ? `${lib.royaltyPerImportUSDC} USDC` : ''}
-                      </p>
+              {project.usedLibraries.map((lib: any, idx: number) => {
+                // Check if this is a direct import (for now, we'll need to add this info to the project data)
+                const isDirect = project.directImports ? project.directImports.includes(lib.projectId) : true
+                
+                return (
+                  <div
+                    key={idx}
+                    className={`group p-2 rounded transition-all ${isDirect ? 'bg-gray-50 hover:bg-gray-100' : 'bg-gray-50/50 hover:bg-gray-100/50 ml-4'}`}
+                    onMouseEnter={() => setHoveredLibraryId(lib.projectId)}
+                    onMouseLeave={() => setHoveredLibraryId(null)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {!isDirect && <span className="text-xs text-gray-400">└</span>}
+                          <p className={`text-sm font-medium truncate ${isDirect ? 'text-gray-900' : 'text-gray-600'}`}>
+                            {lib.name}
+                          </p>
+                        </div>
+                        <p className={`text-xs ${isDirect ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 ? `${lib.royaltyPerImportETH} ETH` : 
+                           lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 ? `${lib.royaltyPerImportUSDC} USDC` : ''}
+                          {!isDirect && ' (included)'}
+                        </p>
+                      </div>
+                      <Link
+                        href={`/library/${lib.projectId}`}
+                        className="ml-2 px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-800 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        View
+                      </Link>
                     </div>
-                    <Link
-                      href={`/library/${lib.projectId}`}
-                      className="ml-2 px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-800 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      View
-                    </Link>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <div className="pt-3 mt-3 border-t border-gray-200">
               <p className="text-xs text-gray-500">
-                Total royalty: {(() => {
-                  const totalETH = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
-                  const totalUSDC = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
+                You pay: {(() => {
+                  // Only calculate direct imports
+                  const directLibs = project.directImports 
+                    ? project.usedLibraries.filter((lib: any) => project.directImports.includes(lib.projectId))
+                    : project.usedLibraries
+                  
+                  const totalETH = directLibs.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
+                  const totalUSDC = directLibs.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
                   
                   if (totalETH > 0 && totalUSDC > 0) {
                     return `${totalETH.toFixed(4)} ETH + ${totalUSDC.toFixed(2)} USDC`;

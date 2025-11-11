@@ -29,6 +29,15 @@ export interface RoyaltyReceipt {
     owner: string; // Owner at time of payment
     royaltyETH: string;
     royaltyUSDC: string;
+    distributions?: Array<{
+      projectId: string;
+      name: string;
+      owner: string;
+      amountETH: string;
+      amountUSDC: string;
+    }>;
+    profitETH?: string;
+    profitUSDC?: string;
   }>;
   totalPaidETH: string;
   totalPaidUSDC: string;
@@ -44,7 +53,8 @@ export interface RoyaltyReceipt {
 /**
  * Process library purchases and register royalties
  * @param projectId The project being uploaded
- * @param usedLibraries Array of libraries used in this project
+ * @param usedLibraries Array of libraries used in this project (should be direct imports only for hierarchical royalties)
+ * @param allDependencies Optional array of all dependencies (direct + indirect) for registration
  * @param paymentToken Payment token preference (ETH or USDC)
  * @returns Total cost including all library purchases
  */
@@ -52,7 +62,8 @@ export async function processLibraryPurchasesAndRoyalties(
   projectId: string,
   usedLibraries: LibraryDependency[],
   customProvider?: any,
-  onProgress?: (message: string) => void
+  onProgress?: (message: string) => void,
+  allDependencies?: LibraryDependency[]
 ): Promise<{ 
   success: boolean; 
   totalCostETH: number; 
@@ -125,15 +136,6 @@ export async function processLibraryPurchasesAndRoyalties(
       }
     }
     
-    for (const library of activeLibraries) {
-      const state = currentStates.get(library.projectId);
-      if (state) {
-        // Use current blockchain values
-        totalRoyaltyETH += state.ethAmount;
-        totalRoyaltyUSDC += state.usdcAmount;
-      }
-    }
-    
     console.log('[RoyaltyService] Active libraries:');
     activeLibraries.forEach((lib, idx) => {
       const state = currentStates.get(lib.projectId);
@@ -166,8 +168,8 @@ export async function processLibraryPurchasesAndRoyalties(
         ROYALTY_CONTRACT_ADDRESS,
         [
           'function recordRoyalties(string projectId, uint256 price, uint8 paymentToken) external payable',
-          'function registerProjectRoyalties(string projectId, string[] dependencyIds) external',
-          'function getProjectDependencies(string projectId) external view returns (tuple(string dependencyProjectId, uint256 royaltyPercentage, uint256 fixedRoyaltyETH, uint256 fixedRoyaltyUSDC)[])',
+          'function registerProjectRoyalties(string projectId, string[] dependencyIds, string[] directDependencyIds) external',
+          'function getProjectDependencies(string projectId) external view returns (tuple(string dependencyProjectId, uint256 royaltyPercentage, uint256 fixedRoyaltyETH, uint256 fixedRoyaltyUSDC, bool isDirect)[])',
           'event RoyaltyRecorded(string indexed projectId, address indexed recipient, uint256 amountETH, uint256 amountUSDC)'
         ],
         signer
@@ -222,13 +224,22 @@ export async function processLibraryPurchasesAndRoyalties(
       // STEP 1A: Register dependencies (if needed)
       if (needsRegistration && activeLibraries.length > 0) {
         currentTransaction++;
-        const dependencyIds = activeLibraries.map(lib => lib.projectId);
+        
+        // For hierarchical royalties: separate all dependencies and direct dependencies
+        const allDeps = allDependencies || usedLibraries; // Use all if provided, otherwise assume usedLibraries are all deps
+        const allActiveLibraries = allDeps.filter(lib => {
+          const state = currentStates.get(lib.projectId);
+          return state && state.exists && state.enabled;
+        });
+        
+        const allDependencyIds = allActiveLibraries.map(lib => lib.projectId);
+        const directDependencyIds = activeLibraries.map(lib => lib.projectId); // activeLibraries are the direct ones
         const libraryNames = activeLibraries.map(lib => lib.name).join(', ');
         
-        onProgress?.(`[${currentTransaction}/${totalTransactions}] Registering ${activeLibraries.length} active library dependencies (${libraryNames}). Please sign...`);
-        console.log('[RoyaltyService] Registering project royalties...', { projectId, dependencyIds });
+        onProgress?.(`[${currentTransaction}/${totalTransactions}] Registering ${allActiveLibraries.length} library dependencies (${directDependencyIds.length} direct). Please sign...`);
+        console.log('[RoyaltyService] Registering project royalties...', { projectId, allDependencyIds, directDependencyIds });
         
-        const regTx = await contract.registerProjectRoyalties(projectId, dependencyIds);
+        const regTx = await contract.registerProjectRoyalties(projectId, allDependencyIds, directDependencyIds);
         txHashes.register = regTx.hash;
         
         onProgress?.(`[${currentTransaction}/${totalTransactions}] Waiting for registration confirmation...`);

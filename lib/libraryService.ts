@@ -15,7 +15,7 @@ export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 // Library contract ABI
 export const LIBRARY_CONTRACT_ABI = [
-  "function registerAsset(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC) external",
+  "function registerAsset(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, string[] dependencyProjectIds) external",
   "function purchaseAssetWithETH(string projectId) external payable",
   "function purchaseAssetWithUSDC(string projectId) external",
   "function getAsset(string projectId) external view returns (tuple(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled))",
@@ -27,7 +27,8 @@ export const LIBRARY_CONTRACT_ABI = [
   "function updateRoyaltyFee(string projectId, uint256 newRoyaltyETH, uint256 newRoyaltyUSDC) external",
   "function disableRoyalty(string projectId) external",
   "function enableRoyalty(string projectId) external",
-  "function deleteAsset(string projectId) external"
+  "function deleteAsset(string projectId) external",
+  "function getLibraryDependencies(string projectId) external view returns (string[])"
 ];
 
 // USDC ERC20 ABI (minimal)
@@ -87,7 +88,8 @@ export async function registerLibraryAsset(
   royaltyUSDC: number,
   walletAddress: string,
   customProvider?: any,
-  thumbnailId?: string
+  thumbnailId?: string,
+  dependencyProjectIds?: string[]
 ): Promise<{ success: boolean; txHash?: string; error?: string; requiresConfirmation?: boolean }> {
   try {
     if (!LIBRARY_CONTRACT_ADDRESS) {
@@ -146,7 +148,8 @@ export async function registerLibraryAsset(
       if (estimate) {
         console.log('[LibraryService] Using estimated gas limit:', estimate.gasLimit.toString());
         const tx = await contract.registerAsset(
-          projectId, name, description, royaltyETHWei, royaltyUSDCUnits,
+          projectId, name, description, royaltyETHWei, royaltyUSDCUnits, 
+          dependencyProjectIds || [], // Pass empty array if no dependencies
           { gasLimit: estimate.gasLimit }
         );
         console.log('[LibraryService] Transaction sent, hash:', tx.hash);
@@ -211,7 +214,10 @@ export async function registerLibraryAsset(
     }
     
     // Register asset on blockchain (royalty amounts, not prices!)
-    const tx = await contract.registerAsset(projectId, name, description, royaltyETHWei, royaltyUSDCUnits);
+    const tx = await contract.registerAsset(
+      projectId, name, description, royaltyETHWei, royaltyUSDCUnits,
+      dependencyProjectIds || []
+    );
     console.log('[LibraryService] Transaction sent, hash:', tx.hash);
     console.log('[LibraryService] Waiting for confirmation...');
     await tx.wait();
