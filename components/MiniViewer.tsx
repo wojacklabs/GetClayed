@@ -30,7 +30,7 @@ function Clay({ clay }: { clay: any }) {
   )
 }
 
-function Scene({ clayObjects }: { clayObjects: any[] }) {
+function Scene({ clayObjects, backgroundColor }: { clayObjects: any[]; backgroundColor: string }) {
   const groupRef = useRef<THREE.Group>(null)
   
   // Auto rotate
@@ -41,11 +41,14 @@ function Scene({ clayObjects }: { clayObjects: any[] }) {
   })
   
   return (
-    <group ref={groupRef}>
-      {clayObjects.map(clay => (
-        <Clay key={clay.id} clay={clay} />
-      ))}
-    </group>
+    <>
+      <color attach="background" args={[backgroundColor]} />
+      <group ref={groupRef}>
+        {clayObjects.map(clay => (
+          <Clay key={clay.id} clay={clay} />
+        ))}
+      </group>
+    </>
   )
 }
 
@@ -157,11 +160,11 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
     <div ref={containerRef} className={className}>
       <Canvas
         camera={{ position: [5, 5, 5], fov: 50 }}
-        style={{ background: backgroundColor, pointerEvents: 'none' }}
+        style={{ pointerEvents: 'none' }}
         gl={{ 
           preserveDrawingBuffer: true,
           antialias: false,
-          alpha: false,
+          alpha: true,
           powerPreference: 'low-power'
         }}
         onCreated={({ gl }) => {
@@ -176,7 +179,7 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 5, 5]} intensity={0.8} />
           <directionalLight position={[-5, -5, -5]} intensity={0.3} />
-          <Scene clayObjects={clayObjects} />
+          <Scene clayObjects={clayObjects} backgroundColor={backgroundColor} />
         </Suspense>
       </Canvas>
     </div>
