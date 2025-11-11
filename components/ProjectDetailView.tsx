@@ -60,13 +60,6 @@ function ViewOnlyClay({ clay, isFromLibrary }: { clay: any, isFromLibrary: boole
               depthTest={false}
             />
           </mesh>
-          {hovered && clay.librarySourceName && (
-            <group position={[clay.position.x, clay.position.y + 2, clay.position.z]}>
-              <sprite scale={[3, 1, 1]}>
-                <spriteMaterial color="#000000" opacity={0.8} />
-              </sprite>
-            </group>
-          )}
         </>
       )}
     </group>
@@ -456,7 +449,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
             </svg>
-            Uses Libraries ({project.usedLibraries.length})
+            Imported Libraries ({project.usedLibraries.length})
           </h3>
           <div className="space-y-2">
             {project.usedLibraries.map((lib: any, idx: number) => (
@@ -469,15 +462,27 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
                   {lib.name}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {lib.royaltyPerImportETH ? `${lib.royaltyPerImportETH} ETH` : ''}
-                  {lib.royaltyPerImportUSDC ? `${lib.royaltyPerImportUSDC} USDC` : ''}
+                  {lib.royaltyPerImportETH && parseFloat(lib.royaltyPerImportETH) > 0 ? `${lib.royaltyPerImportETH} ETH` : 
+                   lib.royaltyPerImportUSDC && parseFloat(lib.royaltyPerImportUSDC) > 0 ? `${lib.royaltyPerImportUSDC} USDC` : ''}
                 </p>
               </Link>
             ))}
           </div>
           <div className="pt-3 mt-3 border-t border-gray-200">
             <p className="text-xs text-gray-500">
-              Total royalty: {project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0).toFixed(4)} ETH
+              Total royalty: {(() => {
+                const totalETH = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
+                const totalUSDC = project.usedLibraries.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
+                
+                if (totalETH > 0 && totalUSDC > 0) {
+                  return `${totalETH.toFixed(4)} ETH + ${totalUSDC.toFixed(2)} USDC`;
+                } else if (totalETH > 0) {
+                  return `${totalETH.toFixed(4)} ETH`;
+                } else if (totalUSDC > 0) {
+                  return `${totalUSDC.toFixed(2)} USDC`;
+                }
+                return '0';
+              })()}
             </p>
           </div>
         </div>
