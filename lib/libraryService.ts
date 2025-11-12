@@ -137,7 +137,7 @@ export async function registerLibraryAsset(
       const { confirmed, estimate } = await estimateAndConfirmGas(
         contract,
         'registerAsset',
-        [projectId, name, description, royaltyETHWei, royaltyUSDCUnits]
+        [projectId, name, description, royaltyETHWei, royaltyUSDCUnits, dependencyProjectIds || []]
       );
       
       if (!confirmed) {
@@ -213,46 +213,12 @@ export async function registerLibraryAsset(
       };
     }
     
-    // Register asset on blockchain (royalty amounts, not prices!)
-    const tx = await contract.registerAsset(
-      projectId, name, description, royaltyETHWei, royaltyUSDCUnits,
-      dependencyProjectIds || []
-    );
-    console.log('[LibraryService] Transaction sent, hash:', tx.hash);
-    console.log('[LibraryService] Waiting for confirmation...');
-    await tx.wait();
-    console.log('[LibraryService] Transaction confirmed!');
-    
-    // Also tag the project on Irys as a library asset
-    const libraryMetadata = {
-      projectId,
-      name,
-      description,
-      royaltyETH,
-      royaltyUSDC,
-      registeredBy: walletAddress,
-      registeredAt: Date.now()
+    // This code should never be reached because of the try-catch block above
+    // If we somehow get here, return an error
+    return { 
+      success: false, 
+      error: 'Unexpected error: code should not reach this point' 
     };
-    
-    const data = Buffer.from(JSON.stringify(libraryMetadata), 'utf-8');
-    const tags = [
-      { name: 'App-Name', value: 'GetClayed' },
-      { name: 'Data-Type', value: 'library-registration' },
-      { name: 'Project-ID', value: projectId },
-      { name: 'Asset-Name', value: name },
-      { name: 'Royalty-ETH', value: royaltyETH.toString() },
-      { name: 'Royalty-USDC', value: royaltyUSDC.toString() },
-      { name: 'Registered-By', value: walletAddress.toLowerCase() },
-      { name: 'Registered-At', value: Date.now().toString() }
-    ];
-    
-    if (thumbnailId) {
-      tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
-    }
-    
-    await fixedKeyUploader.upload(data, tags);
-    
-    return { success: true, txHash: tx.hash };
   } catch (error: any) {
     console.error('[LibraryService] Error registering asset:', error);
     return { success: false, error: getErrorMessage(error) };

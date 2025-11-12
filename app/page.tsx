@@ -67,10 +67,16 @@ export default function HomePage() {
 
   // Remove automatic wallet check - rely on ConnectWallet component instead
 
+  // Load projects only once on initial mount
   useEffect(() => {
     loadProjects()
+  }, [])
+
+  // Load user-specific data when wallet connects
+  useEffect(() => {
     if (walletAddress) {
       loadUserPreferences()
+      loadUserSpecificData()
     }
   }, [walletAddress])
 
@@ -168,20 +174,6 @@ export default function HomePage() {
       )
       
       setUserProfiles(profileMap)
-      
-      // Load following users and sync mutable references if wallet is connected
-      if (walletAddress) {
-        try {
-          // Sync project mutable references from blockchain
-          await syncProjectMutableReferences(walletAddress)
-          
-          // Load following users
-          const following = await getUserFollowing(walletAddress)
-          setFollowingUsers(following)
-        } catch (error) {
-          console.error('Failed to load user data:', error)
-        }
-      }
     } catch (error) {
       console.error('Failed to load projects:', error)
     } finally {
@@ -189,27 +181,47 @@ export default function HomePage() {
     }
   }
 
+  const loadUserSpecificData = async () => {
+    if (!walletAddress) return
+    
+    try {
+      // Sync project mutable references from blockchain
+      await syncProjectMutableReferences(walletAddress)
+      
+      // Load following users
+      const following = await getUserFollowing(walletAddress)
+      setFollowingUsers(following)
+      
+      // Load current user's profile
+      try {
+        const profile = await downloadUserProfile(walletAddress)
+        if (profile) {
+          let avatarUrl: string | undefined
+          if (profile.avatarUrl) {
+            const avatar = await downloadProfileAvatar(profile.avatarUrl)
+            if (avatar) avatarUrl = avatar
+          }
+          setCurrentUserProfile({
+            displayName: profile.displayName,
+            avatarUrl
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load current user profile:', error)
+      }
+    } catch (error) {
+      console.error('Failed to load user-specific data:', error)
+    }
+  }
+
   const loadUserPreferences = async () => {
     if (!walletAddress) return
     
     try {
-      // TODO: Implement user likes and favorites loading
+      // TODO: Implement user likes and favorites loading from blockchain or storage
+      // For now, just initialize empty arrays
       setUserLikes([])
       setUserFavorites([])
-      
-      // Load current user's profile
-      const profile = await downloadUserProfile(walletAddress)
-      if (profile) {
-        let avatarDataUrl: string | undefined
-        if (profile.avatarUrl) {
-          const avatar = await downloadProfileAvatar(profile.avatarUrl)
-          if (avatar) avatarDataUrl = avatar
-        }
-        setCurrentUserProfile({
-          displayName: profile.displayName,
-          avatarUrl: avatarDataUrl
-        })
-      }
     } catch (error) {
       console.error('Failed to load user preferences:', error)
     }
