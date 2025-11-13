@@ -286,7 +286,7 @@ export default function LibraryDetailPage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar size={16} />
-                  {new Date(asset.listedAt).toLocaleDateString()}
+                  {new Date(asset.listedAt * 1000).toLocaleDateString()}
                 </span>
               </div>
               
