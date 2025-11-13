@@ -304,10 +304,10 @@ export default function LibraryDetailPage() {
               
               {/* Owner Actions */}
               {walletAddress && asset.currentOwner.toLowerCase() === walletAddress.toLowerCase() && (
-                <div className="flex gap-3">
+                <div className="flex gap-3 mb-4">
                   <button
                     onClick={() => setShowUpdateModal(true)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium"
                   >
                     Edit
                   </button>
@@ -353,7 +353,7 @@ export default function LibraryDetailPage() {
                       }
                     });
                   }}
-                  className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium mb-4"
+                  className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium"
                 >
                   Deactivate from Library
                 </button>
