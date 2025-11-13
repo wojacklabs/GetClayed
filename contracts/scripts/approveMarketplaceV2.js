@@ -1,8 +1,8 @@
 const hre = require("hardhat");
 
 async function main() {
-  const LIBRARY_ADDRESS = "0xe90BB6281B7Af6211519e5721A5b4985Ea693a49";
-  const MARKETPLACE_ADDRESS = "0x7f993C490aA7934A537950dB8b5f22F8B5843884";
+  const LIBRARY_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS || "0xe90BB6281B7Af6211519e5721A5b4985Ea693a49";
+  const MARKETPLACE_ADDRESS = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || "0x7f993C490aA7934A537950dB8b5f22F8B5843884";
   
   console.log("🔧 Approving Marketplace in ClayLibrary...");
   console.log("   Library:", LIBRARY_ADDRESS);
