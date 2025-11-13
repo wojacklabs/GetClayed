@@ -172,7 +172,7 @@ export default function LibraryDetailPage() {
         if (parseFloat(pending.eth || '0') > 0 || parseFloat(pending.usdc || '0') > 0) {
           displayEvents.push({
             projectId: projectId,
-            projectName: foundAsset.name,
+            projectName: asset?.name || 'Unknown',
             recipient: creator,
             amountETH: pending.eth,
             amountUSDC: pending.usdc,
