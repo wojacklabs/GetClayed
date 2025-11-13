@@ -210,7 +210,7 @@ export default function LibraryPage() {
                 >
                   {/* 3D Preview */}
                   <MiniViewer 
-                    projectId={asset.projectId}
+                    projectId={asset.tags?.['Transaction-ID'] || asset.projectId}
                     className="aspect-square"
                   />
                   
