@@ -1,5 +1,18 @@
 # Clay Contracts V2 Migration Guide
 
+## 현재 사용 중인 V2 컨트랙트 주소
+
+```bash
+# ClayLibrary Contract (V2)
+NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS=0xe90BB6281B7Af6211519e5721A5b4985Ea693a49
+
+# ClayRoyalty Contract (V2)
+NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS=0x8a1EDFFD51E20E80cdBC4649f3c5790dd1E83D4a
+
+# ClayMarketplace Contract (V2)
+NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS=0x7f993C490aA7934A537950dB8b5f22F8B5843884
+```
+
 ## Overview
 This guide covers the migration from V1 to V2 contracts, which introduces hierarchical royalty distribution.
 

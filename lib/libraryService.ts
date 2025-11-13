@@ -493,7 +493,7 @@ export async function queryLibraryAssets(
         currentOwner: tags['Registered-By'] || '',
         originalCreator: tags['Registered-By'] || '',
         listedAt: parseInt(tags['Registered-At'] || '0'),
-        isActive: true,
+        isActive: false,  // Default to false until blockchain data confirms existence
         thumbnailId: tags['Thumbnail-ID'],
         tags
       };
