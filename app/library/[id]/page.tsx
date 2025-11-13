@@ -70,8 +70,56 @@ export default function LibraryDetailPage() {
       
       setAsset(foundAsset)
       
-      // Load project data
-      const projectData = await downloadClayProject(assetId)
+      // Load project data using the correct transaction ID
+      let projectTxId = foundAsset.tags?.['Transaction-ID'];
+      
+      // If no Transaction-ID tag, try to find the manifest
+      if (!projectTxId) {
+        try {
+          // Query for chunk manifest
+          const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
+          const query = `
+            query {
+              transactions(
+                tags: [
+                  { name: "App-Name", values: ["GetClayed"] },
+                  { name: "Data-Type", values: ["clay-project-manifest", "clay-project", "chunk-manifest"] },
+                  { name: "Project-ID", values: ["${assetId}"] }
+                ],
+                first: 1,
+                order: DESC
+              ) {
+                edges {
+                  node {
+                    id
+                  }
+                }
+              }
+            }
+          `;
+          
+          const response = await fetch(IRYS_GRAPHQL_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+          });
+          
+          const result = await response.json();
+          if (result.data?.transactions?.edges?.[0]) {
+            projectTxId = result.data.transactions.edges[0].node.id;
+            console.log('Found project manifest:', projectTxId);
+          }
+        } catch (error) {
+          console.error('Failed to find project manifest:', error);
+        }
+      }
+      
+      // Final fallback to assetId
+      if (!projectTxId) {
+        projectTxId = assetId;
+      }
+      
+      const projectData = await downloadClayProject(projectTxId)
       setProject(projectData)
       
       // Load thumbnail
