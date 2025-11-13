@@ -63,16 +63,126 @@ export default function LibraryDetailPage() {
       const foundAsset = assets.find(a => a.projectId === assetId)
       
       if (!foundAsset) {
-        showPopup('Asset not found', 'error')
-        router.push('/library')
-        return
+        // Try to find in Irys directly for legacy assets
+        try {
+          const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql'
+          const query = `
+            query {
+              transactions(
+                tags: [
+                  { name: "App-Name", values: ["GetClayed"] },
+                  { name: "Data-Type", values: ["library-registration"] },
+                  { name: "Project-ID", values: ["${assetId}"] }
+                ],
+                first: 1,
+                order: DESC
+              ) {
+                edges {
+                  node {
+                    id
+                    tags {
+                      name
+                      value
+                    }
+                  }
+                }
+              }
+            }
+          `
+          
+          const response = await fetch(IRYS_GRAPHQL_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+          })
+          
+          const result = await response.json()
+          const edges = result.data?.transactions?.edges || []
+          
+          if (edges.length > 0) {
+            const tags = edges[0].node.tags.reduce((acc: any, tag: any) => {
+              acc[tag.name] = tag.value
+              return acc
+            }, {})
+            
+            // Create a temporary asset object from Irys data
+            const legacyAsset: LibraryAsset = {
+              projectId: assetId,
+              name: tags['Asset-Name'] || 'Unnamed Asset',
+              description: '',
+              royaltyPerImportETH: tags['Royalty-ETH'] || '0',
+              royaltyPerImportUSDC: tags['Royalty-USDC'] || '0',
+              currentOwner: tags['Registered-By'] || '',
+              originalCreator: tags['Registered-By'] || '',
+              listedAt: parseInt(tags['Registered-At'] || '0'),
+              isActive: true,
+              thumbnailId: tags['Thumbnail-ID'],
+              tags
+            }
+            
+            setAsset(legacyAsset)
+          } else {
+            showPopup('Asset not found', 'error')
+            router.push('/library')
+            return
+          }
+        } catch (error) {
+          console.error('Failed to find legacy asset:', error)
+          showPopup('Asset not found', 'error')
+          router.push('/library')
+          return
+        }
+      } else {
+        setAsset(foundAsset)
       }
       
-      setAsset(foundAsset)
-      
-      // Load project data
-      const projectData = await downloadClayProject(assetId)
-      setProject(projectData)
+      // Load project data - try to find the actual project transaction
+      try {
+        // First, try to find the project itself in Irys
+        const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql'
+        const projectQuery = `
+          query {
+            transactions(
+              tags: [
+                { name: "App-Name", values: ["GetClayed"] },
+                { name: "Data-Type", values: ["clay-project"] },
+                { name: "Project-ID", values: ["${assetId}"] }
+              ],
+              first: 1,
+              order: DESC
+            ) {
+              edges {
+                node {
+                  id
+                }
+              }
+            }
+          }
+        `
+        
+        const projectResponse = await fetch(IRYS_GRAPHQL_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: projectQuery })
+        })
+        
+        const projectResult = await projectResponse.json()
+        const projectEdges = projectResult.data?.transactions?.edges || []
+        
+        if (projectEdges.length > 0) {
+          const projectTxId = projectEdges[0].node.id
+          console.log('[LibraryDetail] Found project transaction:', projectTxId)
+          const projectData = await downloadClayProject(projectTxId)
+          setProject(projectData)
+        } else {
+          // If no project found, show message but continue (asset metadata is still useful)
+          console.warn('[LibraryDetail] No project data found for:', assetId)
+          showPopup('Project data not found - showing metadata only', 'warning')
+        }
+      } catch (error) {
+        console.error('Failed to load project data:', error)
+        showPopup('Failed to load project data', 'warning')
+      }
       
       // Load thumbnail
       if (foundAsset.thumbnailId) {
