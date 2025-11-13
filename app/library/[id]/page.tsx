@@ -157,10 +157,9 @@ export default function LibraryDetailPage() {
         totalUSDC += parseFloat(event.amountUSDC || '0')
       })
       
-      // Update royalty history state
-      setRoyaltyHistory(libraryEvents)
-      
       // Get pending royalties
+      let displayEvents = [...libraryEvents]
+      
       try {
         const pending = await getPendingRoyalties(creator)
         setPendingRoyalties(pending)
@@ -168,18 +167,34 @@ export default function LibraryDetailPage() {
         // Add pending royalties to total
         totalETH += parseFloat(pending.eth || '0')
         totalUSDC += parseFloat(pending.usdc || '0')
+        
+        // Add pending royalties as an event in history if there are any
+        if (parseFloat(pending.eth || '0') > 0 || parseFloat(pending.usdc || '0') > 0) {
+          displayEvents.push({
+            projectId: projectId,
+            projectName: foundAsset.name,
+            recipient: creator,
+            amountETH: pending.eth,
+            amountUSDC: pending.usdc,
+            timestamp: Date.now(),
+            type: 'earned' as const,
+            source: 'library' as const,
+            payerName: 'Pending (unclaimed)'
+          })
+        }
       } catch (error) {
         console.error('Failed to load pending royalties:', error)
         // Set default values on error
         setPendingRoyalties({ eth: '0', usdc: '0' })
       }
       
+      // Update royalty history state with both claimed and pending
+      setRoyaltyHistory(displayEvents)
+      
       setTotalEarned({
         eth: totalETH.toFixed(6),
         usdc: totalUSDC.toFixed(6) // Changed to 6 decimals for USDC
       })
-      
-      setRoyaltyHistory(libraryEvents)
     } catch (error) {
       console.error('Failed to load royalty history:', error)
     }
