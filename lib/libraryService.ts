@@ -169,6 +169,46 @@ export async function registerLibraryAsset(
           registeredAt: Date.now()
         };
         
+        // Try to find the project transaction ID
+        let projectTxId: string | null = null;
+        try {
+          const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
+          const query = `
+            query {
+              transactions(
+                tags: [
+                  { name: "App-Name", values: ["GetClayed"] },
+                  { name: "Data-Type", values: ["clay-project"] },
+                  { name: "Project-ID", values: ["${projectId}"] }
+                ],
+                first: 1,
+                order: DESC
+              ) {
+                edges {
+                  node {
+                    id
+                  }
+                }
+              }
+            }
+          `;
+          
+          const response = await fetch(IRYS_GRAPHQL_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+          });
+          
+          const result = await response.json();
+          const edges = result.data?.transactions?.edges || [];
+          if (edges.length > 0) {
+            projectTxId = edges[0].node.id;
+            console.log('[LibraryService] Found project transaction ID:', projectTxId);
+          }
+        } catch (error) {
+          console.warn('[LibraryService] Could not find project transaction ID:', error);
+        }
+        
         const data = Buffer.from(JSON.stringify(libraryMetadata), 'utf-8');
         const tags = [
           { name: 'App-Name', value: 'GetClayed' },
@@ -183,6 +223,11 @@ export async function registerLibraryAsset(
         
         if (thumbnailId) {
           tags.push({ name: 'Thumbnail-ID', value: thumbnailId });
+        }
+        
+        // Add project transaction ID if found
+        if (projectTxId) {
+          tags.push({ name: 'Transaction-ID', value: projectTxId });
         }
         
         await fixedKeyUploader.upload(data, tags);
