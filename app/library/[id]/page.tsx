@@ -309,7 +309,7 @@ export default function LibraryDetailPage() {
                     onClick={() => setShowUpdateModal(true)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                   >
-                    Update Library
+                    Edit
                   </button>
                   <button
                     onClick={() => {
