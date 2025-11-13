@@ -75,7 +75,14 @@ export async function getPendingRoyalties(userAddress: string): Promise<PendingR
     
     // Use public RPC provider (no wallet needed for reading)
     console.log('[RoyaltyClaimService] Using public RPC provider:', BASE_RPC_URL);
-    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
+    
+    // Create provider with optimized settings for browser environment
+    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL, undefined, {
+      staticNetwork: true,
+      polling: false,
+      batchMaxCount: 1
+    });
+    
     const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, provider);
     
     console.log('[RoyaltyClaimService] Calling getPendingRoyalties...');

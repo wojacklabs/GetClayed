@@ -157,6 +157,9 @@ export default function LibraryDetailPage() {
         totalUSDC += parseFloat(event.amountUSDC || '0')
       })
       
+      // Update royalty history state
+      setRoyaltyHistory(libraryEvents)
+      
       // Get pending royalties
       try {
         const pending = await getPendingRoyalties(creator)
