@@ -199,3 +199,4 @@ console.log(process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS)
 
 🚀 거의 끝났습니다! Vercel 환경변수만 업데이트하면 모든 배포가 완료됩니다!
 
+

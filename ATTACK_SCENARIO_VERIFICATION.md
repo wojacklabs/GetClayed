@@ -556,3 +556,4 @@ showPopup('⚠️ Security Warning: ...', 'error')
 **종합 평가**: 🛡️ **안전함 - 배포 준비 완료**
 
 
+

@@ -357,3 +357,4 @@ if (msg.value > totalETHNeeded) {
 모든 검증이 완료되었습니다! 🎊
 
 
+

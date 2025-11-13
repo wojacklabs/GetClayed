@@ -319,3 +319,4 @@ await contract.registerProjectRoyalties(projectId, dependencyIds)
 - 로드 시간은 거의 동일 (백그라운드 검증)
 
 
+

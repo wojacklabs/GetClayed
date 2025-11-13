@@ -436,3 +436,4 @@ Layer 5: UI 경고 시스템 (__integrityWarning)
 - 성능 영향 미미함
 
 
+
