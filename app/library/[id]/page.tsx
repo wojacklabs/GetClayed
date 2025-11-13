@@ -411,10 +411,9 @@ export default function LibraryDetailPage() {
               </div>
             )}
             
-            {/* Revenue History - Only show to asset owner */}
-            {walletAddress && asset.originalCreator.toLowerCase() === walletAddress.toLowerCase() && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue History</h3>
+            {/* Revenue History - Public information */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue History</h3>
                 
                 {/* Total Earnings with Distribution Info */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
@@ -510,8 +509,7 @@ export default function LibraryDetailPage() {
                   ))
                 )}
               </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </main>
