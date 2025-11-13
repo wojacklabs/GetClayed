@@ -14,6 +14,7 @@ import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
 import { useWallets } from '@privy-io/react-auth'
 import { getRoyaltyEvents, RoyaltyEvent, getPendingRoyalties } from '@/lib/royaltyClaimService'
+import UpdateLibraryModal from '@/components/UpdateLibraryModal'
 
 function PreviewClay({ clay }: { clay: any }) {
   return (
@@ -42,6 +43,7 @@ export default function LibraryDetailPage() {
   const [royaltyHistory, setRoyaltyHistory] = useState<RoyaltyEvent[]>([])
   const [totalEarned, setTotalEarned] = useState({ eth: '0', usdc: '0' })
   const [pendingRoyalties, setPendingRoyalties] = useState({ eth: '0', usdc: '0' })
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
   const { showPopup } = usePopup()
   
   useEffect(() => {
@@ -302,8 +304,15 @@ export default function LibraryDetailPage() {
               
               {/* Owner Actions */}
               {walletAddress && asset.currentOwner.toLowerCase() === walletAddress.toLowerCase() && (
-                <button
-                  onClick={() => {
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowUpdateModal(true)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  >
+                    Update Library
+                  </button>
+                  <button
+                    onClick={() => {
                     showPopup('Deactivate this library asset? Users will no longer pay royalties.', 'warning', {
                       autoClose: false,
                       confirmButton: {
@@ -348,6 +357,7 @@ export default function LibraryDetailPage() {
                 >
                   Deactivate from Library
                 </button>
+                </div>
               )}
               
               {/* Info Notice */}
@@ -513,6 +523,18 @@ export default function LibraryDetailPage() {
           </div>
         </div>
       </main>
+      
+      {/* Update Library Modal */}
+      {asset && (
+        <UpdateLibraryModal
+          isOpen={showUpdateModal}
+          onClose={() => setShowUpdateModal(false)}
+          asset={asset}
+          project={project}
+          thumbnail={thumbnail}
+          walletAddress={walletAddress || ''}
+        />
+      )}
     </div>
   )
 }
