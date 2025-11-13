@@ -807,8 +807,8 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
           <RoyaltyDashboard walletAddress={walletAddress} />
         )}
         
-        {/* Revenue Stats */}
-        {currentUserAddress?.toLowerCase() === walletAddress.toLowerCase() && (totalRevenueETH > 0 || totalRevenueUSDC > 0) && (
+        {/* Revenue Stats - Public Information */}
+        {(totalRevenueETH > 0 || totalRevenueUSDC > 0) && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Library Revenue</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
