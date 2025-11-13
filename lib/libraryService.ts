@@ -512,31 +512,52 @@ export async function queryLibraryAssets(
       // Get asset data from blockchain if contract is deployed
       let blockchainData: any = null;
       if (LIBRARY_CONTRACT_ADDRESS && typeof window !== 'undefined') {
-        // Try to get blockchain data with retries for better reliability
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            // Use public RPC provider (works without wallet connection)
-            const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
-            const provider = new ethers.JsonRpcProvider(rpcUrl);
-            const contract = new ethers.Contract(
-              LIBRARY_CONTRACT_ADDRESS,
-              LIBRARY_CONTRACT_ABI,
-              provider
-            );
-            blockchainData = await contract.getAsset(projectId);
-            console.log('[LibraryService] Blockchain data for', projectId, '- exists:', blockchainData.exists, 'royaltyEnabled:', blockchainData.royaltyEnabled);
-            break; // Success, exit retry loop
-          } catch (error: any) {
-            if (error.code === 'CALL_EXCEPTION' && error.data === null) {
-              // Asset doesn't exist in this contract - this is normal, not an error
-              console.log('[LibraryService] Asset not found in V2 contract:', projectId);
-              break; // No point retrying
-            } else if (attempt === 1) {
-              // Last attempt failed
-              console.warn('[LibraryService] Could not fetch blockchain data for', projectId, 'after retries:', error.message);
-            } else {
-              // Retry on network errors
-              await new Promise(resolve => setTimeout(resolve, 500));
+        // List of RPC endpoints to try (fallback support)
+        const rpcUrls = [
+          process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
+          'https://base.meowrpc.com',
+          'https://base.publicnode.com'
+        ];
+        
+        // Try to get blockchain data with retries and fallback RPCs
+        let lastError: any = null;
+        for (let rpcIndex = 0; rpcIndex < rpcUrls.length; rpcIndex++) {
+          const rpcUrl = rpcUrls[rpcIndex];
+          
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              // Use public RPC provider with optimized settings
+              const provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+                staticNetwork: true,
+                polling: false,
+                batchMaxCount: 1
+              });
+              
+              const contract = new ethers.Contract(
+                LIBRARY_CONTRACT_ADDRESS,
+                LIBRARY_CONTRACT_ABI,
+                provider
+              );
+              
+              blockchainData = await contract.getAsset(projectId);
+              console.log('[LibraryService] Blockchain data for', projectId, '- exists:', blockchainData.exists, 'royaltyEnabled:', blockchainData.royaltyEnabled);
+              rpcIndex = rpcUrls.length; // Exit outer loop
+              break; // Success, exit retry loop
+            } catch (error: any) {
+              lastError = error;
+              
+              if (error.code === 'CALL_EXCEPTION' && error.data === null) {
+                // Asset doesn't exist in this contract - this is normal, not an error
+                console.log('[LibraryService] Asset not found in V2 contract:', projectId);
+                rpcIndex = rpcUrls.length; // Exit outer loop
+                break; // No point retrying
+              } else if (attempt === 1 && rpcIndex === rpcUrls.length - 1) {
+                // Last attempt with last RPC failed
+                console.warn('[LibraryService] Could not fetch blockchain data for', projectId, 'after all attempts:', error.message);
+              } else if (attempt === 0) {
+                // Retry with same RPC
+                await new Promise(resolve => setTimeout(resolve, 300));
+              }
             }
           }
         }
