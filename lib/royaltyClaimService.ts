@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { getErrorMessage } from './errorHandler';
+import { executeContractCall } from './rpcProvider';
 
 /**
  * Get wallet provider - supports Privy and MetaMask
@@ -58,7 +59,6 @@ export interface RoyaltyEvent {
 export async function getPendingRoyalties(userAddress: string): Promise<PendingRoyalties> {
   try {
     const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS;
-    const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
     
     console.log('[RoyaltyClaimService] Getting pending royalties for:', userAddress);
     console.log('[RoyaltyClaimService] Royalty contract address:', ROYALTY_CONTRACT_ADDRESS);
@@ -73,20 +73,17 @@ export async function getPendingRoyalties(userAddress: string): Promise<PendingR
       return { eth: '0', usdc: '0' };
     }
     
-    // Use public RPC provider (no wallet needed for reading)
-    console.log('[RoyaltyClaimService] Using public RPC provider:', BASE_RPC_URL);
-    
-    // Create provider with optimized settings for browser environment
-    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL, undefined, {
-      staticNetwork: true,
-      polling: false,
-      batchMaxCount: 1
-    });
-    
-    const contract = new ethers.Contract(ROYALTY_CONTRACT_ADDRESS, ROYALTY_CONTRACT_ABI, provider);
-    
     console.log('[RoyaltyClaimService] Calling getPendingRoyalties...');
-    const [ethWei, usdcRaw] = await contract.getPendingRoyalties(userAddress);
+    
+    // Use the new RPC provider with rate limiting
+    const result = await executeContractCall<[bigint, bigint]>(
+      ROYALTY_CONTRACT_ADDRESS,
+      ROYALTY_CONTRACT_ABI,
+      'getPendingRoyalties',
+      [userAddress]
+    );
+    
+    const [ethWei, usdcRaw] = result;
     
     // Convert from wei to ETH (18 decimals)
     const eth = ethers.formatEther(ethWei);
