@@ -31,16 +31,23 @@ export default function UpdateLibraryModal({
   const { showPopup } = usePopup()
   const [assetName, setAssetName] = useState('')
   const [description, setDescription] = useState('')
-  const [priceETH, setPriceETH] = useState('')
-  const [priceUSDC, setPriceUSDC] = useState('')
+  const [price, setPrice] = useState('')
+  const [selectedCurrency, setSelectedCurrency] = useState<'ETH' | 'USDC'>('USDC')
   const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
     if (isOpen && asset) {
       setAssetName(asset.name)
       setDescription(asset.description || '')
-      setPriceETH(asset.royaltyPerImportETH)
-      setPriceUSDC(asset.royaltyPerImportUSDC)
+      
+      // 기존 가격이 있는 통화를 자동으로 선택
+      if (parseFloat(asset.royaltyPerImportETH) > 0) {
+        setSelectedCurrency('ETH')
+        setPrice(asset.royaltyPerImportETH)
+      } else if (parseFloat(asset.royaltyPerImportUSDC) > 0) {
+        setSelectedCurrency('USDC')
+        setPrice(asset.royaltyPerImportUSDC)
+      }
     }
   }, [isOpen, asset])
 
@@ -59,18 +66,21 @@ export default function UpdateLibraryModal({
         return
       }
 
-      const ethPrice = priceETH ? parseFloat(priceETH) : 0
-      const usdcPrice = priceUSDC ? parseFloat(priceUSDC) : 0
+      const priceValue = price ? parseFloat(price) : 0
       
-      if (ethPrice < 0 || usdcPrice < 0) {
-        showPopup('Prices cannot be negative', 'warning')
+      if (priceValue < 0) {
+        showPopup('Price cannot be negative', 'warning')
         return
       }
 
-      if (ethPrice === 0 && usdcPrice === 0) {
-        showPopup('At least one price must be greater than 0', 'warning')
+      if (priceValue === 0) {
+        showPopup('Price must be greater than 0', 'warning')
         return
       }
+
+      // 선택한 통화에 따라 가격 설정
+      const ethPrice = selectedCurrency === 'ETH' ? priceValue : 0
+      const usdcPrice = selectedCurrency === 'USDC' ? priceValue : 0
 
       showPopup('Creating new version of library...', 'info')
 
@@ -185,34 +195,33 @@ export default function UpdateLibraryModal({
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Royalty per Import (ETH)
+                Royalty Currency
               </label>
-              <input
-                type="number"
-                value={priceETH}
-                onChange={(e) => setPriceETH(e.target.value)}
+              <select
+                value={selectedCurrency}
+                onChange={(e) => setSelectedCurrency(e.target.value as 'ETH' | 'USDC')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
-                placeholder="0.0"
-                min="0"
-                step="0.0001"
-              />
+              >
+                <option value="USDC">USDC</option>
+                <option value="ETH">ETH</option>
+              </select>
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Royalty per Import (USDC)
+                Royalty per Import ({selectedCurrency})
               </label>
               <input
                 type="number"
-                value={priceUSDC}
-                onChange={(e) => setPriceUSDC(e.target.value)}
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                 placeholder="0.0"
                 min="0"
-                step="0.01"
+                step={selectedCurrency === 'ETH' ? '0.0001' : '0.01'}
               />
             </div>
           </div>
