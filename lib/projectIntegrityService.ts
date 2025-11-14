@@ -202,6 +202,7 @@ export async function verifyProjectSignature(
 
 /**
  * Auto-detect libraries from clay objects and verify against declared libraries
+ * Updated to handle hierarchical library dependencies properly
  */
 export function detectLibraryTampering(project: ClayProject): {
   tampered: boolean;
@@ -221,19 +222,35 @@ export function detectLibraryTampering(project: ClayProject): {
   
   const detectedLibraries = Array.from(detectedSet);
   const declaredLibraries = (project.usedLibraries || []).map(lib => lib.projectId);
+  const directImports = project.directImports || [];
   
-  // Find missing and extra libraries
-  const missing = detectedLibraries.filter(id => !declaredLibraries.includes(id));
-  const extra = declaredLibraries.filter(id => !detectedLibraries.includes(id));
+  // For hierarchical libraries, we only need to check if direct imports are present
+  // Indirect dependencies (libraries used by our imported libraries) don't need to be in clay objects
+  const requiredLibraries = detectedLibraries.filter(id => {
+    // If it's in directImports, it must be in declaredLibraries
+    if (directImports.includes(id)) {
+      return true;
+    }
+    // If it's not a direct import but is detected in clay objects,
+    // it should still be in declaredLibraries (as an indirect dependency)
+    return true;
+  });
   
-  const tampered = missing.length > 0 || extra.length > 0;
+  // Find missing libraries - only those that are actually detected in clay objects
+  const missing = requiredLibraries.filter(id => !declaredLibraries.includes(id));
+  
+  // Extra libraries are OK - they might be indirect dependencies not used in current clay objects
+  const extra: string[] = [];
+  
+  const tampered = missing.length > 0;
   
   if (tampered) {
     console.warn('[ProjectIntegrity] ⚠️ Library tampering detected!');
     console.warn('  Detected in clay objects:', detectedLibraries);
     console.warn('  Declared in usedLibraries:', declaredLibraries);
+    console.warn('  Direct imports:', directImports);
     console.warn('  Missing from declaration:', missing);
-    console.warn('  Extra in declaration:', extra);
+    console.warn('  Note: Indirect dependencies in usedLibraries but not in clay objects are normal');
   }
   
   return {

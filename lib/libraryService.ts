@@ -3,6 +3,7 @@ import { fixedKeyUploader } from './fixedKeyUploadService';
 import { getErrorMessage } from './errorHandler';
 import { uploadInChunks, uploadChunkManifest } from './chunkUploadService';
 import { downloadClayProject, ClayProject } from './clayStorageService';
+import { executeContractCall, batchContractCalls } from './rpcProvider';
 
 const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
 
@@ -494,7 +495,9 @@ export async function queryLibraryAssets(
     
     const assets: LibraryAsset[] = [];
     const seenProjects = new Set<string>();
+    const projectsToQuery: Array<{ projectId: string; tags: any }> = [];
     
+    // First, collect all unique projects
     for (const edge of edges) {
       const tags = edge.node.tags.reduce((acc: any, tag: any) => {
         acc[tag.name] = tag.value;
@@ -508,60 +511,64 @@ export async function queryLibraryAssets(
         continue;
       }
       seenProjects.add(projectId);
+      projectsToQuery.push({ projectId, tags });
+    }
+    
+    // Batch query blockchain data if contract is deployed
+    let blockchainDataMap = new Map<string, any>();
+    if (LIBRARY_CONTRACT_ADDRESS && typeof window !== 'undefined' && projectsToQuery.length > 0) {
+      console.log(`[LibraryService] Batch querying ${projectsToQuery.length} assets from blockchain...`);
       
-      // Get asset data from blockchain if contract is deployed
-      let blockchainData: any = null;
-      if (LIBRARY_CONTRACT_ADDRESS && typeof window !== 'undefined') {
-        // List of RPC endpoints to try (fallback support)
-        const rpcUrls = [
-          process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
-          'https://base.meowrpc.com',
-          'https://base.publicnode.com'
-        ];
+      try {
+        // Prepare batch calls
+        const calls = projectsToQuery.map(({ projectId }) => ({
+          contractAddress: LIBRARY_CONTRACT_ADDRESS,
+          abi: LIBRARY_CONTRACT_ABI,
+          method: 'getAsset',
+          args: [projectId]
+        }));
         
-        // Try to get blockchain data with retries and fallback RPCs
-        let lastError: any = null;
-        for (let rpcIndex = 0; rpcIndex < rpcUrls.length; rpcIndex++) {
-          const rpcUrl = rpcUrls[rpcIndex];
-          
-          for (let attempt = 0; attempt < 2; attempt++) {
-            try {
-              // Use public RPC provider with optimized settings
-              const provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
-                staticNetwork: true,
-                polling: false,
-                batchMaxCount: 1
-              });
-              
-              const contract = new ethers.Contract(
-                LIBRARY_CONTRACT_ADDRESS,
-                LIBRARY_CONTRACT_ABI,
-                provider
-              );
-              
-              blockchainData = await contract.getAsset(projectId);
-              console.log('[LibraryService] Blockchain data for', projectId, '- exists:', blockchainData.exists, 'royaltyEnabled:', blockchainData.royaltyEnabled);
-              rpcIndex = rpcUrls.length; // Exit outer loop
-              break; // Success, exit retry loop
-            } catch (error: any) {
-              lastError = error;
-              
-              if (error.code === 'CALL_EXCEPTION' && error.data === null) {
-                // Asset doesn't exist in this contract - this is normal, not an error
-                console.log('[LibraryService] Asset not found in V2 contract:', projectId);
-                rpcIndex = rpcUrls.length; // Exit outer loop
-                break; // No point retrying
-              } else if (attempt === 1 && rpcIndex === rpcUrls.length - 1) {
-                // Last attempt with last RPC failed
-                console.warn('[LibraryService] Could not fetch blockchain data for', projectId, 'after all attempts:', error.message);
-              } else if (attempt === 0) {
-                // Retry with same RPC
-                await new Promise(resolve => setTimeout(resolve, 300));
-              }
+        // Execute batch calls
+        const results = await batchContractCalls<any>(calls);
+        
+        // Map results
+        results.forEach((result, index) => {
+          if (result) {
+            const projectId = projectsToQuery[index].projectId;
+            blockchainDataMap.set(projectId, result);
+            console.log('[LibraryService] Blockchain data for', projectId, '- exists:', result.exists, 'royaltyEnabled:', result.royaltyEnabled);
+          }
+        });
+      } catch (error) {
+        console.error('[LibraryService] Batch query failed, falling back to individual queries:', error);
+        
+        // Fallback to individual queries with rate limiting
+        for (const { projectId } of projectsToQuery) {
+          try {
+            const result = await executeContractCall<any>(
+              LIBRARY_CONTRACT_ADDRESS,
+              LIBRARY_CONTRACT_ABI,
+              'getAsset',
+              [projectId]
+            );
+            if (result) {
+              blockchainDataMap.set(projectId, result);
+              console.log('[LibraryService] Blockchain data for', projectId, '- exists:', result.exists, 'royaltyEnabled:', result.royaltyEnabled);
+            }
+          } catch (error: any) {
+            if (error.code === 'CALL_EXCEPTION' && error.data === null) {
+              console.log('[LibraryService] Asset not found in contract:', projectId);
+            } else {
+              console.warn('[LibraryService] Could not fetch blockchain data for', projectId, ':', error.message);
             }
           }
         }
       }
+    }
+    
+    // Process results
+    for (const { projectId, tags } of projectsToQuery) {
+      const blockchainData = blockchainDataMap.get(projectId);
       
       // Combine Irys metadata with blockchain data
       const asset: LibraryAsset = {
@@ -739,65 +746,120 @@ export async function getLibraryCurrentRoyalties(
   }
   
   try {
-    // Use Privy provider if available (avoids CORS issues)
-    let provider;
+    // Use Privy provider if available for transactions, or batch calls for read operations
     if (customProvider) {
-      provider = new ethers.BrowserProvider(customProvider);
+      // For custom provider (likely used for writes), use it directly
+      const provider = new ethers.BrowserProvider(customProvider);
+      const contract = new ethers.Contract(
+        LIBRARY_CONTRACT_ADDRESS,
+        LIBRARY_CONTRACT_ABI,
+        provider
+      );
+      
+      // PERFORMANCE: Fetch all libraries in parallel
+      const promises = projectIds.map(async (projectId) => {
+        try {
+          // Get current royalty fee from blockchain
+          const [royaltyETH, royaltyUSDC] = await contract.getRoyaltyFee(projectId);
+          
+          // Get asset info
+          const asset = await contract.getAsset(projectId);
+          
+          const state = {
+            ethAmount: parseFloat(ethers.formatEther(royaltyETH)),
+            usdcAmount: parseFloat(ethers.formatUnits(royaltyUSDC, 6)),
+            exists: asset.exists,
+            enabled: asset.royaltyEnabled
+          };
+          
+          console.log(`[LibraryService] Current blockchain state for ${projectId}:`, {
+            eth: ethers.formatEther(royaltyETH),
+            usdc: ethers.formatUnits(royaltyUSDC, 6),
+            exists: asset.exists,
+            enabled: asset.royaltyEnabled
+          });
+          
+          return { projectId, state };
+        } catch (error) {
+          console.error(`[LibraryService] Failed to get current state for ${projectId}:`, error);
+          // Library doesn't exist or error - treat as deleted
+          return {
+            projectId,
+            state: {
+              ethAmount: 0,
+              usdcAmount: 0,
+              exists: false,
+              enabled: false
+            }
+          };
+        }
+      });
+      
+      const allResults = await Promise.all(promises);
+      
+      // Build results map
+      for (const { projectId, state } of allResults) {
+        results.set(projectId, state);
+      }
     } else {
-      const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
-      provider = new ethers.JsonRpcProvider(rpcUrl);
-    }
-    
-    const contract = new ethers.Contract(
-      LIBRARY_CONTRACT_ADDRESS,
-      LIBRARY_CONTRACT_ABI,
-      provider
-    );
-    
-    // PERFORMANCE: Fetch all libraries in parallel
-    const promises = projectIds.map(async (projectId) => {
-      try {
-        // Get current royalty fee from blockchain
-        const [royaltyETH, royaltyUSDC] = await contract.getRoyaltyFee(projectId);
+      // Use batch calls for better rate limiting when no custom provider
+      console.log(`[LibraryService] Batch querying ${projectIds.length} libraries for current royalties...`);
+      
+      // Prepare batch calls for getRoyaltyFee and getAsset
+      const royaltyFeeCalls = projectIds.map(projectId => ({
+        contractAddress: LIBRARY_CONTRACT_ADDRESS,
+        abi: LIBRARY_CONTRACT_ABI,
+        method: 'getRoyaltyFee',
+        args: [projectId]
+      }));
+      
+      const assetCalls = projectIds.map(projectId => ({
+        contractAddress: LIBRARY_CONTRACT_ADDRESS,
+        abi: LIBRARY_CONTRACT_ABI,
+        method: 'getAsset',
+        args: [projectId]
+      }));
+      
+      // Execute batch calls
+      const [royaltyResults, assetResults] = await Promise.all([
+        batchContractCalls<[bigint, bigint]>(royaltyFeeCalls),
+        batchContractCalls<any>(assetCalls)
+      ]);
+      
+      // Process results
+      for (let i = 0; i < projectIds.length; i++) {
+        const projectId = projectIds[i];
+        const royaltyResult = royaltyResults[i];
+        const assetResult = assetResults[i];
         
-        // Get asset info
-        const asset = await contract.getAsset(projectId);
-        
-        const state = {
-          ethAmount: parseFloat(ethers.formatEther(royaltyETH)),
-          usdcAmount: parseFloat(ethers.formatUnits(royaltyUSDC, 6)),
-          exists: asset.exists,
-          enabled: asset.royaltyEnabled
-        };
-        
-        console.log(`[LibraryService] Current blockchain state for ${projectId}:`, {
-          eth: ethers.formatEther(royaltyETH),
-          usdc: ethers.formatUnits(royaltyUSDC, 6),
-          exists: asset.exists,
-          enabled: asset.royaltyEnabled
-        });
-        
-        return { projectId, state };
-      } catch (error) {
-        console.error(`[LibraryService] Failed to get current state for ${projectId}:`, error);
-        // Library doesn't exist or error - treat as deleted
-        return {
-          projectId,
-          state: {
+        if (royaltyResult && assetResult) {
+          const [royaltyETH, royaltyUSDC] = royaltyResult;
+          
+          const state = {
+            ethAmount: parseFloat(ethers.formatEther(royaltyETH)),
+            usdcAmount: parseFloat(ethers.formatUnits(royaltyUSDC, 6)),
+            exists: assetResult.exists,
+            enabled: assetResult.royaltyEnabled
+          };
+          
+          console.log(`[LibraryService] Current blockchain state for ${projectId}:`, {
+            eth: ethers.formatEther(royaltyETH),
+            usdc: ethers.formatUnits(royaltyUSDC, 6),
+            exists: assetResult.exists,
+            enabled: assetResult.royaltyEnabled
+          });
+          
+          results.set(projectId, state);
+        } else {
+          // Library doesn't exist or error - treat as deleted
+          results.set(projectId, {
             ethAmount: 0,
             usdcAmount: 0,
             exists: false,
             enabled: false
-          }
-        };
+          });
+        }
       }
-    });
-    
-    const allResults = await Promise.all(promises);
-    
-    // Build results map
-    for (const { projectId, state } of allResults) {
-      results.set(projectId, state);
     }
     
     return results;
