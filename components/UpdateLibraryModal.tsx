@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { usePopup } from './PopupNotification'
 import { LibraryAsset, registerLibraryAsset, disableLibraryRoyalty } from '@/lib/libraryService'
 import { uploadClayProject, uploadProjectThumbnail } from '@/lib/clayStorageService'
+import { verifyAndSwitchNetwork } from '@/lib/networkUtils'
 import { ethers } from 'ethers'
 import { useWallets } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
@@ -113,6 +114,14 @@ export default function UpdateLibraryModal({
         } catch (error) {
           console.error('[UpdateLibrary] Failed to get provider:', error)
         }
+      }
+
+      // Verify network before proceeding
+      const isCorrectNetwork = await verifyAndSwitchNetwork(showPopup, provider)
+      if (!isCorrectNetwork) {
+        showPopup('Please switch to Base network to continue', 'error')
+        setIsUpdating(false)
+        return
       }
 
       // Register as new library  
@@ -244,7 +253,7 @@ export default function UpdateLibraryModal({
           <button
             onClick={handleUpdate}
             disabled={!assetName || isUpdating}
-            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUpdating ? 'Updating...' : 'Update Library'}
           </button>
