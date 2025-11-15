@@ -270,15 +270,6 @@ export default function LibraryDetailPage() {
         usdc: totalUSDC.toFixed(6) // Changed to 6 decimals for USDC
       }
       
-      console.log(`[LibraryPage] Final totals for ${projectId}:`, {
-        totalETH: finalTotals.eth,
-        totalUSDC: finalTotals.usdc,
-        pendingETH: libraryPendingETH,
-        pendingUSDC: libraryPendingUSDC,
-        claimedETH: (totalETH - libraryPendingETH).toFixed(6),
-        claimedUSDC: (totalUSDC - libraryPendingUSDC).toFixed(6)
-      })
-      
       setTotalEarned(finalTotals)
     } catch (error) {
       console.error('Failed to load royalty history:', error)
