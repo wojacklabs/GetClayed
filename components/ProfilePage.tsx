@@ -1095,9 +1095,9 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
         </div>
         
         {/* Projects Grid */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 overflow-visible">
           <h3 className="text-sm font-medium mb-3 text-gray-900">Projects</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 overflow-visible">
             {projects
               .slice((currentPage - 1) * projectsPerPage, currentPage * projectsPerPage)
               .map((project) => {
@@ -1105,10 +1105,10 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
               return (
                 <div
                   key={project.id}
-                  className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-gray-200 relative group"
+                  className="bg-white rounded-lg hover:shadow-md transition-shadow border border-gray-200 relative group"
                 >
                   {/* 3D Preview */}
-                  <div className="relative cursor-pointer" onClick={() => router.push(`/project/${project.id}`)}>
+                  <div className="relative cursor-pointer rounded-t-lg overflow-hidden" onClick={() => router.push(`/project/${project.id}`)}>
                     <MiniViewer 
                       projectId={project.id}
                       className="aspect-square"
@@ -1141,7 +1141,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                             <MoreVertical size={16} className="text-gray-500" />
                           </button>
                           {projectMenu === project.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 w-48">
+                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 w-48">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
