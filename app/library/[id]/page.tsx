@@ -183,6 +183,12 @@ export default function LibraryDetailPage() {
           const libRoyaltyETH = parseFloat(asset.royaltyPerImportETH || '0')
           const libRoyaltyUSDC = parseFloat(asset.royaltyPerImportUSDC || '0')
           
+          console.log(`[LibraryPage] Library ${projectId} royalty rates:`, {
+            eth: libRoyaltyETH,
+            usdc: libRoyaltyUSDC,
+            asset: asset
+          })
+          
           // If this library has dependencies, subtract their amounts
           let dependencyETH = 0
           let dependencyUSDC = 0
@@ -208,50 +214,23 @@ export default function LibraryDetailPage() {
             const pendingETH = parseFloat(pending.eth)
             const pendingUSDC = parseFloat(pending.usdc)
             
-            // Calculate based on known patterns:
-            // Each library typically receives its profit amount per use
-            // If there are multiple uses pending, we show the total for this library
-            
+            // Show the full library price as pending for this specific library
+            // This represents what users pay when they use this library
             if (libRoyaltyUSDC > 0 && pendingUSDC > 0) {
-              // Show the full library price (including dependencies)
-              // This is what users pay when they use this library
+              // Show the library's full price (including dependencies)
               libraryPendingUSDC = libRoyaltyUSDC
-              
-              // If total pending is significantly higher, there might be multiple uses
-              if (pendingUSDC >= libRoyaltyUSDC * 2) {
-                // Likely multiple uses or indirect royalties
-                // For hierarchical dependencies, a library can earn from:
-                // 1. Direct uses (full price)
-                // 2. Indirect uses (when used as a dependency)
-                
-                // For libraries with no dependencies (base libraries), 
-                // they often receive more from indirect uses
-                if (dependencyUSDC === 0) {
-                  // Base library - likely receives from multiple sources
-                  libraryPendingUSDC = Math.min(pendingUSDC, libRoyaltyUSDC * 2)
-                } else {
-                  // Library with dependencies - show full price for one use
-                  libraryPendingUSDC = libRoyaltyUSDC
-                }
-              }
+              console.log(`[LibraryPage] Library ${projectId}: Setting pending USDC to ${libraryPendingUSDC} (library price)`)
             }
             
             if (libRoyaltyETH > 0 && pendingETH > 0) {
-              // Similar logic for ETH - show full price
+              // Show the library's full price (including dependencies)
               libraryPendingETH = libRoyaltyETH
-              
-              if (pendingETH >= libRoyaltyETH * 2) {
-                if (dependencyETH === 0) {
-                  libraryPendingETH = Math.min(pendingETH, libRoyaltyETH * 2)
-                } else {
-                  libraryPendingETH = libRoyaltyETH
-                }
-              }
+              console.log(`[LibraryPage] Library ${projectId}: Setting pending ETH to ${libraryPendingETH} (library price)`)
             }
             
             // Add to display events if there's pending for this library
             if (libraryPendingETH > 0 || libraryPendingUSDC > 0) {
-              displayEvents.push({
+              const pendingEvent = {
                 projectId: projectId,
                 projectName: asset.name || 'Unknown',
                 recipient: creator,
@@ -261,7 +240,15 @@ export default function LibraryDetailPage() {
                 type: 'earned' as const,
                 source: 'library' as const,
                 payerName: 'Pending (unclaimed)'
+              }
+              
+              console.log(`[LibraryPage] Adding pending event:`, {
+                libraryId: projectId,
+                pendingUSDC: pendingEvent.amountUSDC,
+                pendingETH: pendingEvent.amountETH
               })
+              
+              displayEvents.push(pendingEvent)
               
               // Add to totals
               totalETH += libraryPendingETH
@@ -278,10 +265,21 @@ export default function LibraryDetailPage() {
       // Update royalty history state with both claimed and pending
       setRoyaltyHistory(displayEvents)
       
-      setTotalEarned({
+      const finalTotals = {
         eth: totalETH.toFixed(6),
         usdc: totalUSDC.toFixed(6) // Changed to 6 decimals for USDC
+      }
+      
+      console.log(`[LibraryPage] Final totals for ${projectId}:`, {
+        totalETH: finalTotals.eth,
+        totalUSDC: finalTotals.usdc,
+        pendingETH: libraryPendingETH,
+        pendingUSDC: libraryPendingUSDC,
+        claimedETH: (totalETH - libraryPendingETH).toFixed(6),
+        claimedUSDC: (totalUSDC - libraryPendingUSDC).toFixed(6)
       })
+      
+      setTotalEarned(finalTotals)
     } catch (error) {
       console.error('Failed to load royalty history:', error)
     }
