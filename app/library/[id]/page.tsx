@@ -164,26 +164,16 @@ export default function LibraryDetailPage() {
       
       try {
         const pending = await getPendingRoyalties(creator)
+        
+        // IMPORTANT: getPendingRoyalties returns total pending for ALL libraries owned by creator
+        // We should NOT add this to the individual library's revenue history
+        // Only show it in a separate "Pending Royalties" section if needed
+        
         setPendingRoyalties(pending)
         
-        // Add pending royalties to total
-        totalETH += parseFloat(pending.eth || '0')
-        totalUSDC += parseFloat(pending.usdc || '0')
+        // Don't add pending royalties to this library's total or history
+        // as it includes royalties from other libraries too
         
-        // Add pending royalties as an event in history if there are any
-        if (parseFloat(pending.eth || '0') > 0 || parseFloat(pending.usdc || '0') > 0) {
-          displayEvents.push({
-            projectId: projectId,
-            projectName: asset?.name || 'Unknown',
-            recipient: creator,
-            amountETH: pending.eth,
-            amountUSDC: pending.usdc,
-            timestamp: Date.now(),
-            type: 'earned' as const,
-            source: 'library' as const,
-            payerName: 'Pending (unclaimed)'
-          })
-        }
       } catch (error) {
         console.error('Failed to load pending royalties:', error)
         // Set default values on error
@@ -430,22 +420,25 @@ export default function LibraryDetailPage() {
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-xs text-gray-500 mb-1">Total ETH Revenue</p>
                     <p className="text-xl font-bold text-gray-900">{totalEarned.eth} ETH</p>
-                    {parseFloat(pendingRoyalties.eth) > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        (includes {parseFloat(pendingRoyalties.eth).toFixed(6)} ETH pending)
-                      </p>
-                    )}
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-xs text-gray-500 mb-1">Total USDC Revenue</p>
                     <p className="text-xl font-bold text-gray-900">{totalEarned.usdc} USDC</p>
-                    {parseFloat(pendingRoyalties.usdc) > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        (includes {parseFloat(pendingRoyalties.usdc).toFixed(6)} USDC pending)
-                      </p>
-                    )}
                   </div>
                 </div>
+                
+                {/* Pending Royalties Notice - Account Wide */}
+                {(parseFloat(pendingRoyalties.eth) > 0 || parseFloat(pendingRoyalties.usdc) > 0) && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-xs text-blue-800 font-medium mb-1">Account Pending Royalties</p>
+                    <p className="text-xs text-blue-700">
+                      You have {parseFloat(pendingRoyalties.eth) > 0 && `${parseFloat(pendingRoyalties.eth).toFixed(6)} ETH`}
+                      {parseFloat(pendingRoyalties.eth) > 0 && parseFloat(pendingRoyalties.usdc) > 0 && ' and '}
+                      {parseFloat(pendingRoyalties.usdc) > 0 && `${parseFloat(pendingRoyalties.usdc).toFixed(6)} USDC`} pending across all your libraries
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">Note: This includes royalties from all libraries you own, not just this one.</p>
+                  </div>
+                )}
                 
                 {/* Revenue Distribution Info */}
                 {project?.usedLibraries && project.usedLibraries.length > 0 && (
