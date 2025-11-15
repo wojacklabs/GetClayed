@@ -131,7 +131,7 @@ export default function LibraryDetailPage() {
       }
       
       // Load royalty history
-      loadRoyaltyHistory(foundAsset.originalCreator, assetId)
+      loadRoyaltyHistory(foundAsset.originalCreator, assetId, foundAsset, projectData)
     } catch (error) {
       console.error('Failed to load asset:', error)
       showPopup('Failed to load asset', 'error')
@@ -140,7 +140,7 @@ export default function LibraryDetailPage() {
     }
   }
   
-  const loadRoyaltyHistory = async (creator: string, projectId: string) => {
+  const loadRoyaltyHistory = async (creator: string, projectId: string, libraryAsset: LibraryAsset, projectData: any) => {
     try {
       // Get all royalty events for the creator (last 365 days)
       const events = await getRoyaltyEvents(creator, 365, 1000)
@@ -174,29 +174,29 @@ export default function LibraryDetailPage() {
         // Get all projects that have paid royalties to this library recently
         // This is an estimation based on recent activity
         // We look for projects that registered this library as a dependency
-        if (asset) {
+        if (libraryAsset) {
           // For now, we'll estimate based on the library's royalty rate
           // This is a simplified approach - in reality, we'd need to track
           // which projects have used this library but haven't been claimed yet
           
           // Get the library's royalty rates
-          const libRoyaltyETH = parseFloat(asset.royaltyPerImportETH || '0')
-          const libRoyaltyUSDC = parseFloat(asset.royaltyPerImportUSDC || '0')
+          const libRoyaltyETH = parseFloat(libraryAsset.royaltyPerImportETH || '0')
+          const libRoyaltyUSDC = parseFloat(libraryAsset.royaltyPerImportUSDC || '0')
           
           console.log(`[LibraryPage] Library ${projectId} royalty rates:`, {
             eth: libRoyaltyETH,
             usdc: libRoyaltyUSDC,
-            asset: asset
+            asset: libraryAsset
           })
           
           // If this library has dependencies, subtract their amounts
           let dependencyETH = 0
           let dependencyUSDC = 0
           
-          if (project?.usedLibraries) {
-            const directDeps = project.directImports 
-              ? project.usedLibraries.filter((lib: any) => project.directImports.includes(lib.projectId))
-              : project.usedLibraries
+          if (projectData?.usedLibraries) {
+            const directDeps = projectData.directImports 
+              ? projectData.usedLibraries.filter((lib: any) => projectData.directImports.includes(lib.projectId))
+              : projectData.usedLibraries
             
             dependencyETH = directDeps.reduce((sum: number, lib: any) => 
               sum + parseFloat(lib.royaltyPerImportETH || '0'), 0)
@@ -232,7 +232,7 @@ export default function LibraryDetailPage() {
             if (libraryPendingETH > 0 || libraryPendingUSDC > 0) {
               const pendingEvent = {
                 projectId: projectId,
-                projectName: asset.name || 'Unknown',
+                projectName: libraryAsset.name || 'Unknown',
                 recipient: creator,
                 amountETH: libraryPendingETH.toFixed(6),
                 amountUSDC: libraryPendingUSDC.toFixed(6),
