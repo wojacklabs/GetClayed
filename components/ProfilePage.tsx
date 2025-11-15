@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { Canvas } from '@react-three/fiber'
-import { User, Heart, Star, Edit2, Globe, Twitter, Github, Calendar, Eye, ArrowLeft, Wallet, ChevronLeft, ChevronRight, Home } from 'lucide-react'
+import { User, Heart, Star, Edit2, Globe, Twitter, Github, Calendar, Eye, ArrowLeft, Wallet, ChevronLeft, ChevronRight, Home, MoreVertical, Trash2, DollarSign } from 'lucide-react'
 import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, getProjectLikeCount, getProjectViewCount, uploadProfileAvatar, downloadProfileAvatar, getProfileMutableReference, followUser, unfollowUser, isFollowing, getUserFollowStats } from '../lib/profileService'
 import { queryUserProjects, downloadProjectThumbnail } from '../lib/clayStorageService'
 import { usePopup } from './PopupNotification'
@@ -13,6 +13,8 @@ import { AnimatedClayLogo } from './AnimatedClayLogo'
 import RoyaltyDashboard from './RoyaltyDashboard'
 import MiniViewer from './MiniViewer'
 import Link from 'next/link'
+import AddLibraryModal from './AddLibraryModal'
+import ListMarketplaceModal from './ListMarketplaceModal'
 
 interface ProfilePageProps {
   walletAddress: string
@@ -73,6 +75,12 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
   const [currentUserAddress, setCurrentUserAddress] = useState<string | undefined>(initialCurrentUserAddress)
   const [totalRevenueETH, setTotalRevenueETH] = useState<number>(0)
   const [totalRevenueUSDC, setTotalRevenueUSDC] = useState<number>(0)
+  const [projectMenu, setProjectMenu] = useState<string | null>(null)
+  const [showAddLibraryModal, setShowAddLibraryModal] = useState(false)
+  const [showListMarketplaceModal, setShowListMarketplaceModal] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<{ id: string; name: string } | null>(null)
+  
+  const isOwner = currentUserAddress?.toLowerCase() === walletAddress.toLowerCase()
   
   // Load library revenue (only for own profile)
   useEffect(() => {
@@ -526,6 +534,32 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
       setIsProcessingFollow(false)
     }
   }
+
+  const handleAddToLibrary = (projectId: string, projectName: string) => {
+    setSelectedProject({ id: projectId, name: projectName })
+    setShowAddLibraryModal(true)
+  }
+
+  const handleListOnMarketplace = (projectId: string, projectName: string) => {
+    setSelectedProject({ id: projectId, name: projectName })
+    setShowListMarketplaceModal(true)
+  }
+
+  const handleDeleteProject = async (projectId: string, projectName: string) => {
+    if (confirm(`Are you sure you want to delete "${projectName}"?`)) {
+      // TODO: 삭제 로직 구현
+      showPopup('Delete feature is not implemented yet', 'info')
+    }
+  }
+
+  // 외부 클릭 시 메뉴 닫기
+  useEffect(() => {
+    const handleClickOutside = () => setProjectMenu(null)
+    if (projectMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [projectMenu])
   
   return (
     <div className="fixed inset-0 bg-gray-100 z-[9998] overflow-auto">
@@ -1071,11 +1105,10 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
               return (
                 <div
                   key={project.id}
-                  className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
-                  onClick={() => router.push(`/project/${project.id}`)}
+                  className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-gray-200 relative group"
                 >
                   {/* 3D Preview */}
-                  <div className="relative">
+                  <div className="relative cursor-pointer" onClick={() => router.push(`/project/${project.id}`)}>
                     <MiniViewer 
                       projectId={project.id}
                       className="aspect-square"
@@ -1089,7 +1122,68 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                   
                   {/* Info */}
                   <div className="p-3">
-                    <h4 className="text-sm font-medium text-gray-900 mb-1 truncate">{project.name}</h4>
+                    <div className="flex items-center justify-between">
+                      <h4 
+                        className="text-sm font-medium text-gray-900 mb-1 truncate flex-1 cursor-pointer"
+                        onClick={() => router.push(`/project/${project.id}`)}
+                      >
+                        {project.name}
+                      </h4>
+                      {isOwner && (
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setProjectMenu(projectMenu === project.id ? null : project.id)
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
+                            <MoreVertical size={16} className="text-gray-500" />
+                          </button>
+                          {projectMenu === project.id && (
+                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 w-48">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddToLibrary(project.id, project.name)
+                                  setProjectMenu(null)
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                </svg>
+                                Add to Library
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleListOnMarketplace(project.id, project.name)
+                                  setProjectMenu(null)
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <DollarSign size={16} />
+                                List on Marketplace
+                              </button>
+                              <div className="border-t border-gray-100 my-1" />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteProject(project.id, project.name)
+                                  setProjectMenu(null)
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                              >
+                                <Trash2 size={16} />
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3 text-xs text-gray-500">
                       <div className="flex items-center gap-1">
                         <Heart size={12} />
@@ -1154,6 +1248,33 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
         projectName={uploadProgress.type === 'avatar' ? 'Profile Avatar' : 'Profile Data'}
         isDownload={false}
       />
+
+      {/* Add to Library Modal */}
+      {selectedProject && (
+        <AddLibraryModal
+          isOpen={showAddLibraryModal}
+          onClose={() => {
+            setShowAddLibraryModal(false)
+            setSelectedProject(null)
+          }}
+          projectId={selectedProject.id}
+          projectName={selectedProject.name}
+          walletAddress={currentUserAddress!}
+        />
+      )}
+
+      {/* List on Marketplace Modal */}
+      {selectedProject && (
+        <ListMarketplaceModal
+          isOpen={showListMarketplaceModal}
+          onClose={() => {
+            setShowListMarketplaceModal(false)
+            setSelectedProject(null)
+          }}
+          projectId={selectedProject.id}
+          projectName={selectedProject.name}
+        />
+      )}
     </div>
   )
 }

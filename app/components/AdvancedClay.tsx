@@ -38,6 +38,7 @@ import SaveButton from '../../components/SaveButton'
 import FolderStructure, { FolderStructureHandle } from '../../components/FolderStructure'
 import { ConnectWallet } from '../../components/ConnectWallet'
 import { AnimatedClayLogo } from '../../components/AnimatedClayLogo'
+import ListMarketplaceModal from '../../components/ListMarketplaceModal'
 import { useWallets } from '@privy-io/react-auth'
 import MiniViewer from '../../components/MiniViewer'
 import { serializeClayProject, uploadClayProject, downloadClayProject, restoreClayObjects, deleteClayProject, uploadProjectThumbnail, downloadProjectThumbnail } from '../../lib/clayStorageService'
@@ -2270,6 +2271,9 @@ export default function AdvancedClay() {
   const [libraryPriceCurrency, setLibraryPriceCurrency] = useState<'ETH' | 'USDC'>('USDC')
   const [libraryPrice, setLibraryPrice] = useState('')
   const [libraryProjectId, setLibraryProjectId] = useState<string | null>(null)
+  const [showMarketplaceModal, setShowMarketplaceModal] = useState(false)
+  const [marketplaceProjectId, setMarketplaceProjectId] = useState<string | null>(null)
+  const [marketplaceProjectName, setMarketplaceProjectName] = useState<string>('')
   const [showLibrarySearch, setShowLibrarySearch] = useState(false)
   const [librarySearchQuery, setLibrarySearchQuery] = useState('')
   const [libraryAssets, setLibraryAssets] = useState<any[]>([])
@@ -2433,6 +2437,12 @@ export default function AdvancedClay() {
   const handleAddToLibrary = (projectId: string) => {
     setLibraryProjectId(projectId)
     setShowLibraryModal(true)
+  }
+
+  const handleListOnMarketplace = (projectId: string, projectName: string) => {
+    setMarketplaceProjectId(projectId)
+    setMarketplaceProjectName(projectName)
+    setShowMarketplaceModal(true)
   }
   
   const handleRemoveFromLibrary = async (projectId: string) => {
@@ -5046,6 +5056,7 @@ export default function AdvancedClay() {
           onProjectRename={handleProjectRename}
           onAddToLibrary={handleAddToLibrary}
           onRemoveFromLibrary={handleRemoveFromLibrary}
+          onListOnMarketplace={handleListOnMarketplace}
           currentFolder={currentFolder}
           onFolderChange={(folderPath) => setCurrentFolder(folderPath)}
         />
@@ -6387,6 +6398,20 @@ export default function AdvancedClay() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Marketplace Listing Modal */}
+      {showMarketplaceModal && marketplaceProjectId && (
+        <ListMarketplaceModal
+          isOpen={showMarketplaceModal}
+          onClose={() => {
+            setShowMarketplaceModal(false)
+            setMarketplaceProjectId(null)
+            setMarketplaceProjectName('')
+          }}
+          projectId={marketplaceProjectId}
+          projectName={marketplaceProjectName}
+        />
       )}
       
       {/* Context Menu */}
