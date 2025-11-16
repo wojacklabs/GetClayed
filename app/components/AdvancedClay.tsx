@@ -2746,7 +2746,7 @@ export default function AdvancedClay() {
         // Enforce minimum pricing based on CURRENT blockchain values
         if (ethPrice > 0 && ethPrice <= priceCheck.minETH) {
           showPopup(
-            `Price too low. Minimum: ${priceCheck.minETH.toFixed(4)} ETH (you set: ${ethPrice.toFixed(4)}). Suggested: ${(priceCheck.minETH * 1.2).toFixed(4)}`,
+            `Price too low. Minimum: ${formatETH(priceCheck.minETH)} ETH (you set: ${formatETH(ethPrice)}). Suggested: ${formatETH(priceCheck.minETH * 1.2)}`,
             'error'
           )
           setIsRegisteringLibrary(false)
@@ -2755,7 +2755,7 @@ export default function AdvancedClay() {
         
         if (usdcPrice > 0 && usdcPrice <= priceCheck.minUSDC) {
           showPopup(
-            `Price too low. Minimum: ${priceCheck.minUSDC.toFixed(6)} USDC (you set: ${usdcPrice.toFixed(6)}). Suggested: ${(priceCheck.minUSDC * 1.2).toFixed(6)}`,
+            `Price too low. Minimum: ${formatUSDC(priceCheck.minUSDC)} USDC (you set: ${formatUSDC(usdcPrice)}). Suggested: ${formatUSDC(priceCheck.minUSDC * 1.2)}`,
             'error'
           )
           setIsRegisteringLibrary(false)
@@ -2765,7 +2765,7 @@ export default function AdvancedClay() {
         // Show helpful info to user
         if (ethPrice > 0 && ethPrice > priceCheck.minETH) {
           const message = priceCheck.activeLibraries.length > 0
-            ? `✅ Price OK (${ethPrice.toFixed(4)} ETH > ${priceCheck.minETH.toFixed(4)} minimum)`
+            ? `✅ Price OK (${formatETH(ethPrice)} ETH > ${formatETH(priceCheck.minETH)} minimum)`
             : `✅ No dependencies - any price OK`
           
           showPopup(message, 'success')
@@ -2773,7 +2773,7 @@ export default function AdvancedClay() {
         
         if (usdcPrice > 0 && usdcPrice > priceCheck.minUSDC) {
           const message = priceCheck.activeLibraries.length > 0
-            ? `✅ Price OK (${usdcPrice.toFixed(6)} USDC > ${priceCheck.minUSDC.toFixed(6)} minimum)`
+            ? `✅ Price OK (${formatUSDC(usdcPrice)} USDC > ${formatUSDC(priceCheck.minUSDC)} minimum)`
             : `✅ No dependencies - any price OK`
           
           showPopup(message, 'success')

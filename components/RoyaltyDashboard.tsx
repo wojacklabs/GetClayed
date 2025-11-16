@@ -66,7 +66,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
       
       const txHash = await claimETHRoyalties(provider)
       showPopup(
-        `Successfully claimed ${parseFloat(pendingETH).toFixed(4)} ETH`,
+        `Successfully claimed ${formatETH(pendingETH)} ETH`,
         'success',
         { title: 'Royalties Claimed!' }
       )
@@ -103,7 +103,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
       
       const txHash = await claimUSDCRoyalties(provider)
       showPopup(
-        `Successfully claimed ${parseFloat(pendingUSDC).toFixed(4)} USDC`,
+        `Successfully claimed ${formatUSDC(pendingUSDC)} USDC`,
         'success',
         { title: 'Royalties Claimed!' }
       )
