@@ -10,12 +10,10 @@ export async function GET(
   try {
     const { id } = await params;
     
-    // URL에서 마켓플레이스 정보 가져오기
     const { searchParams } = new URL(request.url);
-    const name = searchParams.get('name') || 'Untitled Asset';
+    const name = searchParams.get('name') || 'Marketplace Item';
     const seller = searchParams.get('seller') || 'Unknown';
     const price = searchParams.get('price') || '0';
-    const description = searchParams.get('description') || '';
     
     return new ImageResponse(
       (
@@ -27,154 +25,122 @@ export async function GET(
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-            fontFamily: 'Inter, sans-serif',
+            background: '#f9fafb',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
           }}
         >
-          {/* 메인 콘텐츠 */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              borderRadius: '24px',
-              padding: '60px',
-              margin: '40px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              maxWidth: '900px',
             }}
           >
-            {/* 마켓플레이스 아이콘 */}
+            {/* FOR SALE 배지 */}
             <div
               style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '50%',
-                backgroundColor: '#f59e0b',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '30px',
-                fontSize: '60px',
-              }}
-            >
-              🛒
-            </div>
-            
-            {/* FOR SALE 뱃지 */}
-            <div
-              style={{
-                backgroundColor: '#10b981',
+                backgroundColor: '#111827',
                 color: 'white',
-                fontSize: '22px',
-                fontWeight: 'bold',
-                padding: '12px 32px',
-                borderRadius: '24px',
-                marginBottom: '24px',
+                fontSize: '18px',
+                fontWeight: '700',
+                padding: '10px 28px',
+                borderRadius: '12px',
+                marginBottom: '32px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
               }}
             >
               FOR SALE
             </div>
+
+            {/* 아이콘 */}
+            <div
+              style={{
+                width: '100px',
+                height: '100px',
+                borderRadius: '20px',
+                backgroundColor: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '32px',
+                fontSize: '56px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              🏺
+            </div>
             
-            {/* 자산 이름 */}
+            {/* 이름 */}
             <div
               style={{
                 fontSize: '56px',
-                fontWeight: 'bold',
-                color: '#1f2937',
+                fontWeight: '700',
+                color: '#111827',
                 textAlign: 'center',
-                marginBottom: '20px',
-                maxWidth: '800px',
+                marginBottom: '16px',
+                maxWidth: '900px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                letterSpacing: '-0.02em',
               }}
             >
               {name}
             </div>
             
-            {/* 설명 */}
-            {description && (
-              <div
-                style={{
-                  fontSize: '24px',
-                  color: '#9ca3af',
-                  textAlign: 'center',
-                  marginBottom: '30px',
-                  maxWidth: '700px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                }}
-              >
-                {description}
-              </div>
-            )}
-            
             {/* 가격 */}
             <div
               style={{
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                gap: '16px',
-                marginBottom: '30px',
+                gap: '12px',
+                marginBottom: '32px',
               }}
             >
-              <div
-                style={{
-                  fontSize: '22px',
-                  color: '#6b7280',
-                  fontWeight: '600',
-                }}
-              >
-                Price
-              </div>
-              <div
-                style={{
-                  fontSize: '64px',
-                  fontWeight: 'bold',
-                  color: '#1f2937',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                }}
-              >
-                <div style={{ fontSize: '48px' }}>⟠</div>
+              <div style={{ fontSize: '48px', fontWeight: '800', color: '#111827' }}>
                 {price}
+              </div>
+              <div style={{ fontSize: '28px', color: '#6b7280', fontWeight: '600' }}>
+                ETH
               </div>
             </div>
             
             {/* 판매자 */}
             <div
               style={{
-                fontSize: '24px',
-                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
               }}
             >
-              Seller: {seller.slice(0, 6)}...{seller.slice(-4)}
+              <div style={{ fontSize: '18px', color: '#6b7280', fontWeight: '500' }}>
+                Seller:
+              </div>
+              <div style={{ fontSize: '18px', color: '#111827', fontWeight: '600' }}>
+                {seller.slice(0, 6)}...{seller.slice(-4)}
+              </div>
             </div>
           </div>
           
           {/* 하단 브랜딩 */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              marginTop: '30px',
+              position: 'absolute',
+              bottom: '40px',
+              fontSize: '20px',
+              color: '#9ca3af',
+              fontWeight: '500',
             }}
           >
-            <div style={{ fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
-              GetClayed
-            </div>
-            <div style={{ fontSize: '32px', color: 'rgba(255, 255, 255, 0.8)' }}>
-              Marketplace
-            </div>
+            GetClayed Marketplace
           </div>
         </div>
       ),
@@ -188,4 +154,3 @@ export async function GET(
     return new Response('Failed to generate image', { status: 500 });
   }
 }
-

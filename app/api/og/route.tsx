@@ -14,32 +14,33 @@ export async function GET() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            fontFamily: 'Inter, sans-serif',
+            background: '#f9fafb',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
           }}
         >
-          {/* 메인 로고 */}
+          {/* 메인 컨텐츠 */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '40px',
             }}
           >
+            {/* 로고 */}
             <div
               style={{
-                width: '200px',
-                height: '200px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                width: '140px',
+                height: '140px',
+                borderRadius: '28px',
+                backgroundColor: 'white',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: '40px',
-                fontSize: '120px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                fontSize: '80px',
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
+                border: '1px solid #e5e7eb',
               }}
             >
               🏺
@@ -48,12 +49,12 @@ export async function GET() {
             {/* 앱 이름 */}
             <div
               style={{
-                fontSize: '96px',
-                fontWeight: 'bold',
-                color: 'white',
+                fontSize: '72px',
+                fontWeight: '700',
+                color: '#111827',
                 textAlign: 'center',
-                marginBottom: '20px',
-                textShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                marginBottom: '16px',
+                letterSpacing: '-0.02em',
               }}
             >
               GetClayed
@@ -62,112 +63,89 @@ export async function GET() {
             {/* 태그라인 */}
             <div
               style={{
-                fontSize: '42px',
-                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '32px',
+                color: '#6b7280',
                 textAlign: 'center',
-                marginBottom: '50px',
-                textShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                marginBottom: '60px',
+                fontWeight: '500',
               }}
             >
-              3D Clay Sculpting in Your Browser
+              Sculpt like a 5-year-old genius
+            </div>
+            
+            {/* 특징 */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '32px',
+                marginBottom: '48px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '16px 28px',
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
+                }}
+              >
+                <div style={{ fontSize: '32px' }}>🎨</div>
+                <div style={{ fontSize: '22px', color: '#374151', fontWeight: '600' }}>
+                  Easy to Use
+                </div>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '16px 28px',
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
+                }}
+              >
+                <div style={{ fontSize: '32px' }}>⛓️</div>
+                <div style={{ fontSize: '22px', color: '#374151', fontWeight: '600' }}>
+                  On-Chain
+                </div>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '16px 28px',
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
+                }}
+              >
+                <div style={{ fontSize: '32px' }}>✨</div>
+                <div style={{ fontSize: '22px', color: '#374151', fontWeight: '600' }}>
+                  3D Sculpting
+                </div>
+              </div>
             </div>
           </div>
           
-          {/* 기능 아이콘들 */}
+          {/* 하단 서브텍스트 */}
           <div
             style={{
-              display: 'flex',
-              gap: '50px',
-              marginBottom: '50px',
+              position: 'absolute',
+              bottom: '40px',
+              fontSize: '20px',
+              color: '#9ca3af',
+              fontWeight: '500',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px',
-              }}
-            >
-              <div
-                style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '20px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '50px',
-                }}
-              >
-                ✨
-              </div>
-              <div style={{ fontSize: '24px', color: 'white' }}>Create</div>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px',
-              }}
-            >
-              <div
-                style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '20px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '50px',
-                }}
-              >
-                🎨
-              </div>
-              <div style={{ fontSize: '24px', color: 'white' }}>Sculpt</div>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px',
-              }}
-            >
-              <div
-                style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '20px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '50px',
-                }}
-              >
-                🚀
-              </div>
-              <div style={{ fontSize: '24px', color: 'white' }}>Share</div>
-            </div>
-          </div>
-          
-          {/* Web3 배지 */}
-          <div
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              fontSize: '28px',
-              fontWeight: '600',
-              padding: '16px 48px',
-              borderRadius: '32px',
-              backdropFilter: 'blur(10px)',
-            }}
-          >
-            Powered by Web3 & Blockchain
+            getclayed.vercel.app
           </div>
         </div>
       ),

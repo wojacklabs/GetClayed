@@ -10,13 +10,11 @@ export async function GET(
   try {
     const { id } = await params;
     
-    // URL에서 라이브러리 정보 가져오기
     const { searchParams } = new URL(request.url);
-    const name = searchParams.get('name') || 'Untitled Asset';
+    const name = searchParams.get('name') || 'Library Asset';
     const author = searchParams.get('author') || 'Unknown';
     const royaltyETH = searchParams.get('royaltyETH') || '';
     const royaltyUSDC = searchParams.get('royaltyUSDC') || '';
-    const description = searchParams.get('description') || '';
     
     return new ImageResponse(
       (
@@ -28,54 +26,64 @@ export async function GET(
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            fontFamily: 'Inter, sans-serif',
+            background: '#f9fafb',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
           }}
         >
-          {/* 메인 콘텐츠 */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              borderRadius: '24px',
-              padding: '60px',
-              margin: '40px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              maxWidth: '900px',
             }}
           >
-            {/* 라이브러리 아이콘 */}
+            {/* Library 배지 */}
             <div
               style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '50%',
-                backgroundColor: '#ec4899',
+                fontSize: '18px',
+                color: '#6b7280',
+                fontWeight: '600',
+                marginBottom: '24px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              📚 Library Asset
+            </div>
+
+            {/* 아이콘 */}
+            <div
+              style={{
+                width: '100px',
+                height: '100px',
+                borderRadius: '20px',
+                backgroundColor: 'white',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '30px',
-                fontSize: '60px',
+                marginBottom: '32px',
+                fontSize: '56px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
+                border: '1px solid #e5e7eb',
               }}
             >
-              📚
+              📦
             </div>
             
-            {/* 라이브러리 이름 */}
+            {/* 이름 */}
             <div
               style={{
                 fontSize: '56px',
-                fontWeight: 'bold',
-                color: '#1f2937',
+                fontWeight: '700',
+                color: '#111827',
                 textAlign: 'center',
-                marginBottom: '20px',
-                maxWidth: '800px',
+                marginBottom: '16px',
+                maxWidth: '900px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                letterSpacing: '-0.02em',
               }}
             >
               {name}
@@ -84,71 +92,41 @@ export async function GET(
             {/* 작가 */}
             <div
               style={{
-                fontSize: '28px',
+                fontSize: '22px',
                 color: '#6b7280',
-                marginBottom: '20px',
+                marginBottom: '48px',
+                fontWeight: '500',
               }}
             >
               by {author.slice(0, 6)}...{author.slice(-4)}
             </div>
             
-            {/* 설명 */}
-            {description && (
-              <div
-                style={{
-                  fontSize: '24px',
-                  color: '#9ca3af',
-                  textAlign: 'center',
-                  marginBottom: '30px',
-                  maxWidth: '700px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                }}
-              >
-                {description}
-              </div>
-            )}
-            
             {/* 로열티 정보 */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                alignItems: 'center',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '22px',
-                  color: '#6b7280',
-                  fontWeight: '600',
-                }}
-              >
-                Royalty per Import
-              </div>
+            {(royaltyETH || royaltyUSDC) && (
               <div
                 style={{
                   display: 'flex',
-                  gap: '40px',
+                  gap: '24px',
+                  alignItems: 'center',
                 }}
               >
+                <div style={{ fontSize: '20px', color: '#6b7280', fontWeight: '500' }}>
+                  Royalty:
+                </div>
                 {royaltyETH && parseFloat(royaltyETH) > 0 && (
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
-                      backgroundColor: '#f3f4f6',
-                      padding: '16px 32px',
+                      gap: '8px',
+                      padding: '12px 24px',
+                      backgroundColor: 'white',
                       borderRadius: '12px',
+                      border: '1px solid #e5e7eb',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                     }}
                   >
-                    <div style={{ fontSize: '28px' }}>⟠</div>
-                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#374151' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
                       {royaltyETH} ETH
                     </div>
                   </div>
@@ -158,37 +136,34 @@ export async function GET(
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
-                      backgroundColor: '#f3f4f6',
-                      padding: '16px 32px',
+                      gap: '8px',
+                      padding: '12px 24px',
+                      backgroundColor: 'white',
                       borderRadius: '12px',
+                      border: '1px solid #e5e7eb',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                     }}
                   >
-                    <div style={{ fontSize: '28px' }}>💵</div>
-                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#374151' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
                       {royaltyUSDC} USDC
                     </div>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
           
           {/* 하단 브랜딩 */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              marginTop: '30px',
+              position: 'absolute',
+              bottom: '40px',
+              fontSize: '20px',
+              color: '#9ca3af',
+              fontWeight: '500',
             }}
           >
-            <div style={{ fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
-              GetClayed
-            </div>
-            <div style={{ fontSize: '32px', color: 'rgba(255, 255, 255, 0.8)' }}>
-              Library
-            </div>
+            GetClayed Library
           </div>
         </div>
       ),
@@ -202,4 +177,3 @@ export async function GET(
     return new Response('Failed to generate image', { status: 500 });
   }
 }
-

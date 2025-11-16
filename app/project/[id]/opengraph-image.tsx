@@ -11,8 +11,6 @@ export const contentType = 'image/png';
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   
-  // 프로젝트 정보를 실제로 가져오는 것은 edge runtime에서 제한이 있으므로
-  // API를 통해 리다이렉트합니다
   return new ImageResponse(
     (
       <div
@@ -23,8 +21,8 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          fontFamily: 'sans-serif',
+          background: '#f9fafb',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
         <div
@@ -33,24 +31,21 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            borderRadius: '24px',
-            padding: '60px',
-            margin: '40px',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
           }}
         >
           <div
             style={{
-              width: '120px',
-              height: '120px',
-              borderRadius: '50%',
-              backgroundColor: '#3b82f6',
+              width: '100px',
+              height: '100px',
+              borderRadius: '20px',
+              backgroundColor: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '30px',
-              fontSize: '60px',
+              marginBottom: '32px',
+              fontSize: '56px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
+              border: '1px solid #e5e7eb',
             }}
           >
             🏺
@@ -58,38 +53,35 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           <div
             style={{
               fontSize: '56px',
-              fontWeight: 'bold',
-              color: '#1f2937',
+              fontWeight: '700',
+              color: '#111827',
               textAlign: 'center',
-              marginBottom: '20px',
+              marginBottom: '16px',
+              letterSpacing: '-0.02em',
             }}
           >
-            GetClayed Project
+            3D Clay Project
           </div>
           <div
             style={{
-              fontSize: '28px',
+              fontSize: '22px',
               color: '#6b7280',
-              marginBottom: '20px',
+              fontWeight: '500',
             }}
           >
-            ID: {id}
+            View on GetClayed
           </div>
         </div>
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            marginTop: '30px',
+            position: 'absolute',
+            bottom: '40px',
+            fontSize: '20px',
+            color: '#9ca3af',
+            fontWeight: '500',
           }}
         >
-          <div style={{ fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
-            GetClayed
-          </div>
-          <div style={{ fontSize: '32px', color: 'rgba(255, 255, 255, 0.8)' }}>
-            3D Clay Sculpting
-          </div>
+          GetClayed
         </div>
       </div>
     ),
@@ -98,4 +90,3 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     }
   );
 }
-
