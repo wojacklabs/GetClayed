@@ -619,7 +619,7 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
     
     if (isEmpty) {
       return (
-        <div className="flex gap-3 min-w-max items-center justify-center h-16">
+        <div className="flex justify-center items-center h-16 w-full">
           <p className="text-xs text-gray-400">No files or folders</p>
         </div>
       );

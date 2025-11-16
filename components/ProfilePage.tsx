@@ -673,15 +673,15 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
         </div>
       </div>
       
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
         
         {/* Profile Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-start gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             {/* Avatar */}
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 self-center sm:self-start">
               <div className="relative">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
                   {tempProfileImage ? (
                     <img src={tempProfileImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : profileImage ? (
@@ -712,7 +712,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             </div>
             
             {/* Profile Info */}
-            <div className="flex-grow">
+            <div className="flex-grow min-w-0 w-full sm:w-auto">
               {loading ? (
                 <div>
                   <div className="h-8 w-48 bg-gray-200 rounded mb-2 animate-pulse"></div>
@@ -739,40 +739,40 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                     rows={3}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
                   />
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <input
                       type="text"
                       placeholder="Website"
                       value={editForm.website}
                       onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
-                      className="px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Twitter"
                       value={editForm.twitter}
                       onChange={(e) => setEditForm({ ...editForm, twitter: e.target.value })}
-                      className="px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm"
                     />
                     <input
                       type="text"
                       placeholder="GitHub"
                       value={editForm.github}
                       onChange={(e) => setEditForm({ ...editForm, github: e.target.value })}
-                      className="px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm"
                     />
                   </div>
                 </div>
               ) : (
                 <div>
                   <div className="mb-2">
-                    <h2 className="text-xl font-medium">
+                    <h2 className="text-lg sm:text-xl font-medium truncate">
                       {profile?.displayName || formatAddress(walletAddress)}
                     </h2>
                   </div>
-                  <p className="text-gray-600 mb-4">{formatAddress(walletAddress)}</p>
-                  {profile?.bio && <p className="text-gray-700 mb-4">{profile.bio}</p>}
-                  <div className="flex gap-4 text-sm">
+                  <p className="text-sm text-gray-600 mb-3 truncate">{formatAddress(walletAddress)}</p>
+                  {profile?.bio && <p className="text-sm text-gray-700 mb-3 line-clamp-3">{profile.bio}</p>}
+                  <div className="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm">
                     {profile?.website && (
                       <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
                         <Globe size={14} />
@@ -797,7 +797,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             </div>
             
             {/* Stats */}
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-3 sm:gap-6 w-full sm:w-auto sm:flex-shrink-0">
               {loading ? (
                 <>
                   <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
@@ -808,25 +808,25 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                 </>
               ) : (
                 <>
-                  <div className="text-sm">
+                  <div className="text-xs sm:text-sm">
                     <span className="font-medium text-gray-900">{followStats.followers}</span>
                     <span className="text-gray-500 ml-1">followers</span>
                   </div>
-                  <div className="text-sm">
+                  <div className="text-xs sm:text-sm">
                     <span className="font-medium text-gray-900">{followStats.following}</span>
                     <span className="text-gray-500 ml-1">following</span>
                   </div>
-                  <div className="text-sm">
+                  <div className="text-xs sm:text-sm">
                     <span className="font-medium text-gray-900">{projects.length}</span>
                     <span className="text-gray-500 ml-1">projects</span>
                   </div>
-                  <div className="text-sm">
+                  <div className="text-xs sm:text-sm">
                     <span className="font-medium text-gray-900">
                       {Array.from(projectStats.values()).reduce((sum, stats) => sum + stats.likes, 0)}
                     </span>
                     <span className="text-gray-500 ml-1">likes</span>
                   </div>
-                  <div className="text-sm">
+                  <div className="text-xs sm:text-sm">
                     <span className="font-medium text-gray-900">{favorites.length}</span>
                     <span className="text-gray-500 ml-1">favorites</span>
                   </div>

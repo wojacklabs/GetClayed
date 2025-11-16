@@ -1,8 +1,8 @@
 import { ethers } from 'ethers';
 
 // RPC endpoints configuration
+// Note: Excluding the first RPC endpoint as it has reliability issues
 const RPC_ENDPOINTS = [
-  process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
   'https://base.meowrpc.com',
   'https://base.publicnode.com',
   'https://1rpc.io/base',

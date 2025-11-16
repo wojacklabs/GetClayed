@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Bell, X, DollarSign, TrendingUp } from 'lucide-react'
 import { getPendingRoyalties, getRoyaltyEvents, RoyaltyEvent } from '../lib/royaltyClaimService'
 import Link from 'next/link'
+import { formatETH, formatUSDC } from '../lib/formatCurrency'
 
 interface RoyaltyNotificationsProps {
   walletAddress: string
@@ -148,10 +149,10 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                           </p>
                           <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
                             {parseFloat(event.amountETH) > 0 && (
-                              <span>{parseFloat(event.amountETH).toFixed(6)} ETH</span>
+                              <span>{formatETH(event.amountETH)} ETH</span>
                             )}
                             {parseFloat(event.amountUSDC) > 0 && (
-                              <span>{parseFloat(event.amountUSDC).toFixed(6)} USDC</span>
+                              <span>{formatUSDC(event.amountUSDC)} USDC</span>
                             )}
                           </div>
                           <p className="text-xs text-gray-500">
@@ -240,12 +241,12 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                       <div className="flex items-center gap-3 text-sm">
                         {parseFloat(event.amountETH) > 0 && (
                           <span className="text-gray-900 font-medium">
-                            {parseFloat(event.amountETH).toFixed(6)} ETH
+                            {formatETH(event.amountETH)} ETH
                           </span>
                         )}
                         {parseFloat(event.amountUSDC) > 0 && (
                           <span className="text-gray-900 font-medium">
-                            {parseFloat(event.amountUSDC).toFixed(6)} USDC
+                            {formatUSDC(event.amountUSDC)} USDC
                           </span>
                         )}
                       </div>

@@ -52,17 +52,11 @@ export const metadata: Metadata = {
     images: ['https://getclayed.vercel.app/api/og'],
   },
   other: {
-    'fc:miniapp': JSON.stringify({
-      version: '1',
-      imageUrl: 'https://getclayed.vercel.app/api/og',
-      button: {
-        title: 'Launch GetClayed',
-        action: {
-          type: 'launch_miniapp',
-          url: 'https://getclayed.vercel.app'
-        }
-      }
-    })
+    'fc:frame': 'vNext',
+    'fc:frame:image': 'https://getclayed.vercel.app/api/og',
+    'fc:frame:button:1': 'Launch GetClayed',
+    'fc:frame:button:1:action': 'link',
+    'fc:frame:button:1:target': 'https://getclayed.vercel.app',
   }
 };
 

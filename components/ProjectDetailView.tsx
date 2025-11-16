@@ -13,6 +13,7 @@ import { AnimatedClayLogo } from './AnimatedClayLogo'
 import RoyaltyTree from './RoyaltyTree'
 import { queryMarketplaceListings } from '../lib/marketplaceService'
 import { queryLibraryAssets } from '../lib/libraryService'
+import { formatCombinedCurrency } from '../lib/formatCurrency'
 
 interface ProjectDetailViewProps {
   projectId: string
@@ -300,21 +301,21 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
     <div className="fixed inset-0 bg-gray-100 z-[9998]">
       {/* Minimal Header */}
       <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">
-        <div className="px-4 flex items-center justify-between h-14">
-          <div className="flex items-center gap-3">
+        <div className="px-4 flex items-center justify-between h-14 gap-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <button
               onClick={onBack}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
               title="Back"
             >
               <ArrowLeft size={20} />
             </button>
-            <div>
-              <h1 className="text-lg font-medium text-gray-900">{project?.name || 'Untitled'}</h1>
+            <div className="min-w-0 flex-1 max-w-md">
+              <h1 className="text-lg font-medium text-gray-900 truncate">{project?.name || 'Untitled'}</h1>
               {project?.author ? (
                 <Link 
                   href={`/user/${project.author}`}
-                  className="text-xs text-gray-500 hover:text-gray-700 hover:underline transition-colors"
+                  className="text-xs text-gray-500 hover:text-gray-700 hover:underline transition-colors truncate block"
                 >
                   by {authorProfile?.displayName || `${project.author.slice(0, 6)}...${project.author.slice(-4)}`}
                 </Link>
@@ -346,9 +347,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             </Link>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* Stats */}
-            <div className="flex items-center gap-3 text-xs text-gray-500">
+            <div className="hidden sm:flex items-center gap-3 text-xs text-gray-500">
               <div className="flex items-center gap-1">
                 <Eye size={14} />
                 <span>{viewCount}</span>
@@ -629,14 +630,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
                   const totalETH = directLibs.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
                   const totalUSDC = directLibs.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
                   
-                  if (totalETH > 0 && totalUSDC > 0) {
-                    return `${totalETH.toFixed(4)} ETH + ${totalUSDC.toFixed(2)} USDC`;
-                  } else if (totalETH > 0) {
-                    return `${totalETH.toFixed(4)} ETH`;
-                  } else if (totalUSDC > 0) {
-                    return `${totalUSDC.toFixed(2)} USDC`;
-                  }
-                  return '0';
+                  return formatCombinedCurrency(totalETH, totalUSDC);
                 })()}
               </p>
             </div>

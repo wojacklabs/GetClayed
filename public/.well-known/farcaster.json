@@ -3,5 +3,15 @@
     "header": "eyJmaWQiOjE0MzA5MjQsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhDMkNFZjEwOUViOTFCRkQ3MzMxYURFQ0YyQUE5YjIwMzg0ZDg1Y2VEIn0",
     "payload": "eyJkb21haW4iOiJnZXRjbGF5ZWQudmVyY2VsLmFwcCJ9",
     "signature": "fzc1+8XW3pj5fJsUcesI21j7CFg6KefhXmJ+wjCCIMhFPa3C9rXtxENsv7TwwyOM8LZlOJhWXu2tuRwsssk2+xs="
+  },
+  "frame": {
+    "version": "next",
+    "name": "GetClayed",
+    "iconUrl": "https://getclayed.vercel.app/clay.png",
+    "homeUrl": "https://getclayed.vercel.app",
+    "imageUrl": "https://getclayed.vercel.app/api/og",
+    "splashImageUrl": "https://getclayed.vercel.app/api/og",
+    "splashBackgroundColor": "#3b82f6",
+    "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook"
   }
 }
