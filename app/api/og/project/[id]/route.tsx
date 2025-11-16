@@ -27,8 +27,8 @@ export async function GET(
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            fontFamily: 'Inter, sans-serif',
+            background: '#f9fafb',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
           }}
         >
           {/* 메인 콘텐츠 */}
@@ -38,26 +38,22 @@ export async function GET(
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              borderRadius: '24px',
-              padding: '60px',
-              margin: '40px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              maxWidth: '900px',
             }}
           >
             {/* 아이콘/로고 */}
             <div
               style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '50%',
-                backgroundColor: '#3b82f6',
+                width: '100px',
+                height: '100px',
+                borderRadius: '20px',
+                backgroundColor: 'white',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '30px',
-                fontSize: '60px',
+                marginBottom: '32px',
+                fontSize: '56px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
+                border: '1px solid #e5e7eb',
               }}
             >
               🏺
@@ -67,14 +63,15 @@ export async function GET(
             <div
               style={{
                 fontSize: '56px',
-                fontWeight: 'bold',
-                color: '#1f2937',
+                fontWeight: '700',
+                color: '#111827',
                 textAlign: 'center',
                 marginBottom: '20px',
-                maxWidth: '800px',
+                maxWidth: '900px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                letterSpacing: '-0.02em',
               }}
             >
               {name}
@@ -83,9 +80,10 @@ export async function GET(
             {/* 작가 */}
             <div
               style={{
-                fontSize: '28px',
+                fontSize: '24px',
                 color: '#6b7280',
-                marginBottom: '40px',
+                marginBottom: '48px',
+                fontWeight: '500',
               }}
             >
               by {author.slice(0, 6)}...{author.slice(-4)}
@@ -95,7 +93,7 @@ export async function GET(
             <div
               style={{
                 display: 'flex',
-                gap: '60px',
+                gap: '32px',
               }}
             >
               <div
@@ -103,10 +101,15 @@ export async function GET(
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
+                  padding: '16px 32px',
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <div style={{ fontSize: '32px' }}>❤️</div>
-                <div style={{ fontSize: '32px', fontWeight: '600', color: '#374151' }}>
+                <div style={{ fontSize: '28px' }}>❤️</div>
+                <div style={{ fontSize: '28px', fontWeight: '700', color: '#111827' }}>
                   {likes}
                 </div>
               </div>
@@ -115,10 +118,15 @@ export async function GET(
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
+                  padding: '16px 32px',
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <div style={{ fontSize: '32px' }}>👁️</div>
-                <div style={{ fontSize: '32px', fontWeight: '600', color: '#374151' }}>
+                <div style={{ fontSize: '28px' }}>👁️</div>
+                <div style={{ fontSize: '28px', fontWeight: '700', color: '#111827' }}>
                   {views}
                 </div>
               </div>
@@ -128,18 +136,14 @@ export async function GET(
           {/* 하단 브랜딩 */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              marginTop: '30px',
+              position: 'absolute',
+              bottom: '40px',
+              fontSize: '20px',
+              color: '#9ca3af',
+              fontWeight: '500',
             }}
           >
-            <div style={{ fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
-              GetClayed
-            </div>
-            <div style={{ fontSize: '32px', color: 'rgba(255, 255, 255, 0.8)' }}>
-              3D Clay Sculpting
-            </div>
+            GetClayed
           </div>
         </div>
       ),

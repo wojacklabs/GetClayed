@@ -21,8 +21,8 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          fontFamily: 'sans-serif',
+          background: '#f9fafb',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
         <div
@@ -31,72 +31,69 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            borderRadius: '24px',
-            padding: '60px',
-            margin: '40px',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
           }}
         >
           <div
             style={{
-              width: '120px',
-              height: '120px',
-              borderRadius: '50%',
-              backgroundColor: '#ec4899',
+              fontSize: '18px',
+              color: '#6b7280',
+              fontWeight: '600',
+              marginBottom: '24px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            📚 Library Asset
+          </div>
+          <div
+            style={{
+              width: '100px',
+              height: '100px',
+              borderRadius: '20px',
+              backgroundColor: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '30px',
-              fontSize: '60px',
+              marginBottom: '32px',
+              fontSize: '56px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
+              border: '1px solid #e5e7eb',
             }}
           >
-            📚
+            📦
           </div>
           <div
             style={{
               fontSize: '56px',
-              fontWeight: 'bold',
-              color: '#1f2937',
+              fontWeight: '700',
+              color: '#111827',
               textAlign: 'center',
-              marginBottom: '20px',
+              marginBottom: '16px',
+              letterSpacing: '-0.02em',
             }}
           >
-            Library Asset
-          </div>
-          <div
-            style={{
-              fontSize: '28px',
-              color: '#6b7280',
-              marginBottom: '20px',
-            }}
-          >
-            ID: {id}
+            Reusable Component
           </div>
           <div
             style={{
               fontSize: '22px',
               color: '#6b7280',
-              fontWeight: '600',
+              fontWeight: '500',
             }}
           >
-            Reusable 3D Component
+            Browse on GetClayed Library
           </div>
         </div>
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            marginTop: '30px',
+            position: 'absolute',
+            bottom: '40px',
+            fontSize: '20px',
+            color: '#9ca3af',
+            fontWeight: '500',
           }}
         >
-          <div style={{ fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
-            GetClayed
-          </div>
-          <div style={{ fontSize: '32px', color: 'rgba(255, 255, 255, 0.8)' }}>
-            Library
-          </div>
+          GetClayed Library
         </div>
       </div>
     ),
@@ -105,4 +102,3 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     }
   );
 }
-
