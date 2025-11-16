@@ -27,23 +27,30 @@ export async function GET() {
               justifyContent: 'center',
             }}
           >
-            {/* 로고 */}
+            {/* 로고 - 지점토 구체 */}
             <div
               style={{
                 width: '140px',
                 height: '140px',
-                borderRadius: '28px',
-                backgroundColor: 'white',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #B8C5D6 0%, #9DB4CC 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: '40px',
-                fontSize: '80px',
                 boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
-                border: '1px solid #e5e7eb',
+                border: '3px solid white',
               }}
             >
-              🏺
+              <div
+                style={{
+                  width: '110px',
+                  height: '110px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(225deg, #B8C5D6 0%, #9DB4CC 100%)',
+                  boxShadow: 'inset 0 4px 8px rgba(0, 0, 0, 0.1)',
+                }}
+              />
             </div>
             
             {/* 앱 이름 */}
@@ -77,7 +84,7 @@ export async function GET() {
             <div
               style={{
                 display: 'flex',
-                gap: '32px',
+                gap: '24px',
                 marginBottom: '48px',
               }}
             >
@@ -85,33 +92,33 @@ export async function GET() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px 28px',
+                  gap: '10px',
+                  padding: '14px 24px',
                   backgroundColor: 'white',
-                  borderRadius: '16px',
+                  borderRadius: '12px',
                   border: '1px solid #e5e7eb',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <div style={{ fontSize: '32px' }}>🎨</div>
-                <div style={{ fontSize: '22px', color: '#374151', fontWeight: '600' }}>
-                  Easy to Use
+                <div style={{ fontSize: '28px' }}>👶</div>
+                <div style={{ fontSize: '20px', color: '#374151', fontWeight: '600' }}>
+                  Easy as Play
                 </div>
               </div>
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px 28px',
+                  gap: '10px',
+                  padding: '14px 24px',
                   backgroundColor: 'white',
-                  borderRadius: '16px',
+                  borderRadius: '12px',
                   border: '1px solid #e5e7eb',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <div style={{ fontSize: '32px' }}>⛓️</div>
-                <div style={{ fontSize: '22px', color: '#374151', fontWeight: '600' }}>
+                <div style={{ fontSize: '28px' }}>⛓️</div>
+                <div style={{ fontSize: '20px', color: '#374151', fontWeight: '600' }}>
                   On-Chain
                 </div>
               </div>
@@ -119,16 +126,16 @@ export async function GET() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px 28px',
+                  gap: '10px',
+                  padding: '14px 24px',
                   backgroundColor: 'white',
-                  borderRadius: '16px',
+                  borderRadius: '12px',
                   border: '1px solid #e5e7eb',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <div style={{ fontSize: '32px' }}>✨</div>
-                <div style={{ fontSize: '22px', color: '#374151', fontWeight: '600' }}>
+                <div style={{ fontSize: '28px' }}>🎨</div>
+                <div style={{ fontSize: '20px', color: '#374151', fontWeight: '600' }}>
                   3D Sculpting
                 </div>
               </div>

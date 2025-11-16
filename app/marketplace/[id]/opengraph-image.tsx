@@ -52,18 +52,25 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             style={{
               width: '100px',
               height: '100px',
-              borderRadius: '20px',
-              backgroundColor: 'white',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #B8C5D6 0%, #9DB4CC 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: '32px',
-              fontSize: '56px',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
-              border: '1px solid #e5e7eb',
+              border: '3px solid white',
             }}
           >
-            🏺
+            <div
+              style={{
+                width: '75px',
+                height: '75px',
+                borderRadius: '50%',
+                background: 'linear-gradient(225deg, #B8C5D6 0%, #9DB4CC 100%)',
+                boxShadow: 'inset 0 3px 6px rgba(0, 0, 0, 0.1)',
+              }}
+            />
           </div>
           <div
             style={{
