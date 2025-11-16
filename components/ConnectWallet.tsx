@@ -3,6 +3,7 @@
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useEffect } from 'react'
 import { LogIn, LogOut } from 'lucide-react'
+import { useFarcasterWallet } from '@/hooks/useFarcasterWallet'
 
 interface ConnectWalletProps {
   onConnect: (address: string) => void
@@ -12,17 +13,22 @@ interface ConnectWalletProps {
 export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   const { ready, authenticated, login, logout, user } = usePrivy()
   const { wallets } = useWallets()
+  const { isInFarcaster, farcasterAddress } = useFarcasterWallet()
   
-  // Get the first wallet address
-  const walletAddress = wallets[0]?.address
+  // Prefer Farcaster wallet if available, otherwise use Privy wallet
+  const walletAddress = farcasterAddress || wallets[0]?.address
   
   useEffect(() => {
-    if (authenticated && walletAddress) {
-      onConnect(walletAddress)
+    if (farcasterAddress) {
+      // Farcaster wallet has priority
+      onConnect(farcasterAddress)
+    } else if (authenticated && wallets[0]?.address) {
+      // Fallback to Privy wallet
+      onConnect(wallets[0].address)
     } else {
       onDisconnect()
     }
-  }, [authenticated, walletAddress])
+  }, [authenticated, wallets, farcasterAddress])
   
   const handleConnect = async () => {
     // Check if authenticated with wallet
@@ -64,6 +70,16 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
     return (
       <div className="px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-sm">
         Loading...
+      </div>
+    )
+  }
+  
+  // If in Farcaster and connected, show Farcaster badge
+  if (farcasterAddress) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-800 rounded-lg border border-purple-200 text-sm font-medium">
+        <span className="hidden sm:inline">🟣 Farcaster</span>
+        <span className="sm:hidden">🟣</span>
       </div>
     )
   }
