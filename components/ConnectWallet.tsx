@@ -74,16 +74,7 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
     )
   }
   
-  // If in Farcaster and connected, show Farcaster badge
-  if (farcasterAddress) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-800 rounded-lg border border-purple-200 text-sm font-medium">
-        <span className="hidden sm:inline">🟣 Farcaster</span>
-        <span className="sm:hidden">🟣</span>
-      </div>
-    )
-  }
-  
+  // Show disconnect button for both Farcaster and regular wallets
   if (authenticated && walletAddress) {
     return (
       <button
