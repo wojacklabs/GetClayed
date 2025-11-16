@@ -63,6 +63,7 @@ import { usePopup } from '../../components/PopupNotification'
 import ProfilePage from '../../components/ProfilePage'
 import ProjectDetailView from '../../components/ProjectDetailView'
 import { downloadUserProfile } from '../../lib/profileService'
+import { formatETH, formatUSDC, formatCombinedCurrency } from '../../lib/formatCurrency'
 
 interface ClayObject {
   id: string
@@ -2995,10 +2996,7 @@ export default function AdvancedClay() {
       
       let costMessage = ''
       if (importCostETH > 0 || importCostUSDC > 0) {
-        const costs = []
-        if (importCostETH > 0) costs.push(`${importCostETH.toFixed(6)} ETH`)
-        if (importCostUSDC > 0) costs.push(`${importCostUSDC.toFixed(4)} USDC`)
-        costMessage = ` (${costs.join(' + ')} when saving)`
+        costMessage = ` (${formatCombinedCurrency(importCostETH, importCostUSDC)} when saving)`
       }
       
       const dependencyInfo = allLibraries.length > 1 ? ` + ${allLibraries.length - 1} nested dependencies` : ''
@@ -4204,14 +4202,7 @@ export default function AdvancedClay() {
           
           if (actuallyPaid) {
             // Build payment message
-            const payments = []
-            if (result.totalCostETH > 0) {
-              payments.push(`${result.totalCostETH.toFixed(6)} ETH`)
-            }
-            if (result.totalCostUSDC > 0) {
-              payments.push(`${result.totalCostUSDC.toFixed(4)} USDC`)
-            }
-            const paymentStr = payments.join(' + ')
+            const paymentStr = formatCombinedCurrency(result.totalCostETH, result.totalCostUSDC)
             const purchasedCount = finalUsedLibraries.length - result.alreadyOwned
             
             showPopup(
@@ -6666,9 +6657,7 @@ export default function AdvancedClay() {
                         )}
                       </div>
                       <span className="text-sm text-gray-600">
-                        {dist.totalETH > 0 && `${dist.totalETH.toFixed(6)} ETH`}
-                        {dist.totalETH > 0 && dist.totalUSDC > 0 && ' + '}
-                        {dist.totalUSDC > 0 && `${dist.totalUSDC.toFixed(4)} USDC`}
+                        {formatCombinedCurrency(dist.totalETH, dist.totalUSDC)}
                       </span>
                     </div>
                     
@@ -6676,16 +6665,10 @@ export default function AdvancedClay() {
                       <div className="mt-2 p-2 bg-yellow-50 rounded text-xs">
                         <p className="text-yellow-800 font-medium">Price changed since project load:</p>
                         <p className="text-yellow-700 mt-1">
-                          Previous: {dist.registeredETH > 0 && `${dist.registeredETH.toFixed(6)} ETH`}
-                          {dist.registeredETH > 0 && dist.registeredUSDC > 0 && ' + '}
-                          {dist.registeredUSDC > 0 && `${dist.registeredUSDC.toFixed(4)} USDC`}
-                          {dist.registeredETH === 0 && dist.registeredUSDC === 0 && 'Free'}
+                          Previous: {formatCombinedCurrency(dist.registeredETH, dist.registeredUSDC) || 'Free'}
                         </p>
                         <p className="text-yellow-700">
-                          Current: {dist.currentETH > 0 && `${dist.currentETH.toFixed(6)} ETH`}
-                          {dist.currentETH > 0 && dist.currentUSDC > 0 && ' + '}
-                          {dist.currentUSDC > 0 && `${dist.currentUSDC.toFixed(4)} USDC`}
-                          {dist.currentETH === 0 && dist.currentUSDC === 0 && 'Free'}
+                          Current: {formatCombinedCurrency(dist.currentETH, dist.currentUSDC) || 'Free'}
                         </p>
                         <p className="text-yellow-600 mt-1">You'll pay the current price</p>
                       </div>
@@ -6720,9 +6703,7 @@ export default function AdvancedClay() {
                               <div key={subIdx} className="flex items-center justify-between text-sm">
                                 <span className="text-gray-600">└ {sub.name}</span>
                                 <span className="text-gray-500">
-                                  {sub.amountETH > 0 && `${sub.amountETH.toFixed(6)} ETH`}
-                                  {sub.amountETH > 0 && sub.amountUSDC > 0 && ' + '}
-                                  {sub.amountUSDC > 0 && `${sub.amountUSDC.toFixed(4)} USDC`}
+                                  {formatCombinedCurrency(sub.amountETH, sub.amountUSDC)}
                                 </span>
                               </div>
                             ))}
@@ -6734,9 +6715,7 @@ export default function AdvancedClay() {
                             <p className="text-xs text-yellow-800 font-medium mb-1">⚠️ Deleted dependencies:</p>
                             {dist.deletedDependencies.map((del: any, delIdx: number) => (
                               <div key={delIdx} className="text-xs text-yellow-700">
-                                {del.name} ({del.amountETH > 0 ? `${del.amountETH.toFixed(6)} ETH` : ''}
-                                {del.amountETH > 0 && del.amountUSDC > 0 ? ' + ' : ''}
-                                {del.amountUSDC > 0 ? `${del.amountUSDC.toFixed(4)} USDC` : ''})
+                                {del.name} ({formatCombinedCurrency(del.amountETH, del.amountUSDC)})
                               </div>
                             ))}
                             <p className="text-xs text-yellow-600 mt-1">
@@ -6748,9 +6727,7 @@ export default function AdvancedClay() {
                         <div className="flex items-center justify-between text-sm mt-2 pt-2 border-t border-gray-100">
                           <span className="text-gray-700">{dist.name} profit:</span>
                           <span className="text-gray-900 font-medium">
-                            {dist.profitETH > 0 && `${dist.profitETH.toFixed(6)} ETH`}
-                            {dist.profitETH > 0 && dist.profitUSDC > 0 && ' + '}
-                            {dist.profitUSDC > 0 && `${dist.profitUSDC.toFixed(4)} USDC`}
+                            {formatCombinedCurrency(dist.profitETH, dist.profitUSDC)}
                           </span>
                         </div>
                       </div>
@@ -6765,9 +6742,7 @@ export default function AdvancedClay() {
                 <div className="flex items-center justify-between">
                   <span className="text-base font-semibold text-gray-900">Total Payment</span>
                   <span className="text-base font-semibold text-gray-900">
-                    {royaltyBreakdown.totalETH > 0 && `${royaltyBreakdown.totalETH.toFixed(6)} ETH`}
-                    {royaltyBreakdown.totalETH > 0 && royaltyBreakdown.totalUSDC > 0 && ' + '}
-                    {royaltyBreakdown.totalUSDC > 0 && `${royaltyBreakdown.totalUSDC.toFixed(4)} USDC`}
+                    {formatCombinedCurrency(royaltyBreakdown.totalETH, royaltyBreakdown.totalUSDC)}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
@@ -6878,14 +6853,7 @@ export default function AdvancedClay() {
                       // Show success message
                       const actuallyPaid = result.totalCostETH > 0 || result.totalCostUSDC > 0
                       if (actuallyPaid) {
-                        const payments = []
-                        if (result.totalCostETH > 0) {
-                          payments.push(`${result.totalCostETH.toFixed(6)} ETH`)
-                        }
-                        if (result.totalCostUSDC > 0) {
-                          payments.push(`${result.totalCostUSDC.toFixed(4)} USDC`)
-                        }
-                        const paymentStr = payments.join(' + ')
+                        const paymentStr = formatCombinedCurrency(result.totalCostETH, result.totalCostUSDC)
                         const purchasedCount = (finalUsedLibraries?.length || 0) - result.alreadyOwned
                         
                         showPopup(

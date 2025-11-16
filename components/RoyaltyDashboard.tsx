@@ -6,6 +6,7 @@ import { getPendingRoyalties, claimETHRoyalties, claimUSDCRoyalties } from '../l
 import { getRoyaltyReceipts, RoyaltyReceipt } from '../lib/royaltyService'
 import { usePopup } from './PopupNotification'
 import { useWallets } from '@privy-io/react-auth'
+import { formatETH, formatUSDC } from '../lib/formatCurrency'
 
 interface RoyaltyDashboardProps {
   walletAddress: string
@@ -177,7 +178,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
             {parseFloat(pendingETH) > 0 && (
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-xs text-gray-600 mb-1">ETH</p>
-                <p className="text-2xl font-bold text-gray-900 mb-3">{parseFloat(pendingETH).toFixed(4)}</p>
+                <p className="text-2xl font-bold text-gray-900 mb-3">{formatETH(pendingETH)}</p>
                 <button
                   onClick={handleClaimETH}
                   disabled={claiming !== null}
@@ -192,7 +193,7 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
             {parseFloat(pendingUSDC) > 0 && (
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-xs text-gray-600 mb-1">USDC</p>
-                <p className="text-2xl font-bold text-gray-900 mb-3">{parseFloat(pendingUSDC).toFixed(4)}</p>
+                <p className="text-2xl font-bold text-gray-900 mb-3">{formatUSDC(pendingUSDC)}</p>
                 <button
                   onClick={handleClaimUSDC}
                   disabled={claiming !== null}
@@ -257,8 +258,8 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
                             <div className="flex items-center justify-between">
                               <span className="text-gray-700">{lib.name}</span>
                               <span className="text-gray-900 font-medium">
-                                {parseFloat(lib.royaltyETH) > 0 && `${parseFloat(lib.royaltyETH).toFixed(6)} ETH`}
-                                {parseFloat(lib.royaltyUSDC) > 0 && `${parseFloat(lib.royaltyUSDC).toFixed(4)} USDC`}
+                                {parseFloat(lib.royaltyETH) > 0 && `${formatETH(lib.royaltyETH)} ETH`}
+                                {parseFloat(lib.royaltyUSDC) > 0 && `${formatUSDC(lib.royaltyUSDC)} USDC`}
                               </span>
                             </div>
                             <div className="text-gray-500 mt-1">
@@ -272,8 +273,8 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
                                   <div key={distIdx} className="flex items-center justify-between text-xs text-gray-600 ml-2">
                                     <span>└ {dist.name}</span>
                                     <span>
-                                      {parseFloat(dist.amountETH) > 0 && `${parseFloat(dist.amountETH).toFixed(6)} ETH`}
-                                      {parseFloat(dist.amountUSDC) > 0 && `${parseFloat(dist.amountUSDC).toFixed(4)} USDC`}
+                                      {parseFloat(dist.amountETH) > 0 && `${formatETH(dist.amountETH)} ETH`}
+                                      {parseFloat(dist.amountUSDC) > 0 && `${formatUSDC(dist.amountUSDC)} USDC`}
                                     </span>
                                   </div>
                                 ))}
@@ -281,8 +282,8 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
                                   <div className="flex items-center justify-between text-xs text-gray-700 mt-1 font-medium">
                                     <span>{lib.name} profit:</span>
                                     <span>
-                                      {lib.profitETH && parseFloat(lib.profitETH) > 0 && `${parseFloat(lib.profitETH).toFixed(6)} ETH`}
-                                      {lib.profitUSDC && parseFloat(lib.profitUSDC) > 0 && `${parseFloat(lib.profitUSDC).toFixed(4)} USDC`}
+                                      {lib.profitETH && parseFloat(lib.profitETH) > 0 && `${formatETH(lib.profitETH)} ETH`}
+                                      {lib.profitUSDC && parseFloat(lib.profitUSDC) > 0 && `${formatUSDC(lib.profitUSDC)} USDC`}
                                     </span>
                                   </div>
                                 )}
@@ -297,12 +298,12 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
                         <div className="text-right">
                           {parseFloat(receipt.totalPaidETH) > 0 && (
                             <div className="text-sm font-bold text-gray-900">
-                              {parseFloat(receipt.totalPaidETH).toFixed(6)} ETH
+                              {formatETH(receipt.totalPaidETH)} ETH
                             </div>
                           )}
                           {parseFloat(receipt.totalPaidUSDC) > 0 && (
                             <div className="text-sm font-bold text-gray-900">
-                              {parseFloat(receipt.totalPaidUSDC).toFixed(4)} USDC
+                              {formatUSDC(receipt.totalPaidUSDC)} USDC
                             </div>
                           )}
                         </div>
