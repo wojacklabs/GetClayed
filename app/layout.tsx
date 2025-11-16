@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PopupNotificationProvider } from "../components/PopupNotification";
 import { PrivyProviderWrapper } from "../components/PrivyProvider";
+import { FarcasterProvider } from "../components/FarcasterProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,38 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'GetClayed',
   },
+  openGraph: {
+    title: "GetClayed - 3D Clay Sculpting",
+    description: "Create and sculpt 3D clay objects in your browser",
+    images: [
+      {
+        url: 'https://getclayed.vercel.app/api/og',
+        width: 1200,
+        height: 630,
+        alt: 'GetClayed - 3D Clay Sculpting',
+      }
+    ],
+    url: 'https://getclayed.vercel.app',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "GetClayed - 3D Clay Sculpting",
+    description: "Create and sculpt 3D clay objects in your browser",
+    images: ['https://getclayed.vercel.app/api/og'],
+  },
+  other: {
+    'fc:miniapp': JSON.stringify({
+      version: '1',
+      imageUrl: 'https://getclayed.vercel.app/api/og',
+      button: {
+        title: 'Launch GetClayed',
+        action: {
+          type: 'launch_miniapp',
+          url: 'https://getclayed.vercel.app'
+        }
+      }
+    })
+  }
 };
 
 export const viewport = {
@@ -52,11 +85,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <PrivyProviderWrapper>
-          <PopupNotificationProvider>
-            {children}
-          </PopupNotificationProvider>
-        </PrivyProviderWrapper>
+        <FarcasterProvider>
+          <PrivyProviderWrapper>
+            <PopupNotificationProvider>
+              {children}
+            </PopupNotificationProvider>
+          </PrivyProviderWrapper>
+        </FarcasterProvider>
       </body>
     </html>
   );

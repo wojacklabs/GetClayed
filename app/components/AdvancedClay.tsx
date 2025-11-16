@@ -2155,11 +2155,9 @@ function RaycasterManager({
       }
     }
     
-    const handlePointerClick = (event: PointerEvent) => {
-      // Prevent default touch behavior
-      if (event.pointerType === 'touch') {
-        event.preventDefault()
-      }
+    const handlePointerClick = (event: MouseEvent) => {
+      // Prevent default behavior
+      event.preventDefault()
       
       // Calculate mouse position in normalized device coordinates
       const rect = gl.domElement.getBoundingClientRect()

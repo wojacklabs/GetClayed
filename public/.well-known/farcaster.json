@@ -1,0 +1,25 @@
+{
+  "miniApp": {
+    "name": "GetClayed",
+    "iconUrl": "https://getclayed.vercel.app/clay.png",
+    "homeUrl": "https://getclayed.vercel.app",
+    "description": "Create and sculpt 3D clay objects in your browser. A Web3 3D creation platform with blockchain integration.",
+    "splashImageUrl": "https://getclayed.vercel.app/api/og",
+    "splashBackgroundColor": "#3b82f6",
+    "version": "0.1.2"
+  },
+  "frame": {
+    "version": "1",
+    "name": "GetClayed",
+    "iconUrl": "https://getclayed.vercel.app/clay.png",
+    "homeUrl": "https://getclayed.vercel.app",
+    "imageUrl": "https://getclayed.vercel.app/api/og",
+    "button": {
+      "title": "Launch GetClayed",
+      "action": {
+        "type": "launch_miniapp"
+      }
+    }
+  }
+}
+
