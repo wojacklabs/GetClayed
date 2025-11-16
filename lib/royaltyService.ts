@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { USDC_ADDRESS, USDC_ABI, purchaseLibraryAssetWithETH, purchaseLibraryAssetWithUSDC } from './libraryService';
 import { fixedKeyUploader } from './fixedKeyUploadService';
+import { formatETH, formatUSDC } from './formatCurrency';
 
 export const ROYALTY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ROYALTY_CONTRACT_ADDRESS || '';
 
@@ -131,7 +132,7 @@ export async function processLibraryPurchasesAndRoyalties(
           `Insufficient USDC balance.\n` +
           `Required: ${requiredFormatted} USDC\n` +
           `Available: ${balanceFormatted} USDC\n` +
-          `Please add ${(totalRoyaltyUSDC - parseFloat(balanceFormatted)).toFixed(6)} USDC to your wallet before saving.`
+          `Please add ${formatUSDC(totalRoyaltyUSDC - parseFloat(balanceFormatted))} USDC to your wallet before saving.`
         );
       }
     }
@@ -293,7 +294,7 @@ export async function processLibraryPurchasesAndRoyalties(
           return `${lib.name} (${state?.ethAmount} ETH)`;
         }).join(', ');
         
-        onProgress?.(`[${currentTransaction}/${totalTransactions}] Paying ${totalRoyaltyETH.toFixed(6)} ETH royalty for: ${ethLibraryNames}. Please sign...`);
+        onProgress?.(`[${currentTransaction}/${totalTransactions}] Paying ${formatETH(totalRoyaltyETH)} ETH royalty for: ${ethLibraryNames}. Please sign...`);
         console.log('[RoyaltyService] Paying ETH royalties...');
         
         const royaltyWei = ethers.parseEther(totalRoyaltyETH.toFixed(18));
@@ -336,7 +337,7 @@ export async function processLibraryPurchasesAndRoyalties(
         
         // Approve
         currentTransaction++;
-        onProgress?.(`[${currentTransaction}/${totalTransactions}] Approving ${totalRoyaltyUSDC.toFixed(6)} USDC for royalty payment. Please sign...`);
+        onProgress?.(`[${currentTransaction}/${totalTransactions}] Approving ${formatUSDC(totalRoyaltyUSDC)} USDC for royalty payment. Please sign...`);
         console.log('[RoyaltyService] Approving USDC...');
         
         const approveTx = await usdcContract.approve(ROYALTY_CONTRACT_ADDRESS, royaltyUnits);
@@ -347,7 +348,7 @@ export async function processLibraryPurchasesAndRoyalties(
         
         // Record payment
         currentTransaction++;
-        onProgress?.(`[${currentTransaction}/${totalTransactions}] Paying ${totalRoyaltyUSDC.toFixed(6)} USDC royalty for: ${usdcLibraryNames}. Please sign...`);
+        onProgress?.(`[${currentTransaction}/${totalTransactions}] Paying ${formatUSDC(totalRoyaltyUSDC)} USDC royalty for: ${usdcLibraryNames}. Please sign...`);
         console.log('[RoyaltyService] Paying USDC royalties...');
         
         const usdcTx = await contract.recordRoyalties(projectId, 0, 1);

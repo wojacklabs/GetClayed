@@ -98,12 +98,12 @@ export default function RoyaltyNotifications({ walletAddress }: RoyaltyNotificat
                   <div className="flex items-center gap-3 mb-2">
                     {parseFloat(pendingETH) > 0 && (
                       <span className="text-sm font-medium text-gray-900">
-                        {parseFloat(pendingETH).toFixed(4)} ETH
+                        {formatETH(pendingETH)} ETH
                       </span>
                     )}
                     {parseFloat(pendingUSDC) > 0 && (
                       <span className="text-sm font-medium text-gray-900">
-                        {parseFloat(pendingUSDC).toFixed(6)} USDC
+                        {formatUSDC(pendingUSDC)} USDC
                       </span>
                     )}
                   </div>

@@ -302,7 +302,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       {/* Minimal Header */}
       <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">
         <div className="px-4 flex items-center justify-between h-14 gap-4">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex items-center gap-3 min-w-0 max-w-[40%] sm:max-w-[45%]">
             <button
               onClick={onBack}
               className="p-1.5 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
@@ -310,8 +310,8 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             >
               <ArrowLeft size={20} />
             </button>
-            <div className="min-w-0 flex-1 max-w-md">
-              <h1 className="text-lg font-medium text-gray-900 truncate">{project?.name || 'Untitled'}</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base sm:text-lg font-medium text-gray-900 truncate">{project?.name || 'Untitled'}</h1>
               {project?.author ? (
                 <Link 
                   href={`/user/${project.author}`}
@@ -452,7 +452,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       </div>
       
       {/* Bottom UI Controls - Minimal style */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
         {/* Desktop buttons */}
         <div className="hidden sm:flex items-center gap-2 bg-white rounded-md border border-gray-200 p-1">
           <button
@@ -499,7 +499,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       
       {/* Description - Minimal style */}
       {project?.description && (
-        <div className="absolute bottom-16 left-4 right-4 max-w-2xl mx-auto">
+        <div className="absolute bottom-14 left-4 right-4 max-w-2xl mx-auto">
           <div className="bg-white/90 backdrop-blur-sm rounded-md border border-gray-200 p-3">
             <p className="text-sm text-gray-700">{project.description}</p>
             {project.tags && project.tags.length > 0 && (

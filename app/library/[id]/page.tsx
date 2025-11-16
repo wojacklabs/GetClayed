@@ -15,6 +15,7 @@ import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
 import { useWallets } from '@privy-io/react-auth'
 import { getRoyaltyEvents, RoyaltyEvent, getPendingRoyalties } from '@/lib/royaltyClaimService'
 import UpdateLibraryModal from '@/components/UpdateLibraryModal'
+import { formatETH, formatUSDC, formatCombinedCurrency } from '@/lib/formatCurrency'
 
 function PreviewClay({ clay }: { clay: any }) {
   return (
@@ -266,8 +267,8 @@ export default function LibraryDetailPage() {
       setRoyaltyHistory(displayEvents)
       
       const finalTotals = {
-        eth: totalETH.toFixed(6),
-        usdc: totalUSDC.toFixed(6) // Changed to 6 decimals for USDC
+        eth: formatETH(totalETH),
+        usdc: formatUSDC(totalUSDC)
       }
       
       setTotalEarned(finalTotals)
@@ -482,14 +483,7 @@ export default function LibraryDetailPage() {
                     const totalETH = directLibs.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportETH || '0'), 0);
                     const totalUSDC = directLibs.reduce((sum: number, lib: any) => sum + parseFloat(lib.royaltyPerImportUSDC || '0'), 0);
                     
-                    if (totalETH > 0 && totalUSDC > 0) {
-                      return `${totalETH.toFixed(4)} ETH + ${totalUSDC.toFixed(2)} USDC`;
-                    } else if (totalETH > 0) {
-                      return `${totalETH.toFixed(4)} ETH`;
-                    } else if (totalUSDC > 0) {
-                      return `${totalUSDC.toFixed(2)} USDC`;
-                    }
-                    return '0';
+                    return formatCombinedCurrency(totalETH, totalUSDC);
                   })()}
                 </p>
               </div>
@@ -546,14 +540,10 @@ export default function LibraryDetailPage() {
                         return (
                           <>
                             <div className="text-xs text-yellow-700">
-                              • Dependencies receive: {totalDepETH > 0 && `${totalDepETH.toFixed(6)} ETH`}
-                              {totalDepETH > 0 && totalDepUSDC > 0 && ' + '}
-                              {totalDepUSDC > 0 && `${totalDepUSDC.toFixed(4)} USDC`}
+                              • Dependencies receive: {formatCombinedCurrency(totalDepETH, totalDepUSDC)}
                             </div>
                             <div className="text-xs text-yellow-700 font-medium">
-                              • You keep: {profitETH > 0 && `${profitETH.toFixed(6)} ETH`}
-                              {profitETH > 0 && profitUSDC > 0 && ' + '}
-                              {profitUSDC > 0 && `${profitUSDC.toFixed(4)} USDC`}
+                              • You keep: {formatCombinedCurrency(profitETH, profitUSDC)}
                             </div>
                           </>
                         )

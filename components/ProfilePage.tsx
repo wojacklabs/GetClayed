@@ -15,6 +15,7 @@ import MiniViewer from './MiniViewer'
 import Link from 'next/link'
 import AddLibraryModal from './AddLibraryModal'
 import ListMarketplaceModal from './ListMarketplaceModal'
+import { formatETH, formatUSDC } from '../lib/formatCurrency'
 
 interface ProfilePageProps {
   walletAddress: string
@@ -849,13 +850,13 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
               {totalRevenueETH > 0 && (
                 <div className="bg-blue-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-1">Total ETH</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalRevenueETH.toFixed(4)} ETH</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatETH(totalRevenueETH)} ETH</p>
                 </div>
               )}
               {totalRevenueUSDC > 0 && (
                 <div className="bg-green-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-1">Total USDC</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalRevenueUSDC.toFixed(6)} USDC</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatUSDC(totalRevenueUSDC)} USDC</p>
                 </div>
               )}
             </div>
