@@ -19,6 +19,11 @@ const HTML_TEMPLATE = `
 <head>
   <meta charset="UTF-8">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     body { 
       margin: 0; 
       padding: 0; 
@@ -28,10 +33,19 @@ const HTML_TEMPLATE = `
       justify-content: center;
       width: ${SIZE}px;
       height: ${SIZE}px;
+      overflow: hidden;
+    }
+    #root {
+      width: ${SIZE}px;
+      height: ${SIZE}px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     canvas { 
-      width: ${SIZE}px !important; 
-      height: ${SIZE}px !important; 
+      display: block;
+      width: 100% !important; 
+      height: 100% !important; 
     }
   </style>
 </head>
@@ -51,14 +65,16 @@ const HTML_TEMPLATE = `
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
     camera.position.z = 2;
 
+    const container = document.getElementById('root');
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true, 
       alpha: true,
       preserveDrawingBuffer: true
     });
     renderer.setSize(${SIZE}, ${SIZE});
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setClearColor(0x000000, 0);
-    document.body.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
     // AnimatedClayLogo 로직 복제
     const geometry = new THREE.SphereGeometry(0.65, 16, 16);
@@ -145,7 +161,7 @@ async function generateFrames() {
   
   // 애니메이션 준비 대기
   await page.waitForFunction('window.animationReady === true');
-  await new Promise(resolve => setTimeout(resolve, 500)); // 추가 대기
+  await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기로 증가
   
   console.log('✓ 애니메이션 준비 완료');
   
