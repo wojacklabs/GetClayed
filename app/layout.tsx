@@ -15,6 +15,38 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Farcaster Mini App embed configuration
+const miniAppEmbed = {
+  version: "1",
+  imageUrl: "https://getclayed.vercel.app/api/og",
+  button: {
+    title: "🎨 Launch GetClayed",
+    action: {
+      type: "launch_miniapp",
+      url: "https://getclayed.vercel.app",
+      name: "GetClayed",
+      splashImageUrl: "https://getclayed.vercel.app/animated-logo.png",
+      splashBackgroundColor: "#B8C5D6"
+    }
+  }
+};
+
+// For backward compatibility
+const frameEmbed = {
+  version: "1",
+  imageUrl: "https://getclayed.vercel.app/api/og",
+  button: {
+    title: "🎨 Launch GetClayed",
+    action: {
+      type: "launch_frame",
+      url: "https://getclayed.vercel.app",
+      name: "GetClayed",
+      splashImageUrl: "https://getclayed.vercel.app/animated-logo.png",
+      splashBackgroundColor: "#B8C5D6"
+    }
+  }
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://getclayed.vercel.app'),
   title: "GetClayed - 3D Clay Sculpting",
@@ -41,7 +73,7 @@ export const metadata: Metadata = {
       {
         url: '/api/og',
         width: 1200,
-        height: 630,
+        height: 800, // 3:2 aspect ratio for Farcaster
         alt: 'GetClayed - 3D Clay Sculpting',
       }
     ],
@@ -56,12 +88,10 @@ export const metadata: Metadata = {
     images: ['/api/og'],
   },
   other: {
-    'fc:frame': 'vNext',
-    'fc:frame:image': 'https://getclayed.vercel.app/api/og',
-    'fc:frame:image:aspect_ratio': '1.91:1',
-    'fc:frame:button:1': 'Launch GetClayed',
-    'fc:frame:button:1:action': 'link',
-    'fc:frame:button:1:target': 'https://getclayed.vercel.app',
+    // New Farcaster Mini App spec
+    'fc:miniapp': JSON.stringify(miniAppEmbed),
+    // For backward compatibility
+    'fc:frame': JSON.stringify(frameEmbed),
   }
 };
 
@@ -82,13 +112,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Farcaster Frame Meta Tags */}
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://getclayed.vercel.app/api/og" />
-        <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-        <meta property="fc:frame:button:1" content="Launch GetClayed" />
-        <meta property="fc:frame:button:1:action" content="link" />
-        <meta property="fc:frame:button:1:target" content="https://getclayed.vercel.app" />
+        {/* Farcaster Mini App is handled by metadata.other */}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

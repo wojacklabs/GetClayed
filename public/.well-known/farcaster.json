@@ -4,6 +4,17 @@
     "payload": "eyJkb21haW4iOiJnZXRjbGF5ZWQudmVyY2VsLmFwcCJ9",
     "signature": "fzc1+8XW3pj5fJsUcesI21j7CFg6KefhXmJ+wjCCIMhFPa3C9rXtxENsv7TwwyOM8LZlOJhWXu2tuRwsssk2+xs="
   },
+  "miniapp": {
+    "version": "1",
+    "name": "GetClayed",
+    "iconUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "homeUrl": "https://getclayed.vercel.app",
+    "imageUrl": "https://getclayed.vercel.app/api/og",
+    "buttonTitle": "🎨 Launch GetClayed",
+    "splashImageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "splashBackgroundColor": "#B8C5D6",
+    "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook"
+  },
   "frame": {
     "version": "next",
     "name": "GetClayed",
@@ -14,7 +25,7 @@
     "splashBackgroundColor": "#B8C5D6",
     "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook",
     "button": {
-      "title": "Launch GetClayed",
+      "title": "🎨 Launch GetClayed",
       "action": {
         "type": "launch_frame"
       }
