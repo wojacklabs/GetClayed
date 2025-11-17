@@ -28,6 +28,7 @@ export async function GET(
             justifyContent: 'center',
             background: '#f9fafb',
             fontFamily: 'system-ui, -apple-system, sans-serif',
+            padding: '80px 100px',
           }}
         >
           <div
@@ -36,15 +37,21 @@ export async function GET(
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
+              backgroundColor: 'white',
+              borderRadius: '32px',
+              padding: '50px 70px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.06)',
+              border: '1px solid #e5e7eb',
+              maxWidth: '700px',
             }}
           >
             {/* Library 배지 */}
             <div
               style={{
-                fontSize: '18px',
+                fontSize: '14px',
                 color: '#6b7280',
                 fontWeight: '600',
-                marginBottom: '24px',
+                marginBottom: '20px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
               }}
@@ -55,25 +62,25 @@ export async function GET(
             {/* 아이콘 - 지점토 구체 */}
             <div
               style={{
-                width: '100px',
-                height: '100px',
+                width: '80px',
+                height: '80px',
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #B8C5D6 0%, #9DB4CC 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '32px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
-                border: '3px solid white',
+                marginBottom: '24px',
+                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.08)',
+                border: '2px solid #f9fafb',
               }}
             >
               <div
                 style={{
-                  width: '75px',
-                  height: '75px',
+                  width: '62px',
+                  height: '62px',
                   borderRadius: '50%',
                   background: 'linear-gradient(225deg, #B8C5D6 0%, #9DB4CC 100%)',
-                  boxShadow: 'inset 0 3px 6px rgba(0, 0, 0, 0.1)',
+                  boxShadow: 'inset 0 2px 5px rgba(0, 0, 0, 0.1)',
                 }}
               />
             </div>
@@ -81,12 +88,12 @@ export async function GET(
             {/* 이름 */}
             <div
               style={{
-                fontSize: '56px',
+                fontSize: '44px',
                 fontWeight: '700',
                 color: '#111827',
                 textAlign: 'center',
-                marginBottom: '16px',
-                maxWidth: '900px',
+                marginBottom: '12px',
+                maxWidth: '600px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -99,9 +106,9 @@ export async function GET(
             {/* 작가 */}
             <div
               style={{
-                fontSize: '22px',
+                fontSize: '16px',
                 color: '#6b7280',
-                marginBottom: '48px',
+                marginBottom: '32px',
                 fontWeight: '500',
               }}
             >
@@ -113,27 +120,23 @@ export async function GET(
               <div
                 style={{
                   display: 'flex',
-                  gap: '24px',
+                  gap: '16px',
                   alignItems: 'center',
                 }}
               >
-                <div style={{ fontSize: '20px', color: '#6b7280', fontWeight: '500' }}>
-                  Royalty:
-                </div>
                 {royaltyETH && parseFloat(royaltyETH) > 0 && (
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      padding: '12px 24px',
-                      backgroundColor: 'white',
+                      gap: '6px',
+                      padding: '10px 20px',
+                      backgroundColor: '#f9fafb',
                       borderRadius: '12px',
                       border: '1px solid #e5e7eb',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                     }}
                   >
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>
                       {royaltyETH} ETH
                     </div>
                   </div>
@@ -143,15 +146,14 @@ export async function GET(
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      padding: '12px 24px',
-                      backgroundColor: 'white',
+                      gap: '6px',
+                      padding: '10px 20px',
+                      backgroundColor: '#f9fafb',
                       borderRadius: '12px',
                       border: '1px solid #e5e7eb',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                     }}
                   >
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>
                       {royaltyUSDC} USDC
                     </div>
                   </div>
@@ -163,9 +165,8 @@ export async function GET(
           {/* 하단 브랜딩 */}
           <div
             style={{
-              position: 'absolute',
-              bottom: '40px',
-              fontSize: '20px',
+              marginTop: '32px',
+              fontSize: '18px',
               color: '#9ca3af',
               fontWeight: '500',
             }}
