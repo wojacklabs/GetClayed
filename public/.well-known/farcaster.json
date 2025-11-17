@@ -7,11 +7,17 @@
   "frame": {
     "version": "next",
     "name": "GetClayed",
-    "iconUrl": "https://getclayed.vercel.app/clay.png",
+    "iconUrl": "https://getclayed.vercel.app/animated-logo.png",
     "homeUrl": "https://getclayed.vercel.app",
     "imageUrl": "https://getclayed.vercel.app/api/og",
-    "splashImageUrl": "https://getclayed.vercel.app/api/og",
-    "splashBackgroundColor": "#3b82f6",
-    "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook"
+    "splashImageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "splashBackgroundColor": "#B8C5D6",
+    "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook",
+    "button": {
+      "title": "Launch GetClayed",
+      "action": {
+        "type": "launch_frame"
+      }
+    }
   }
 }

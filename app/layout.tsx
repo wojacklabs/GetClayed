@@ -16,15 +16,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://getclayed.vercel.app'),
   title: "GetClayed - 3D Clay Sculpting",
   description: "Create and sculpt 3D clay objects in your browser",
   icons: {
     icon: [
+      { url: '/animated-logo.png', type: 'image/png' },
       { url: '/favicon.png', type: 'image/png' },
       { url: '/clay.png', type: 'image/png' }
     ],
-    shortcut: [{ url: '/favicon.png', type: 'image/png' }],
-    apple: [{ url: '/clay.png', type: 'image/png' }],
+    shortcut: [{ url: '/animated-logo.png', type: 'image/png' }],
+    apple: [{ url: '/animated-logo.png', type: 'image/png' }],
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -37,23 +39,26 @@ export const metadata: Metadata = {
     description: "Create and sculpt 3D clay objects in your browser",
     images: [
       {
-        url: 'https://getclayed.vercel.app/api/og',
+        url: '/api/og',
         width: 1200,
         height: 630,
         alt: 'GetClayed - 3D Clay Sculpting',
       }
     ],
-    url: 'https://getclayed.vercel.app',
+    url: '/',
+    siteName: 'GetClayed',
+    type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: "GetClayed - 3D Clay Sculpting",
     description: "Create and sculpt 3D clay objects in your browser",
-    images: ['https://getclayed.vercel.app/api/og'],
+    images: ['/api/og'],
   },
   other: {
     'fc:frame': 'vNext',
     'fc:frame:image': 'https://getclayed.vercel.app/api/og',
+    'fc:frame:image:aspect_ratio': '1.91:1',
     'fc:frame:button:1': 'Launch GetClayed',
     'fc:frame:button:1:action': 'link',
     'fc:frame:button:1:target': 'https://getclayed.vercel.app',

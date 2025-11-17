@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "generate-frames": "node scripts/generateLogoFrames.js",
+    "generate-apng": "node scripts/createAPNG.js",
+    "create-logo": "npm run generate-frames && npm run generate-apng"
   },
   "dependencies": {
     "@farcaster/frame-sdk": "^0.1.12",
@@ -57,10 +60,13 @@
     "crypto-browserify": "^3.12.0",
     "dotenv": "^17.2.3",
     "hardhat": "^2.26.3",
+    "pngjs": "^7.0.0",
     "process": "^0.11.10",
+    "puppeteer": "^23.11.1",
     "stream-browserify": "^3.0.0",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "upng-js": "^2.1.0",
     "url": "^0.11.3",
     "util": "^0.12.5",
     "webpack": "^5.89.0",
