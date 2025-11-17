@@ -9,10 +9,10 @@
     "name": "GetClayed",
     "iconUrl": "https://getclayed.vercel.app/animated-logo.png",
     "homeUrl": "https://getclayed.vercel.app",
-    "imageUrl": "https://getclayed.vercel.app/api/og",
-    "buttonTitle": "🎨 Launch GetClayed",
+    "imageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "buttonTitle": "No Blender, Just Clay",
     "splashImageUrl": "https://getclayed.vercel.app/animated-logo.png",
-    "splashBackgroundColor": "#B8C5D6",
+    "splashBackgroundColor": "#000000",
     "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook"
   },
   "frame": {
@@ -20,12 +20,12 @@
     "name": "GetClayed",
     "iconUrl": "https://getclayed.vercel.app/animated-logo.png",
     "homeUrl": "https://getclayed.vercel.app",
-    "imageUrl": "https://getclayed.vercel.app/api/og",
+    "imageUrl": "https://getclayed.vercel.app/animated-logo.png",
     "splashImageUrl": "https://getclayed.vercel.app/animated-logo.png",
-    "splashBackgroundColor": "#B8C5D6",
+    "splashBackgroundColor": "#000000",
     "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook",
     "button": {
-      "title": "🎨 Launch GetClayed",
+      "title": "No Blender, Just Clay",
       "action": {
         "type": "launch_frame"
       }
