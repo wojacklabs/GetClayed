@@ -7,13 +7,23 @@
   "miniapp": {
     "version": "1",
     "name": "GetClayed",
+    "subtitle": "Sculpt like a 5-year-old genius",
+    "description": "Who said 3D creation needs a PhD? Squish, stretch, if you played with clay as a kid, you're already a pro. GetClayed turns your inner child into an on-chain artist.",
     "iconUrl": "https://getclayed.vercel.app/animated-logo.png",
     "homeUrl": "https://getclayed.vercel.app",
     "imageUrl": "https://getclayed.vercel.app/animated-logo.png",
     "buttonTitle": "No Blender, Just Clay",
     "splashImageUrl": "https://getclayed.vercel.app/animated-logo.png",
     "splashBackgroundColor": "#000000",
-    "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook"
+    "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook",
+    "primaryCategory": "art-design",
+    "tags": ["3d", "art", "nft", "creative", "sculpting", "web3"],
+    "heroImageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "tagline": "Sculpt like a 5-year-old genius",
+    "ogTitle": "GetClayed - 3D Clay Sculpting",
+    "ogDescription": "Create and sculpt 3D clay objects in your browser. Mint as NFTs and earn royalties.",
+    "ogImageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "castShareUrl": "https://getclayed.vercel.app"
   },
   "frame": {
     "version": "next",
