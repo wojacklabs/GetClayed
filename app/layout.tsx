@@ -18,15 +18,15 @@ const geistMono = Geist_Mono({
 // Farcaster Mini App embed configuration
 const miniAppEmbed = {
   version: "1",
-  imageUrl: "https://getclayed.vercel.app/api/og",
+  imageUrl: "https://getclayed.vercel.app/animated-logo.png",
   button: {
-    title: "🎨 Launch GetClayed",
+    title: "No Blender, Just Clay",
     action: {
       type: "launch_miniapp",
       url: "https://getclayed.vercel.app",
       name: "GetClayed",
       splashImageUrl: "https://getclayed.vercel.app/animated-logo.png",
-      splashBackgroundColor: "#B8C5D6"
+      splashBackgroundColor: "#000000"
     }
   }
 };
@@ -34,15 +34,15 @@ const miniAppEmbed = {
 // For backward compatibility
 const frameEmbed = {
   version: "1",
-  imageUrl: "https://getclayed.vercel.app/api/og",
+  imageUrl: "hhttps://getclayed.vercel.app/animated-logo.png",
   button: {
-    title: "🎨 Launch GetClayed",
+    title: "No Blender, Just Clay",
     action: {
       type: "launch_frame",
       url: "https://getclayed.vercel.app",
       name: "GetClayed",
       splashImageUrl: "https://getclayed.vercel.app/animated-logo.png",
-      splashBackgroundColor: "#B8C5D6"
+      splashBackgroundColor: "#000000"
     }
   }
 };
