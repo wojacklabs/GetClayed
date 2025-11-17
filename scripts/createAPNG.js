@@ -9,7 +9,7 @@ const { PNG } = require('pngjs');
 
 const FRAMES_DIR = path.join(__dirname, '..', 'temp_frames');
 const OUTPUT_FILE = path.join(__dirname, '..', 'public', 'animated-logo.png');
-const FRAME_DELAY = 100; // 100ms = 10 FPS
+const FRAME_DELAY = 50; // 50ms = 20 FPS (더 빠르고 부드럽게)
 
 async function createAPNG() {
   console.log('🎬 APNG 생성 시작...');
