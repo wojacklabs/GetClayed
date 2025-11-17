@@ -18,12 +18,12 @@
     "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook",
     "primaryCategory": "art-design",
     "tags": ["3d", "art", "nft", "creative", "sculpting", "web3"],
-    "heroImageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "heroImageUrl": "https://getclayed.vercel.app/api/og",
     "tagline": "Sculpt like a 5-year-old genius",
-    "ogTitle": "GetClayed - 3D Clay Sculpting",
-    "ogDescription": "Create and sculpt 3D clay objects in your browser. Mint as NFTs and earn royalties.",
-    "ogImageUrl": "https://getclayed.vercel.app/animated-logo.png",
-    "castShareUrl": "https://getclayed.vercel.app"
+    "ogTitle": "GetClayed – No Blender, Just Clay",
+    "ogDescription": "Who said 3D creation needs a PhD? Squish, stretch, sculpt - if you played with clay as a kid, you're already a pro. Zero barriers, infinite possibilities, 100% yours.",
+    "ogImageUrl": "https://getclayed.vercel.app/api/og",
+    "castShareUrl": "https://warpcast.com/~/compose?text=Just%20made%203D%20art%20on%20GetClayed!%20%F0%9F%8E%A8%0A%0ANo%20Blender%2C%20no%20tutorials%20-%20just%20clay.%0Ahttps%3A%2F%2Fgetclayed.vercel.app"
   },
   "frame": {
     "version": "next",

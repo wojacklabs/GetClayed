@@ -16,39 +16,46 @@ export async function GET() {
             justifyContent: 'center',
             background: '#f9fafb',
             fontFamily: 'system-ui, -apple-system, sans-serif',
+            padding: '80px 100px',
           }}
         >
-          {/* 메인 컨텐츠 */}
+          {/* 메인 컨텐츠 - 작은 크기로 중앙 배치 */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
+              backgroundColor: 'white',
+              borderRadius: '32px',
+              padding: '60px 80px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.06)',
+              border: '1px solid #e5e7eb',
+              maxWidth: '800px',
             }}
           >
             {/* 로고 - 지점토 구체 */}
             <div
               style={{
-                width: '140px',
-                height: '140px',
+                width: '100px',
+                height: '100px',
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #B8C5D6 0%, #9DB4CC 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '40px',
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
-                border: '3px solid white',
+                marginBottom: '28px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
+                border: '2px solid #f9fafb',
               }}
             >
               <div
                 style={{
-                  width: '110px',
-                  height: '110px',
+                  width: '78px',
+                  height: '78px',
                   borderRadius: '50%',
                   background: 'linear-gradient(225deg, #B8C5D6 0%, #9DB4CC 100%)',
-                  boxShadow: 'inset 0 4px 8px rgba(0, 0, 0, 0.1)',
+                  boxShadow: 'inset 0 3px 6px rgba(0, 0, 0, 0.1)',
                 }}
               />
             </div>
@@ -56,11 +63,11 @@ export async function GET() {
             {/* 앱 이름 */}
             <div
               style={{
-                fontSize: '72px',
+                fontSize: '56px',
                 fontWeight: '700',
                 color: '#111827',
                 textAlign: 'center',
-                marginBottom: '16px',
+                marginBottom: '12px',
                 letterSpacing: '-0.02em',
               }}
             >
@@ -70,10 +77,10 @@ export async function GET() {
             {/* 태그라인 */}
             <div
               style={{
-                fontSize: '32px',
+                fontSize: '24px',
                 color: '#6b7280',
                 textAlign: 'center',
-                marginBottom: '60px',
+                marginBottom: '40px',
                 fontWeight: '500',
               }}
             >
@@ -84,41 +91,38 @@ export async function GET() {
             <div
               style={{
                 display: 'flex',
-                gap: '24px',
-                marginBottom: '48px',
+                gap: '16px',
               }}
             >
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  padding: '14px 24px',
-                  backgroundColor: 'white',
-                  borderRadius: '12px',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '10px',
                   border: '1px solid #e5e7eb',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <div style={{ fontSize: '28px' }}>👶</div>
-                <div style={{ fontSize: '20px', color: '#374151', fontWeight: '600' }}>
-                  Easy as Play
+                <div style={{ fontSize: '20px' }}>👶</div>
+                <div style={{ fontSize: '16px', color: '#374151', fontWeight: '600' }}>
+                  Easy
                 </div>
               </div>
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  padding: '14px 24px',
-                  backgroundColor: 'white',
-                  borderRadius: '12px',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '10px',
                   border: '1px solid #e5e7eb',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <div style={{ fontSize: '28px' }}>⛓️</div>
-                <div style={{ fontSize: '20px', color: '#374151', fontWeight: '600' }}>
+                <div style={{ fontSize: '20px' }}>⛓️</div>
+                <div style={{ fontSize: '16px', color: '#374151', fontWeight: '600' }}>
                   On-Chain
                 </div>
               </div>
@@ -126,17 +130,16 @@ export async function GET() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  padding: '14px 24px',
-                  backgroundColor: 'white',
-                  borderRadius: '12px',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '10px',
                   border: '1px solid #e5e7eb',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <div style={{ fontSize: '28px' }}>🎨</div>
-                <div style={{ fontSize: '20px', color: '#374151', fontWeight: '600' }}>
-                  3D Sculpting
+                <div style={{ fontSize: '20px' }}>🎨</div>
+                <div style={{ fontSize: '16px', color: '#374151', fontWeight: '600' }}>
+                  3D
                 </div>
               </div>
             </div>
@@ -145,9 +148,8 @@ export async function GET() {
           {/* 하단 서브텍스트 */}
           <div
             style={{
-              position: 'absolute',
-              bottom: '40px',
-              fontSize: '20px',
+              marginTop: '32px',
+              fontSize: '18px',
               color: '#9ca3af',
               fontWeight: '500',
             }}
