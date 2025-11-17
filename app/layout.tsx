@@ -34,7 +34,7 @@ const miniAppEmbed = {
 // For backward compatibility
 const frameEmbed = {
   version: "1",
-  imageUrl: "hhttps://getclayed.vercel.app/animated-logo.png",
+  imageUrl: "https://getclayed.vercel.app/animated-logo.png",
   button: {
     title: "No Blender, Just Clay",
     action: {
