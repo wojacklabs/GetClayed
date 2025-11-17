@@ -48,7 +48,7 @@ async function createAPNG() {
   // APNG 생성
   console.log('\n🔄 APNG 인코딩 중...');
   const delays = new Array(frames.length).fill(FRAME_DELAY);
-  const apng = UPNG.encode(frames, width, height, 0, delays);
+  const apng = UPNG.encode(frames, width, height, 256, delays); // 256 = full RGBA color
   
   // 파일 저장
   fs.writeFileSync(OUTPUT_FILE, Buffer.from(apng));
