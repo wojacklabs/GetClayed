@@ -16,6 +16,22 @@ export async function GET(
     const author = searchParams.get('author') || 'Unknown';
     const likes = searchParams.get('likes') || '0';
     const views = searchParams.get('views') || '0';
+    const thumbnailId = searchParams.get('thumbnailId') || '';
+    
+    // Try to fetch thumbnail if provided
+    let thumbnailUrl = '';
+    if (thumbnailId) {
+      try {
+        const thumbResponse = await fetch(`https://uploader.irys.xyz/tx/${thumbnailId}/data`);
+        if (thumbResponse.ok) {
+          const arrayBuffer = await thumbResponse.arrayBuffer();
+          const base64 = Buffer.from(arrayBuffer).toString('base64');
+          thumbnailUrl = `data:image/jpeg;base64,${base64}`;
+        }
+      } catch (error) {
+        console.log('Could not fetch thumbnail:', error);
+      }
+    }
     
     return new ImageResponse(
       (
@@ -45,33 +61,85 @@ export async function GET(
               boxShadow: '0 10px 40px rgba(0, 0, 0, 0.06)',
               border: '1px solid #e5e7eb',
               maxWidth: '700px',
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
-            {/* 아이콘/로고 - 지점토 구체 */}
-            <div
-              style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #B8C5D6 0%, #9DB4CC 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '24px',
-                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.08)',
-                border: '2px solid #f9fafb',
-              }}
-            >
+            {/* Background thumbnail with overlay */}
+            {thumbnailUrl && (
+              <>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundImage: `url(${thumbnailUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    opacity: 0.15,
+                    filter: 'blur(8px)',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.95))',
+                  }}
+                />
+              </>
+            )}
+            
+            {/* 썸네일 이미지 또는 clay ball 아이콘 */}
+            {thumbnailUrl ? (
               <div
                 style={{
-                  width: '62px',
-                  height: '62px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(225deg, #B8C5D6 0%, #9DB4CC 100%)',
-                  boxShadow: 'inset 0 2px 5px rgba(0, 0, 0, 0.1)',
+                  width: '200px',
+                  height: '200px',
+                  borderRadius: '20px',
+                  backgroundImage: `url(${thumbnailUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  marginBottom: '24px',
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
+                  border: '4px solid white',
+                  position: 'relative',
+                  zIndex: 1,
                 }}
               />
-            </div>
+            ) : (
+              <div
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #B8C5D6 0%, #9DB4CC 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '24px',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.08)',
+                  border: '2px solid #f9fafb',
+                  position: 'relative',
+                  zIndex: 1,
+                }}
+              >
+                <div
+                  style={{
+                    width: '62px',
+                    height: '62px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(225deg, #B8C5D6 0%, #9DB4CC 100%)',
+                    boxShadow: 'inset 0 2px 5px rgba(0, 0, 0, 0.1)',
+                  }}
+                />
+              </div>
+            )}
             
             {/* 프로젝트 이름 */}
             <div
@@ -86,6 +154,8 @@ export async function GET(
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 letterSpacing: '-0.02em',
+                position: 'relative',
+                zIndex: 1,
               }}
             >
               {name}
@@ -98,6 +168,8 @@ export async function GET(
                 color: '#6b7280',
                 marginBottom: '32px',
                 fontWeight: '500',
+                position: 'relative',
+                zIndex: 1,
               }}
             >
               by {author.slice(0, 6)}...{author.slice(-4)}
@@ -108,6 +180,8 @@ export async function GET(
               style={{
                 display: 'flex',
                 gap: '20px',
+                position: 'relative',
+                zIndex: 1,
               }}
             >
               <div
