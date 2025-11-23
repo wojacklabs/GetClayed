@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test OG Images</title>
+    <style>
+        body {
+            font-family: system-ui;
+            padding: 20px;
+            background: #f3f4f6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-case {
+            margin: 20px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .test-case h3 {
+            margin-top: 0;
+        }
+        .test-case img {
+            max-width: 100%;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+        }
+        .url {
+            font-family: monospace;
+            background: #f9fafb;
+            padding: 8px;
+            border-radius: 4px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GetClayed OG Image Tests</h1>
+        
+        <div class="test-case">
+            <h3>Test 1: Project with name only</h3>
+            <p class="url">/api/og/project/test123?name=My%20Awesome%20Project&author=0x1234...5678</p>
+            <img src="/api/og/project/test123?name=My%20Awesome%20Project&author=0x1234567890123456789012345678901234567890" alt="Test 1">
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 2: Real Project (chunked)</h3>
+            <p class="url">/api/og/project/9zYAicDJoCZXaVTAAS47WiLhzspDgCUWL8jemeHPAmzz?name=stone,%20star,%20flower,%20heart&author=Unknown</p>
+            <img src="/api/og/project/9zYAicDJoCZXaVTAAS47WiLhzspDgCUWL8jemeHPAmzz?name=stone,%20star,%20flower,%20heart&author=Unknown" alt="Test 2">
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 3: Library Asset</h3>
+            <p class="url">/api/og/library/test456?name=Reusable%20Component&author=0xabcd...ef01&royaltyETH=0.001</p>
+            <img src="/api/og/library/test456?name=Reusable%20Component&author=0xabcdef0123456789abcdef0123456789abcdef01&royaltyETH=0.001" alt="Test 3">
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 4: Marketplace Item</h3>
+            <p class="url">/api/og/marketplace/test789?name=For%20Sale%20Item&seller=0x9876...5432&price=0.5</p>
+            <img src="/api/og/marketplace/test789?name=For%20Sale%20Item&seller=0x98765432109876543210987654321098765432109&price=0.5" alt="Test 4">
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 5: Main Page</h3>
+            <p class="url">/api/og</p>
+            <img src="/api/og" alt="Test 5">
+        </div>
+    </div>
+</body>
+</html>

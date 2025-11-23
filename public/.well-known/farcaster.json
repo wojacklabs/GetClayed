@@ -1,4 +1,9 @@
 {
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE0MzA5MjQsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhDMkNFZjEwOUViOTFCRkQ3MzMxYURFQ0YyQUE5YjIwMzg0ZDg1Y2VEIn0",
+    "payload": "eyJkb21haW4iOiJnZXRjbGF5ZWQuaW8ifQ",
+    "signature": "z0qqOW/KK1LXNMgm0BXzwRJRNF0ceEj0qsw8BAgbRx8v08gd6zAcd+Vlb9ar/of8wVkaP5YqsmWqJcout7Zumxw="
+  },
   "miniapp": {
     "version": "1",
     "name": "GetClayed",
