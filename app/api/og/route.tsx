@@ -154,7 +154,7 @@ export async function GET() {
               fontWeight: '500',
             }}
           >
-            getclayed.vercel.app
+            getclayed.io
           </div>
         </div>
       ),

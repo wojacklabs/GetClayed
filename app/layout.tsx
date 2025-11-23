@@ -18,14 +18,14 @@ const geistMono = Geist_Mono({
 // Farcaster Mini App embed configuration
 const miniAppEmbed = {
   version: "1",
-  imageUrl: "https://getclayed.vercel.app/animated-logo.png",
+  imageUrl: "https://getclayed.io/animated-logo.png",
   button: {
     title: "No Blender, Just Clay",
     action: {
       type: "launch_miniapp",
-      url: "https://getclayed.vercel.app",
+      url: "https://getclayed.io",
       name: "GetClayed",
-      splashImageUrl: "https://getclayed.vercel.app/animated-logo.png",
+      splashImageUrl: "https://getclayed.io/animated-logo.png",
       splashBackgroundColor: "#000000"
     }
   }
@@ -34,21 +34,21 @@ const miniAppEmbed = {
 // For backward compatibility
 const frameEmbed = {
   version: "1",
-  imageUrl: "https://getclayed.vercel.app/animated-logo.png",
+  imageUrl: "https://getclayed.io/animated-logo.png",
   button: {
     title: "No Blender, Just Clay",
     action: {
       type: "launch_frame",
-      url: "https://getclayed.vercel.app",
+      url: "https://getclayed.io",
       name: "GetClayed",
-      splashImageUrl: "https://getclayed.vercel.app/animated-logo.png",
+      splashImageUrl: "https://getclayed.io/animated-logo.png",
       splashBackgroundColor: "#000000"
     }
   }
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://getclayed.vercel.app'),
+  metadataBase: new URL('https://getclayed.io'),
   title: "GetClayed - 3D Clay Sculpting",
   description: "Create and sculpt 3D clay objects in your browser",
   icons: {

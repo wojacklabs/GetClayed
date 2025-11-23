@@ -40,7 +40,7 @@ export interface NotificationResult {
  *   fid: 123456,
  *   title: 'New Like! ❤️',
  *   body: 'Someone liked your creation',
- *   targetUrl: 'https://getclayed.vercel.app/project/abc',
+ *   targetUrl: 'https://getclayed.io/project/abc',
  *   notificationId: 'like-abc-123'
  * });
  * 
@@ -48,7 +48,7 @@ export interface NotificationResult {
  * await sendFarcasterNotification({
  *   title: 'New Feature! 🎉',
  *   body: 'Check out our new 3D sculpting tools',
- *   targetUrl: 'https://getclayed.vercel.app',
+ *   targetUrl: 'https://getclayed.io',
  *   notificationId: 'feature-announcement-2024-11-17'
  * });
  * ```
@@ -95,7 +95,7 @@ export async function notifyRoyaltyPayment(
     fid,
     title: `💰 Royalty: ${amount} ETH`,
     body: 'You received a new royalty payment!',
-    targetUrl: `https://getclayed.vercel.app/project/${projectId}`,
+    targetUrl: `https://getclayed.io/project/${projectId}`,
     notificationId: `royalty-${projectId}-${Date.now()}`,
   });
 }
@@ -116,7 +116,7 @@ export async function notifyProjectLike(
     fid,
     title: '❤️ New Like',
     body,
-    targetUrl: `https://getclayed.vercel.app/project/${projectId}`,
+    targetUrl: `https://getclayed.io/project/${projectId}`,
     notificationId: `like-${projectId}-${Date.now()}`,
   });
 }
@@ -127,7 +127,7 @@ export async function notifyProjectLike(
 export async function broadcastAnnouncement(
   title: string,
   body: string,
-  targetUrl: string = 'https://getclayed.vercel.app'
+  targetUrl: string = 'https://getclayed.io'
 ): Promise<NotificationResult> {
   return sendFarcasterNotification({
     title: title.slice(0, 32), // Ensure max length
@@ -153,7 +153,7 @@ export async function notifyNewComment(
     fid,
     title: '💬 New Comment',
     body,
-    targetUrl: `https://getclayed.vercel.app/project/${projectId}`,
+    targetUrl: `https://getclayed.io/project/${projectId}`,
     notificationId: `comment-${projectId}-${Date.now()}`,
   });
 }
@@ -169,7 +169,7 @@ export async function notifyProjectFeatured(
     fid,
     title: '⭐ Featured!',
     body: 'Your creation was featured!',
-    targetUrl: `https://getclayed.vercel.app/project/${projectId}`,
+    targetUrl: `https://getclayed.io/project/${projectId}`,
     notificationId: `featured-${projectId}`,
   });
 }

@@ -8,7 +8,7 @@ export async function generateMetadata({
   const { id } = await params
   
   // Base URL for OG images
-  const baseUrl = 'https://getclayed.vercel.app'
+  const baseUrl = 'https://getclayed.io'
   
   // Try to fetch library asset data
   let assetName = 'Library Asset'
@@ -33,8 +33,8 @@ export async function generateMetadata({
       
       // Check if it's a chunk manifest
       if (assetData.chunkSetId && assetData.totalChunks) {
-        assetName = 'Library Asset'
-        assetDescription = 'A reusable 3D clay component from GetClayed Library'
+        assetName = assetData.projectName || assetData.name || 'Library Asset'
+        assetDescription = assetData.description || 'A reusable 3D clay component from GetClayed Library'
       } else {
         assetName = assetData.name || assetName
         assetAuthor = assetData.author || assetData.creator || assetAuthor

@@ -55,8 +55,8 @@ export function generateFarcasterMetadata(
 }
 
 // 기본 앱 정보
-export const DEFAULT_APP_IMAGE = 'https://getclayed.vercel.app/clay.png';
-export const DEFAULT_APP_URL = 'https://getclayed.vercel.app';
+export const DEFAULT_APP_IMAGE = 'https://getclayed.io/clay.png';
+export const DEFAULT_APP_URL = 'https://getclayed.io';
 export const APP_NAME = 'GetClayed';
 export const APP_DESCRIPTION = 'Create and sculpt 3D clay objects in your browser';
 

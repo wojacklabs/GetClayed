@@ -10,7 +10,7 @@ export async function generateMetadata({
   const { id } = await params
   
   // Base URL for OG images
-  const baseUrl = 'https://getclayed.vercel.app'
+  const baseUrl = 'https://getclayed.io'
   
   // Try to fetch project data
   let projectName = '3D Clay Project'
@@ -35,9 +35,11 @@ export async function generateMetadata({
       // Check if it's a chunk manifest (multi-part project)
       if (projectData.chunkSetId && projectData.totalChunks) {
         // For chunked projects, we can't easily reassemble on the server
-        // Use basic info or defaults
-        projectName = '3D Clay Project'
-        projectDescription = 'A complex 3D clay sculpture on GetClayed'
+        // But we can use the manifest metadata
+        projectName = projectData.projectName || projectData.name || '3D Clay Project'
+        projectDescription = projectData.description || 'A 3D clay sculpture on GetClayed'
+        // Chunk manifests don't have thumbnailId in the manifest itself
+        // Thumbnails are stored separately
       } else {
         // Regular project
         projectName = projectData.name || projectName

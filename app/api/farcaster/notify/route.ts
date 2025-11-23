@@ -196,7 +196,7 @@ export async function GET() {
       example: {
         title: 'New Creation! 🎨',
         body: 'Check out the latest 3D artwork',
-        targetUrl: 'https://getclayed.vercel.app/project/123',
+        targetUrl: 'https://getclayed.io/project/123',
         notificationId: 'new-creation-123',
       },
     },

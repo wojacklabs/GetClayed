@@ -1,39 +1,34 @@
 {
-  "accountAssociation": {
-    "header": "eyJmaWQiOjE0MzA5MjQsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhDMkNFZjEwOUViOTFCRkQ3MzMxYURFQ0YyQUE5YjIwMzg0ZDg1Y2VEIn0",
-    "payload": "eyJkb21haW4iOiJnZXRjbGF5ZWQudmVyY2VsLmFwcCJ9",
-    "signature": "fzc1+8XW3pj5fJsUcesI21j7CFg6KefhXmJ+wjCCIMhFPa3C9rXtxENsv7TwwyOM8LZlOJhWXu2tuRwsssk2+xs="
-  },
   "miniapp": {
     "version": "1",
     "name": "GetClayed",
     "subtitle": "Sculpt like a 5-year-old genius",
     "description": "Who said 3D creation needs a PhD? Squish, stretch, if you played with clay as a kid, you're already a pro. GetClayed turns your inner child into an on-chain artist.",
-    "iconUrl": "https://getclayed.vercel.app/animated-logo.png",
-    "homeUrl": "https://getclayed.vercel.app",
-    "imageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "iconUrl": "https://getclayed.io/animated-logo.png",
+    "homeUrl": "https://getclayed.io",
+    "imageUrl": "https://getclayed.io/animated-logo.png",
     "buttonTitle": "No Blender, Just Clay",
-    "splashImageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "splashImageUrl": "https://getclayed.io/animated-logo.png",
     "splashBackgroundColor": "#000000",
-    "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook",
+    "webhookUrl": "https://getclayed.io/api/farcaster/webhook",
     "primaryCategory": "art-design",
     "tags": ["3d", "art", "nft", "creative", "sculpting", "web3"],
-    "heroImageUrl": "https://getclayed.vercel.app/api/og",
+    "heroImageUrl": "https://getclayed.io/api/og",
     "tagline": "Sculpt like a 5-year-old genius",
     "ogTitle": "GetClayed – No Blender, Just Clay",
     "ogDescription": "Who said 3D creation needs a PhD? Squish, stretch, sculpt - if you played with clay as a kid, you're already a pro. Zero barriers, infinite possibilities, 100% yours.",
-    "ogImageUrl": "https://getclayed.vercel.app/api/og",
-    "castShareUrl": "https://warpcast.com/~/compose?text=Just%20made%203D%20art%20on%20GetClayed!%20%F0%9F%8E%A8%0A%0ANo%20Blender%2C%20no%20tutorials%20-%20just%20clay.%0Ahttps%3A%2F%2Fgetclayed.vercel.app"
+    "ogImageUrl": "https://getclayed.io/api/og",
+    "castShareUrl": "https://warpcast.com/~/compose?text=Just%20made%203D%20art%20on%20GetClayed!%20%F0%9F%8E%A8%0A%0ANo%20Blender%2C%20no%20tutorials%20-%20just%20clay.%0Ahttps%3A%2F%2Fgetclayed.io"
   },
   "frame": {
     "version": "next",
     "name": "GetClayed",
-    "iconUrl": "https://getclayed.vercel.app/animated-logo.png",
-    "homeUrl": "https://getclayed.vercel.app",
-    "imageUrl": "https://getclayed.vercel.app/animated-logo.png",
-    "splashImageUrl": "https://getclayed.vercel.app/animated-logo.png",
+    "iconUrl": "https://getclayed.io/animated-logo.png",
+    "homeUrl": "https://getclayed.io",
+    "imageUrl": "https://getclayed.io/animated-logo.png",
+    "splashImageUrl": "https://getclayed.io/animated-logo.png",
     "splashBackgroundColor": "#000000",
-    "webhookUrl": "https://getclayed.vercel.app/api/farcaster/webhook",
+    "webhookUrl": "https://getclayed.io/api/farcaster/webhook",
     "button": {
       "title": "No Blender, Just Clay",
       "action": {

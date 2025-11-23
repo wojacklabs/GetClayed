@@ -8,7 +8,7 @@ export async function generateMetadata({
   const { id } = await params
   
   // Base URL for OG images
-  const baseUrl = 'https://getclayed.vercel.app'
+  const baseUrl = 'https://getclayed.io'
   
   // Try to fetch marketplace listing data
   let itemName = 'Unique Creation'
@@ -32,8 +32,8 @@ export async function generateMetadata({
       
       // Check if it's a chunk manifest
       if (projectData.chunkSetId && projectData.totalChunks) {
-        itemName = 'Unique Creation'
-        itemDescription = 'A unique 3D clay sculpture for sale on GetClayed Marketplace'
+        itemName = projectData.projectName || projectData.name || 'Unique Creation'
+        itemDescription = projectData.description || 'A unique 3D clay sculpture for sale on GetClayed Marketplace'
       } else {
         itemName = projectData.name || itemName
         itemSeller = projectData.author || projectData.creator || itemSeller
