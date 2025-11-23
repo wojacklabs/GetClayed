@@ -21,7 +21,10 @@ export async function GET(
     
     browser = await puppeteer.launch({
       args: isDev ? [] : chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      defaultViewport: {
+        width: 1200,
+        height: 630,
+      },
       executablePath: isDev 
         ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' // Mac default
         : await chromium.executablePath(),
@@ -63,7 +66,7 @@ export async function GET(
     console.log('[Screenshot API] Canvas found');
     
     // Give extra time for 3D rendering to complete
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
     console.log('[Screenshot API] Render wait complete');
     
     // Take screenshot
