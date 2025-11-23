@@ -143,8 +143,15 @@ export async function GET(
         // Render once
         renderer.render(scene, camera);
         
-        // Signal that rendering is complete
-        window.parent.postMessage({ type: 'render-complete' }, '*');
+        // Only signal completion if we're in an iframe context
+        try {
+          if (window.parent && window.parent !== window && window.location.origin !== 'null') {
+            window.parent.postMessage({ type: 'render-complete' }, '*');
+          }
+        } catch (e) {
+          // Silently fail if postMessage is not allowed
+          console.log('PostMessage not available or not needed');
+        }
         
       } catch (error) {
         console.error('Failed to load project:', error);

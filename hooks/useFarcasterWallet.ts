@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import sdk from '@farcaster/frame-sdk';
+import sdk from '@farcaster/miniapp-sdk';
 
 export function useFarcasterWallet() {
   const [isInFarcaster, setIsInFarcaster] = useState(false);

@@ -557,7 +557,12 @@ export async function downloadClayProject(
     const response = await fetch(directUrl);
     
     if (!response.ok) {
-      throw new Error(`Failed to download project: ${response.statusText}`);
+      // Better error handling for 400/404 errors (invalid transaction IDs)
+      if (response.status === 400 || response.status === 404) {
+        console.error('[downloadClayProject] Transaction not found or invalid:', txIdToUse);
+        throw new Error(`Transaction not found: ${txIdToUse}. This project may have been deleted or the ID is invalid.`);
+      }
+      throw new Error(`Failed to download project: ${response.status} ${response.statusText}`);
     }
     
     const jsonString = await response.text();

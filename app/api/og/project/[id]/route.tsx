@@ -26,8 +26,32 @@ export async function GET(
         
         // Check if it's a chunk manifest
         if (projectData.chunkSetId && projectData.totalChunks) {
-          // For chunked projects, we can't easily render the 3D, so use fallback
+          // For chunked projects, try to fetch and reassemble
+          try {
+            const chunks = projectData.chunks || [];
+            let reassembledProject: any = null;
+            
+            if (chunks.length > 0) {
+              // Fetch all chunks
+              const chunkPromises = chunks.map((chunkId: string) =>
+                fetch(`https://uploader.irys.xyz/tx/${chunkId}/data`).then(r => r.text())
+              );
+              
+              const chunkData = await Promise.all(chunkPromises);
+              const fullData = chunkData.join('');
+              reassembledProject = JSON.parse(fullData);
+              
+              if (reassembledProject) {
+                clayObjects = reassembledProject.clayObjects || [];
+                backgroundColor = reassembledProject.backgroundColor || '#000000';
+                console.log(`[OG] Reassembled ${clayObjects.length} objects from chunks`);
+              }
+            }
+          } catch (error) {
+            console.error('[OG] Failed to reassemble chunks:', error);
+          }
         } else {
+          // Regular project
           clayObjects = projectData.clayObjects || [];
           backgroundColor = projectData.backgroundColor || '#000000';
         }

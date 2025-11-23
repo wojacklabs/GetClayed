@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 const miniAppEmbed = {
   version: "1",
   imageUrl: "https://getclayed.io/animated-logo.png",
+  aspectRatio: "1:1",
   button: {
     title: "No Blender, Just Clay",
     action: {
@@ -35,6 +36,7 @@ const miniAppEmbed = {
 const frameEmbed = {
   version: "1",
   imageUrl: "https://getclayed.io/animated-logo.png",
+  aspectRatio: "1:1",
   button: {
     title: "No Blender, Just Clay",
     action: {

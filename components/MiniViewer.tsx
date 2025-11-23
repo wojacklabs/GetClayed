@@ -112,8 +112,12 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
         const validColor = projectData.backgroundColor.startsWith('#') ? projectData.backgroundColor : '#f8f9fa'
         setBackgroundColor(validColor)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[MiniViewer] Failed to load project:', error)
+      // Don't show error for deleted/invalid projects - just show placeholder
+      if (error.message && error.message.includes('Transaction not found')) {
+        console.log('[MiniViewer] Project not found or deleted, showing placeholder');
+      }
       setHasError(true)
     } finally {
       setLoading(false)

@@ -7,6 +7,7 @@
     "iconUrl": "https://getclayed.io/animated-logo.png?v=2",
     "homeUrl": "https://getclayed.io",
     "imageUrl": "https://getclayed.io/animated-logo.png?v=2",
+    "aspectRatio": "1:1",
     "buttonTitle": "No Blender, Just Clay",
     "splashImageUrl": "https://getclayed.io/animated-logo.png?v=2",
     "splashBackgroundColor": "#000000",
@@ -23,10 +24,11 @@
   "frame": {
     "version": "next",
     "name": "GetClayed",
-    "iconUrl": "https://getclayed.io/animated-logo.png?v=2?v=2",
+    "iconUrl": "https://getclayed.io/animated-logo.png?v=2",
     "homeUrl": "https://getclayed.io",
-    "imageUrl": "https://getclayed.io/animated-logo.png?v=2?v=2",
-    "splashImageUrl": "https://getclayed.io/animated-logo.png?v=2?v=2",
+    "imageUrl": "https://getclayed.io/animated-logo.png?v=2",
+    "aspectRatio": "1:1",
+    "splashImageUrl": "https://getclayed.io/animated-logo.png?v=2",
     "splashBackgroundColor": "#000000",
     "webhookUrl": "https://getclayed.io/api/farcaster/webhook",
     "button": {
