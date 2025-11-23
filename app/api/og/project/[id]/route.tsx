@@ -42,7 +42,8 @@ export async function GET(
               reassembledProject = JSON.parse(fullData);
               
               if (reassembledProject) {
-                clayObjects = reassembledProject.clayObjects || [];
+                // Correct field name is 'clays', not 'clayObjects'
+                clayObjects = reassembledProject.clays || [];
                 backgroundColor = reassembledProject.backgroundColor || '#000000';
                 console.log(`[OG] Reassembled ${clayObjects.length} objects from chunks`);
               }
@@ -51,8 +52,8 @@ export async function GET(
             console.error('[OG] Failed to reassemble chunks:', error);
           }
         } else {
-          // Regular project
-          clayObjects = projectData.clayObjects || [];
+          // Regular project - correct field name is 'clays', not 'clayObjects'
+          clayObjects = projectData.clays || [];
           backgroundColor = projectData.backgroundColor || '#000000';
         }
         

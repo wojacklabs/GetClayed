@@ -53,14 +53,8 @@ export async function generateMetadata({
     // Use default values
   }
   
-  // Use the API endpoint with query parameters for dynamic data
-  const ogImageParams = new URLSearchParams({
-    name: projectName,
-    author: projectAuthor,
-  })
-  if (thumbnailId) ogImageParams.append('thumbnailId', thumbnailId)
-  
-  const ogImageUrl = `${baseUrl}/api/og/project/${id}?${ogImageParams.toString()}`
+  // Use screenshot API for real 3D rendering via iframe/Puppeteer
+  const ogImageUrl = `${baseUrl}/api/og/screenshot/project/${id}`
   
   return {
     metadataBase: new URL(baseUrl),

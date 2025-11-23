@@ -105,16 +105,8 @@ export async function generateMetadata({
     // Use default values
   }
   
-  // Build query params for OG image
-  const params_obj = new URLSearchParams({
-    name: assetName,
-    author: assetAuthor,
-  })
-  if (royaltyETH) params_obj.append('royaltyETH', royaltyETH)
-  if (royaltyUSDC) params_obj.append('royaltyUSDC', royaltyUSDC)
-  if (thumbnailId) params_obj.append('thumbnailId', thumbnailId)
-  
-  const ogImageUrl = `${baseUrl}/api/og/library/${id}?${params_obj.toString()}`
+  // Use screenshot API for real 3D rendering via iframe/Puppeteer
+  const ogImageUrl = `${baseUrl}/api/og/screenshot/library/${id}`
   
   return {
     metadataBase: new URL(baseUrl),

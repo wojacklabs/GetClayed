@@ -82,9 +82,9 @@ export async function GET(
           scene.background = new THREE.Color(projectData.backgroundColor);
         }
         
-        // Restore clay objects
-        if (projectData.clayObjects) {
-          projectData.clayObjects.forEach(clayData => {
+        // Restore clay objects - correct field name is 'clays'
+        if (projectData.clays) {
+          projectData.clays.forEach(clayData => {
             let geometry;
             
             // Create geometry based on type

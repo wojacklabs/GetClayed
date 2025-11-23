@@ -100,15 +100,8 @@ export async function generateMetadata({
     // Use default values
   }
   
-  // Build query params for OG image
-  const params_obj = new URLSearchParams({
-    name: itemName,
-    seller: itemSeller,
-    price: itemPrice,
-  })
-  if (thumbnailId) params_obj.append('thumbnailId', thumbnailId)
-  
-  const ogImageUrl = `${baseUrl}/api/og/marketplace/${id}?${params_obj.toString()}`
+  // Use screenshot API for real 3D rendering via iframe/Puppeteer
+  const ogImageUrl = `${baseUrl}/api/og/screenshot/marketplace/${id}`
   
   return {
     metadataBase: new URL(baseUrl),

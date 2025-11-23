@@ -39,8 +39,8 @@ export async function GET(
       return new NextResponse('Chunked projects not supported yet', { status: 501 })
     }
     
-    // Get clay objects
-    const clayObjects: ClayObject[] = projectData.objects || []
+    // Get clay objects - correct field name is 'clays'
+    const clayObjects: ClayObject[] = projectData.clays || []
     
     if (!clayObjects || clayObjects.length === 0) {
       return new NextResponse('No objects found', { status: 404 })
