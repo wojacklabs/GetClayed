@@ -18,28 +18,81 @@ export async function generateMetadata({
   let thumbnailId = ''
   
   try {
-    // Fetch project data from Irys
-    const IRYS_DATA_URL = `https://uploader.irys.xyz/tx/${id}/data`
-    const response = await fetch(IRYS_DATA_URL, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
-      headers: {
-        'Accept': 'application/json',
-      },
-    })
+    // First, try to get listing info from smart contract via GraphQL
+    const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
+    const query = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["marketplace-listing"] },
+            { name: "Project-ID", values: ["${id}"] }
+          ],
+          first: 1,
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+              tags {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
     
-    if (response.ok) {
-      const projectData = await response.json()
+    const graphqlResponse = await fetch(IRYS_GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+      next: { revalidate: 3600 }
+    });
+    
+    if (graphqlResponse.ok) {
+      const result = await graphqlResponse.json();
+      if (result.data?.transactions?.edges?.[0]) {
+        const tags = result.data.transactions.edges[0].node.tags;
+        const nameTag = tags.find((t: any) => t.name === 'Name' || t.name === 'Asset-Name');
+        const sellerTag = tags.find((t: any) => t.name === 'Seller');
+        const priceTag = tags.find((t: any) => t.name === 'Price');
+        const descTag = tags.find((t: any) => t.name === 'Description');
+        const thumbnailTag = tags.find((t: any) => t.name === 'Thumbnail-ID');
+        
+        if (nameTag) itemName = nameTag.value;
+        if (sellerTag) itemSeller = sellerTag.value;
+        if (priceTag) itemPrice = priceTag.value;
+        if (descTag) itemDescription = descTag.value;
+        if (thumbnailTag) thumbnailId = thumbnailTag.value;
+        
+        console.log('[Marketplace Metadata] Found from GraphQL:', { itemName, itemSeller, itemPrice });
+      }
+    }
+    
+    // Fallback: Try to fetch project data from Irys
+    if (itemName === 'Unique Creation') {
+      const IRYS_DATA_URL = `https://uploader.irys.xyz/tx/${id}/data`;
+      const response = await fetch(IRYS_DATA_URL, {
+        next: { revalidate: 3600 },
+        headers: { 'Accept': 'application/json' },
+      });
       
-      // Check if it's a chunk manifest
-      if (projectData.chunkSetId && projectData.totalChunks) {
-        itemName = projectData.projectName || projectData.name || 'Unique Creation'
-        itemDescription = projectData.description || 'A unique 3D clay sculpture for sale on GetClayed Marketplace'
-      } else {
-        itemName = projectData.name || itemName
-        itemSeller = projectData.author || projectData.creator || itemSeller
-        itemDescription = projectData.description || itemDescription
-        thumbnailId = projectData.thumbnailId || projectData.tags?.['Thumbnail-ID'] || ''
-        // Note: Price comes from contract, not Irys - would need smart contract query
+      if (response.ok) {
+        const projectData = await response.json();
+        
+        if (projectData.chunkSetId && projectData.totalChunks) {
+          itemName = projectData.projectName || projectData.name || 'Unique Creation';
+          itemDescription = projectData.description || 'A unique 3D clay sculpture for sale on GetClayed Marketplace';
+        } else {
+          itemName = projectData.name || itemName;
+          itemSeller = projectData.author || projectData.creator || itemSeller;
+          itemDescription = projectData.description || itemDescription;
+          thumbnailId = projectData.thumbnailId || projectData.tags?.['Thumbnail-ID'] || thumbnailId;
+        }
+        
+        console.log('[Marketplace Metadata] Found from Irys data:', { itemName, itemSeller });
       }
     }
   } catch (error) {
