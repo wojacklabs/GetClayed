@@ -189,6 +189,12 @@ export async function getProjectLatestTxId(projectId: string): Promise<string | 
         return acc;
       }, {});
       
+      // Skip library-registration transactions
+      const dataType = tags['Data-Type'];
+      if (dataType === 'library-registration') {
+        continue;
+      }
+      
       const txRootId = tags['Root-TX'];
       
       if (txRootId) {

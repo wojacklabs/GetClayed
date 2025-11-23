@@ -146,7 +146,7 @@ export async function GET(
         // Only signal completion if we're in an iframe context
         try {
           if (window.parent && window.parent !== window && window.location.origin !== 'null') {
-            window.parent.postMessage({ type: 'render-complete' }, '*');
+        window.parent.postMessage({ type: 'render-complete' }, '*');
           }
         } catch (e) {
           // Silently fail if postMessage is not allowed
