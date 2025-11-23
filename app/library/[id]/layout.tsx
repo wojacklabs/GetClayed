@@ -104,12 +104,3 @@ export default function LibraryLayout({
 }) {
   return <>{children}</>
 }
-
-export default function LibraryLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return <>{children}</>
-}
-

@@ -101,12 +101,3 @@ export default function MarketplaceLayout({
 }) {
   return <>{children}</>
 }
-
-export default function MarketplaceLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return <>{children}</>
-}
-
