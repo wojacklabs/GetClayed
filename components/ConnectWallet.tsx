@@ -105,27 +105,14 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   
   // Show disconnect button for both Farcaster and regular wallets
   if (walletAddress) {
-    const isFarcasterWallet = !!farcasterAddress
     return (
-      <div className="flex items-center gap-2">
-        <div className="px-3 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 flex items-center gap-2">
-          {isFarcasterWallet && (
-            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-              Farcaster
-            </span>
-          )}
-          <span>{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
-        </div>
-        {!isFarcasterWallet && (
-          <button
-            onClick={handleDisconnect}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
-            title="Disconnect Wallet"
-          >
-            <LogOut size={20} />
-          </button>
-        )}
-      </div>
+      <button
+        onClick={handleDisconnect}
+        className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
+        title="Disconnect Wallet"
+      >
+        <LogOut size={20} />
+      </button>
     )
   }
   
