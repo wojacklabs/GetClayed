@@ -101,10 +101,17 @@ export default function OGViewerLibraryPage() {
         
         setClayObjects(restoredObjects)
         setLoading(false)
+        
+        // Signal that animation is ready
+        // @ts-ignore
+        window.animationReady = true;
+        console.log('[OG Viewer Library] Animation ready signal set');
       } catch (err) {
         console.error('[OG Viewer Library] Error loading asset:', err)
         setError(err instanceof Error ? err.message : 'Failed to load asset')
         setLoading(false)
+        // @ts-ignore
+        window.animationReady = false;
       }
     }
     

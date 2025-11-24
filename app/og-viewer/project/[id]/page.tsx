@@ -89,10 +89,17 @@ export default function OGViewerProjectPage() {
         
         setClayObjects(restoredObjects)
         setLoading(false)
+        
+        // Signal that animation is ready
+        // @ts-ignore
+        window.animationReady = true;
+        console.log('[OG Viewer] Animation ready signal set');
       } catch (err) {
         console.error('[OG Viewer] Error loading project:', err)
         setError(err instanceof Error ? err.message : 'Failed to load project')
         setLoading(false)
+        // @ts-ignore
+        window.animationReady = false;
       }
     }
     

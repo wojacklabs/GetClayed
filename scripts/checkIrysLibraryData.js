@@ -1,4 +1,4 @@
-const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
+const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql'\;
 
 async function checkIrysLibraries() {
   try {
@@ -34,10 +34,7 @@ async function checkIrysLibraries() {
     const result = await response.json();
     const edges = result.data?.transactions?.edges || [];
     
-    console.log('=' .repeat(60));
-    console.log('IRYS Library Registrations (Metadata)');
-    console.log('=' .repeat(60));
-    console.log('Found', edges.length, 'registration transactions\n');
+    console.log('Found', edges.length, 'library registrations on Irys:\n');
     
     const seen = new Set();
     edges.forEach((edge, idx) => {
@@ -52,22 +49,12 @@ async function checkIrysLibraries() {
         console.log(`${seen.size}. ${tags['Asset-Name']}`);
         console.log(`   Project-ID: ${projectId}`);
         console.log(`   Registered-By: ${tags['Registered-By']}`);
-        console.log(`   Timestamp: ${tags['Registered-At']}`);
         console.log('');
       }
     });
     
-    console.log('=' .repeat(60));
-    console.log('IMPORTANT:');
-    console.log('=' .repeat(60));
-    console.log('Irys stores METADATA (names, descriptions)');
-    console.log('Contract stores OWNERSHIP and ROYALTY data');
-    console.log('');
-    console.log('queryLibraryAssets() fetches from Irys FIRST,');
-    console.log('then queries the CONTRACT for current state');
-    console.log('');
-    console.log('If different libraries appear on different pages,');
-    console.log('they might be using different LIBRARY_CONTRACT_ADDRESS!');
+    console.log('\nThese are ALL libraries registered on Irys');
+    console.log('The contract address filters are applied AFTER fetching from Irys');
     
   } catch (error) {
     console.error('Error:', error.message);
@@ -75,14 +62,3 @@ async function checkIrysLibraries() {
 }
 
 checkIrysLibraries();
-
-<<<<<<< Updated upstream
-
-
-
-
-
-
-
-=======
->>>>>>> Stashed changes

@@ -47,6 +47,7 @@ async function checkContract() {
 
 checkContract();
 
+<<<<<<< Updated upstream
 
 
 
@@ -54,3 +55,5 @@ checkContract();
 
 
 
+=======
+>>>>>>> Stashed changes

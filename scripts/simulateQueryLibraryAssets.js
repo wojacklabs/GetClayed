@@ -2,15 +2,15 @@ const { ethers } = require('ethers');
 
 const OLD_LIBRARY = '0x400501A45664B3493Fb6f1E1BB574187BBBB8AA4';
 const NEW_LIBRARY = '0xA742D5B85DE818F4584134717AC18930B6cAFE1e';
-const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
-const BASE_RPC_URL = 'https://mainnet.base.org';
+const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql'\;
+const BASE_RPC_URL = 'https://mainnet.base.org'\;
 
 const LIBRARY_ABI = [
   'function getAsset(string projectId) external view returns (tuple(string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled))'
 ];
 
 async function simulateQuery(contractAddress, label) {
-  console.log('\n' + '='.repeat(60));
+  console.log('\\n' + '='.repeat(60));
   console.log(`${label}: ${contractAddress}`);
   console.log('='.repeat(60));
   
@@ -70,38 +70,25 @@ async function simulateQuery(contractAddress, label) {
           name: blockchainData.name,
           projectId: projectId
         });
+      } else {
+        console.log(`   ⏭️  Skipped: ${tags['Asset-Name']} (exists: ${blockchainData.exists}, enabled: ${blockchainData.royaltyEnabled})`);
       }
     } catch (error) {
-      // Skip - not in this contract
+      console.log(`   ⏭️  Skipped: ${tags['Asset-Name']} (not in contract)`);
     }
   }
   
-  console.log(`\nWould show ${finalAssets.length} libraries:\n`);
+  console.log(`\\nFinal results: ${finalAssets.length} libraries\\n`);
   finalAssets.forEach((asset, idx) => {
-    console.log(`  ${idx + 1}. ${asset.name}`);
+    console.log(`${idx + 1}. ${asset.name}`);
   });
 }
 
 async function main() {
-  console.log('🔍 Simulating queryLibraryAssets() with different contracts...\n');
+  console.log('Simulating queryLibraryAssets() with different contracts...\\n');
   
-  await simulateQuery(OLD_LIBRARY, 'IF using OLD Library');
-  await simulateQuery(NEW_LIBRARY, 'IF using NEW Library');
-  
-  console.log('\n\n💡 CONCLUSION:');
-  console.log('If different pages show different libraries,');
-  console.log('check which LIBRARY_CONTRACT_ADDRESS they use!');
+  await simulateQuery(OLD_LIBRARY, 'OLD Library (10/28)');
+  await simulateQuery(NEW_LIBRARY, 'NEW Library (11/06)');
 }
 
 main();
-
-<<<<<<< Updated upstream
-
-
-
-
-
-
-
-=======
->>>>>>> Stashed changes

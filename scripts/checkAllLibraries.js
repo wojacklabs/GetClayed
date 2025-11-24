@@ -1,10 +1,15 @@
 const { ethers } = require('ethers');
 
+<<<<<<< Updated upstream
 // V2 Contract
 const V2_LIBRARY = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS || '0xe90BB6281B7Af6211519e5721A5b4985Ea693a49';
 // Old Contracts (for historical reference)
 const OLD_LIBRARY_1 = '0x400501A45664B3493Fb6f1E1BB574187BBBB8AA4';
 const OLD_LIBRARY_2 = '0xA742D5B85DE818F4584134717AC18930B6cAFE1e';
+=======
+const OLD_LIBRARY = '0x400501A45664B3493Fb6f1E1BB574187BBBB8AA4';
+const NEW_LIBRARY = '0xA742D5B85DE818F4584134717AC18930B6cAFE1e';
+>>>>>>> Stashed changes
 const BASE_RPC_URL = 'https://mainnet.base.org';
 
 const LIBRARY_ABI = [

@@ -63,24 +63,35 @@ export async function GET(
     
     console.log('[Screenshot API] Page loaded');
     
-    // Wait for Three.js to render
-    await page.waitForSelector('canvas', { timeout: 20000 });
-    console.log('[Screenshot API] Canvas found');
+    // Wait for the animationReady signal from the client-side
+    await page.waitForFunction('window.animationReady === true', { timeout: 20000 });
+    console.log('[Screenshot API] Animation ready signal received');
     
-    // Capture multiple frames for APNG animation (reduced to 15 for faster generation)
-    const frames: any[] = [];
-    const numFrames = 15;
-    const frameDelay = 66; // 66ms ≈ 15 FPS
+    // Give extra time for 3D rendering to complete
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second wait after signal
+    console.log('[Screenshot API] Initial render complete');
+    
+    // Capture multiple frames for APNG animation (30 frames for smooth rotation)
+    const frames: Buffer[] = [];
+    const numFrames = 30;
+    const frameDelay = 50; // 50ms = 20 FPS (same as home screen)
     
     console.log('[Screenshot API] Capturing', numFrames, 'frames...');
     
     for (let i = 0; i < numFrames; i++) {
       await new Promise(resolve => setTimeout(resolve, frameDelay));
-      const screenshot = await page.screenshot({
+      
+      // Capture screenshot of the canvas element only
+      const canvas = await page.$('canvas');
+      if (!canvas) {
+        throw new Error('Canvas element not found for screenshot.');
+      }
+      const screenshot = await canvas.screenshot({
         type: 'png',
         encoding: 'binary',
+        omitBackground: true, // Transparent background
       });
-      frames.push(screenshot);
+      frames.push(screenshot as Buffer);
       if (i % 10 === 0) {
         console.log(`[Screenshot API] Captured frame ${i + 1}/${numFrames}`);
       }
@@ -102,9 +113,9 @@ export async function GET(
       pngFrames.push(png.data as Uint8Array);
     }
     
-    // Create APNG
+    // Create APNG with looping (256 = full RGBA color, same as home screen)
     const delays = new Array(numFrames).fill(frameDelay);
-    const apng = UPNG.encode(pngFrames as any, width, height, 0, delays);
+    const apng = UPNG.encode(pngFrames as any, width, height, 256, delays);
     
     console.log('[Screenshot API] APNG encoded, size:', apng.byteLength);
     

@@ -100,10 +100,17 @@ export default function OGViewerMarketplacePage() {
         
         setClayObjects(restoredObjects)
         setLoading(false)
+        
+        // Signal that animation is ready
+        // @ts-ignore
+        window.animationReady = true;
+        console.log('[OG Viewer Marketplace] Animation ready signal set');
       } catch (err) {
         console.error('[OG Viewer Marketplace] Error loading item:', err)
         setError(err instanceof Error ? err.message : 'Failed to load item')
         setLoading(false)
+        // @ts-ignore
+        window.animationReady = false;
       }
     }
     

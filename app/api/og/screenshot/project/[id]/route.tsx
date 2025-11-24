@@ -63,28 +63,18 @@ export async function GET(
     
     console.log('[Screenshot API] Page loaded, waiting for canvas...');
     
-    // Wait for Three.js canvas to appear
-    await page.waitForSelector('canvas', { timeout: 20000 });
-    console.log('[Screenshot API] Canvas found');
+    // Wait for the animationReady signal from the client-side
+    await page.waitForFunction('window.animationReady === true', { timeout: 20000 });
+    console.log('[Screenshot API] Animation ready signal received');
     
-    // Wait for actual 3D content to render (check canvas has content)
-    await page.waitForFunction(
-      () => {
-        const canvas = document.querySelector('canvas');
-        if (!canvas) return false;
-        // Check if canvas has been drawn to (has actual content)
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return true; // WebGL canvas, assume ready
-        return canvas.width > 0 && canvas.height > 0;
-      },
-      { timeout: 10000 }
-    );
-    console.log('[Screenshot API] Canvas ready');
+    // Give extra time for 3D rendering to complete
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second wait after signal
+    console.log('[Screenshot API] Initial render complete');
     
-    // Capture multiple frames for APNG animation (15 frames = 1 second at 15 FPS)
-    const frames: any[] = [];
-    const numFrames = 15;
-    const frameDelay = 66; // 66ms ≈ 15 FPS
+    // Capture multiple frames for APNG animation (30 frames for smooth rotation)
+    const frames: Buffer[] = [];
+    const numFrames = 30;
+    const frameDelay = 50; // 50ms = 20 FPS (same as home screen)
     
     console.log('[Screenshot API] Capturing', numFrames, 'frames...');
     
@@ -92,13 +82,18 @@ export async function GET(
       // Wait for autoRotate to move the scene
       await new Promise(resolve => setTimeout(resolve, frameDelay));
       
-      // Take screenshot
-      const screenshot = await page.screenshot({
+      // Capture screenshot of the canvas element only
+      const canvas = await page.$('canvas');
+      if (!canvas) {
+        throw new Error('Canvas element not found for screenshot.');
+      }
+      const screenshot = await canvas.screenshot({
         type: 'png',
         encoding: 'binary',
+        omitBackground: true, // Transparent background
       });
       
-      frames.push(screenshot);
+      frames.push(screenshot as Buffer);
       
       if (i % 10 === 0) {
         console.log(`[Screenshot API] Captured frame ${i + 1}/${numFrames}`);
@@ -121,9 +116,9 @@ export async function GET(
       pngFrames.push(png.data as Uint8Array);
     }
     
-    // Create APNG with looping
+    // Create APNG with looping (256 = full RGBA color, same as home screen)
     const delays = new Array(numFrames).fill(frameDelay);
-    const apng = UPNG.encode(pngFrames as any, width, height, 0, delays); // 0 = infinite loop
+    const apng = UPNG.encode(pngFrames as any, width, height, 256, delays);
     
     console.log('[Screenshot API] APNG encoded, size:', apng.byteLength);
     
