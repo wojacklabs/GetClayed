@@ -78,3 +78,4 @@ Farcaster에서 지원하는 aspect ratio:
 - `?v=2` 쿼리 파라미터로 캐시 무효화
 - 필요시 Warpcast Developer Console에서 수동으로 재검증
 
+

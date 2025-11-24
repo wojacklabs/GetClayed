@@ -162,3 +162,4 @@ curl -I "https://getclayed.io/api/og/project/[ID]"
 - ✅ 프로젝트명 + 작성자 정보 표시
 - ✅ 기본 clay ball 대신 실제 도형 표시
 
+
