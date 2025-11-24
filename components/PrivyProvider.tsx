@@ -44,9 +44,6 @@ export function PrivyProviderWrapper({ children }: { children: React.ReactNode }
         loginMethods: isInFarcaster 
           ? ['farcaster', 'wallet', 'email']
           : ['wallet', 'email', 'farcaster'],
-        embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
-        },
       }}
     >
       {children}
