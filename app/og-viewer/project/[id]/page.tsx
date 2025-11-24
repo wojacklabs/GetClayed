@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment } from '@react-three/drei'
 import * as THREE from 'three'
+import { downloadClayProject, restoreClayObjects } from '../../../../lib/clayStorageService'
 
 // Loading fallback
 function LoadingFallback() {
@@ -70,179 +71,22 @@ export default function OGViewerProjectPage() {
     async function loadProject() {
       try {
         setLoading(true)
+        console.log('[OG Viewer] Loading project:', projectId)
         
-        // Fetch project data from Irys
-        const IRYS_DATA_URL = `https://uploader.irys.xyz/tx/${projectId}/data`
-        const response = await fetch(IRYS_DATA_URL)
+        // Use the same function as ProjectDetailView for consistency
+        const projectData = await downloadClayProject(projectId)
+        console.log('[OG Viewer] Project loaded:', projectData.name, 'clays:', projectData.clays?.length)
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch project data')
-        }
+        setProject(projectData)
         
-        const projectData = await response.json()
+        // Restore clay objects with proper geometry
+        const restoredObjects = restoreClayObjects(projectData)
+        console.log('[OG Viewer] Restored objects:', restoredObjects.length)
         
-        // Check if it's a chunk manifest
-        if (projectData.chunkSetId && projectData.totalChunks) {
-          // For chunked projects, try to fetch and reassemble
-          try {
-            const chunks = projectData.chunks || []
-            
-            if (chunks.length > 0) {
-              // Fetch all chunks
-              const chunkPromises = chunks.map((chunkId: string) =>
-                fetch(`https://uploader.irys.xyz/tx/${chunkId}/data`).then(r => r.text())
-              )
-              
-              const chunkData = await Promise.all(chunkPromises)
-              const fullData = chunkData.join('')
-              const reassembledProject = JSON.parse(fullData)
-              
-              setProject(reassembledProject)
-              
-              // Reconstruct clay objects with proper geometry - correct field name is 'clays'
-              const objects = (reassembledProject.clays || []).map((obj: any) => {
-                let geometry: THREE.BufferGeometry
-                
-                // Reconstruct geometry
-                if (obj.geometryData) {
-                  geometry = new THREE.BufferGeometry()
-                  
-                  // Restore attributes
-                  if (obj.geometryData.attributes) {
-                    Object.entries(obj.geometryData.attributes).forEach(([name, data]: [string, any]) => {
-                      geometry.setAttribute(
-                        name,
-                        new THREE.BufferAttribute(new Float32Array(data.array), data.itemSize)
-                      )
-                    })
-                  }
-                  
-                  // Restore index if present
-                  if (obj.geometryData.index) {
-                    geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(obj.geometryData.index.array), 1))
-                  }
-                  
-                  geometry.computeVertexNormals()
-                } else {
-                  // Fallback to basic shapes
-                  switch(obj.type) {
-                    case 'box':
-                      geometry = new THREE.BoxGeometry(1, 1, 1, 4, 4, 4)
-                      break
-                    case 'cylinder':
-                      geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32, 8)
-                      break
-                    case 'cone':
-                      geometry = new THREE.ConeGeometry(0.5, 1, 32, 8)
-                      break
-                    case 'torus':
-                      geometry = new THREE.TorusGeometry(0.7, 0.3, 16, 100)
-                      break
-                    case 'sphere':
-                    default:
-                      geometry = new THREE.SphereGeometry(1, 32, 32)
-                      break
-                  }
-                }
-                
-                return {
-                  ...obj,
-                  geometry,
-                  position: new THREE.Vector3(
-                    obj.position?.x || 0,
-                    obj.position?.y || 0,
-                    obj.position?.z || 0
-                  ),
-                  rotation: new THREE.Euler(
-                    obj.rotation?._x || obj.rotation?.x || 0,
-                    obj.rotation?._y || obj.rotation?.y || 0,
-                    obj.rotation?._z || obj.rotation?.z || 0
-                  ),
-                  scale: obj.scale || 1,
-                }
-              })
-              
-              setClayObjects(objects)
-            } else {
-              throw new Error('No chunks found in manifest')
-            }
-          } catch (chunkError) {
-            console.error('Failed to reassemble chunks:', chunkError)
-            throw new Error('Could not load project chunks')
-          }
-        } else {
-          // Regular project
-          setProject(projectData)
-          
-          // Reconstruct clay objects with proper geometry - correct field name is 'clays'
-          const objects = (projectData.clays || []).map((obj: any) => {
-            let geometry: THREE.BufferGeometry
-            
-            // Reconstruct geometry
-            if (obj.geometryData) {
-              geometry = new THREE.BufferGeometry()
-              
-              // Restore attributes
-              if (obj.geometryData.attributes) {
-                Object.entries(obj.geometryData.attributes).forEach(([name, data]: [string, any]) => {
-                  geometry.setAttribute(
-                    name,
-                    new THREE.BufferAttribute(new Float32Array(data.array), data.itemSize)
-                  )
-                })
-              }
-              
-              // Restore index if present
-              if (obj.geometryData.index) {
-                geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(obj.geometryData.index.array), 1))
-              }
-              
-              geometry.computeVertexNormals()
-            } else {
-              // Fallback to basic shapes
-              switch(obj.type) {
-                case 'box':
-                  geometry = new THREE.BoxGeometry(1, 1, 1, 4, 4, 4)
-                  break
-                case 'cylinder':
-                  geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32, 8)
-                  break
-                case 'cone':
-                  geometry = new THREE.ConeGeometry(0.5, 1, 32, 8)
-                  break
-                case 'torus':
-                  geometry = new THREE.TorusGeometry(0.7, 0.3, 16, 100)
-                  break
-                case 'sphere':
-                default:
-                  geometry = new THREE.SphereGeometry(1, 32, 32)
-                  break
-              }
-            }
-            
-            return {
-              ...obj,
-              geometry,
-              position: new THREE.Vector3(
-                obj.position?.x || 0,
-                obj.position?.y || 0,
-                obj.position?.z || 0
-              ),
-              rotation: new THREE.Euler(
-                obj.rotation?._x || obj.rotation?.x || 0,
-                obj.rotation?._y || obj.rotation?.y || 0,
-                obj.rotation?._z || obj.rotation?.z || 0
-              ),
-              scale: obj.scale || 1,
-            }
-          })
-          
-          setClayObjects(objects)
-        }
-        
+        setClayObjects(restoredObjects)
         setLoading(false)
       } catch (err) {
-        console.error('Error loading project:', err)
+        console.error('[OG Viewer] Error loading project:', err)
         setError(err instanceof Error ? err.message : 'Failed to load project')
         setLoading(false)
       }
