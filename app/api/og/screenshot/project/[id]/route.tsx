@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import UPNG from 'upng-js';
+import { PNG } from 'pngjs';
 
 // Use Node.js runtime for Puppeteer
 export const runtime = 'nodejs';
-export const maxDuration = 60; // 60 seconds timeout for chunked projects
+export const maxDuration = 60; // 60 seconds timeout for APNG generation
 
 export async function GET(
   request: NextRequest,
@@ -78,23 +80,57 @@ export async function GET(
     );
     console.log('[Screenshot API] Canvas ready');
     
-    // Give extra time for 3D rendering to complete
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    console.log('[Screenshot API] Render wait complete');
+    // Capture multiple frames for APNG animation (30 frames = 1.5 seconds at 20 FPS)
+    const frames: Buffer[] = [];
+    const numFrames = 30;
+    const frameDelay = 50; // 50ms = 20 FPS
     
-    // Take screenshot
-    const screenshot = await page.screenshot({
-      type: 'png',
-      encoding: 'binary',
-    });
+    console.log('[Screenshot API] Capturing', numFrames, 'frames...');
     
-    console.log('[Screenshot API] Screenshot captured, size:', screenshot.length);
+    for (let i = 0; i < numFrames; i++) {
+      // Wait for autoRotate to move the scene
+      await new Promise(resolve => setTimeout(resolve, frameDelay));
+      
+      // Take screenshot
+      const screenshot = await page.screenshot({
+        type: 'png',
+        encoding: 'binary',
+      });
+      
+      frames.push(screenshot);
+      
+      if (i % 10 === 0) {
+        console.log(`[Screenshot API] Captured frame ${i + 1}/${numFrames}`);
+      }
+    }
+    
+    console.log('[Screenshot API] All frames captured, encoding APNG...');
+    
+    // Convert frames to UPNG format
+    const pngFrames: Buffer[] = [];
+    let width = 0;
+    let height = 0;
+    
+    for (const frame of frames) {
+      const png = PNG.sync.read(frame);
+      if (width === 0) {
+        width = png.width;
+        height = png.height;
+      }
+      pngFrames.push(png.data);
+    }
+    
+    // Create APNG with looping
+    const delays = new Array(numFrames).fill(frameDelay);
+    const apng = UPNG.encode(pngFrames, width, height, 0, delays); // 0 = infinite loop
+    
+    console.log('[Screenshot API] APNG encoded, size:', apng.byteLength);
     
     await browser.close();
     browser = null;
     
-    // Return as PNG image with minimal caching to ensure fresh images
-    return new NextResponse(screenshot, {
+    // Return as APNG
+    return new NextResponse(Buffer.from(apng), {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
