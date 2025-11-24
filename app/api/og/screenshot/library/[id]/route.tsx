@@ -79,12 +79,14 @@ export async function GET(
     await browser.close();
     browser = null;
     
-    // Return as PNG image
+    // Return as PNG image with minimal caching to ensure fresh images
     return new NextResponse(screenshot, {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+        'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=3600',
+        'CDN-Cache-Control': 'max-age=60',
+        'Vercel-CDN-Cache-Control': 'max-age=60',
       },
     });
     

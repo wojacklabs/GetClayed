@@ -54,8 +54,9 @@ export async function generateMetadata({
   }
   
   // Use screenshot API for real 3D rendering via iframe/Puppeteer
-  // Add timestamp to force cache refresh
-  const ogImageUrl = `${baseUrl}/api/og/screenshot/project/${id}?v=${Date.now()}`
+  // Use project ID + short hash of ID as cache buster (stable but unique per project)
+  const cacheKey = id.slice(-8)
+  const ogImageUrl = `${baseUrl}/api/og/screenshot/project/${id}?v=${cacheKey}`
   
   return {
     metadataBase: new URL(baseUrl),
