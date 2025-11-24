@@ -13,17 +13,27 @@ interface ConnectWalletProps {
 export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   const { ready, authenticated, login, logout, user } = usePrivy()
   const { wallets } = useWallets()
-  const { isInFarcaster, farcasterAddress } = useFarcasterWallet()
+  const { isInFarcaster, farcasterAddress, ethereumProvider } = useFarcasterWallet()
   
   // Prefer Farcaster wallet if available, otherwise use Privy wallet
   const walletAddress = farcasterAddress || wallets[0]?.address
   
   useEffect(() => {
+    console.log('[ConnectWallet] State:', {
+      isInFarcaster,
+      farcasterAddress,
+      authenticated,
+      privyWallet: wallets[0]?.address,
+      finalWallet: walletAddress
+    })
+    
     if (farcasterAddress) {
       // Farcaster wallet has priority
+      console.log('[ConnectWallet] Using Farcaster wallet:', farcasterAddress)
       onConnect(farcasterAddress)
     } else if (authenticated && wallets[0]?.address) {
       // Fallback to Privy wallet
+      console.log('[ConnectWallet] Using Privy wallet:', wallets[0].address)
       onConnect(wallets[0].address)
     } else {
       onDisconnect()
@@ -31,6 +41,24 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   }, [authenticated, wallets, farcasterAddress])
   
   const handleConnect = async () => {
+    // If in Farcaster, use Farcaster SDK directly
+    if (isInFarcaster && ethereumProvider) {
+      console.log('[ConnectWallet] Requesting Farcaster wallet connection...')
+      try {
+        const accounts = await ethereumProvider.request({ 
+          method: 'eth_requestAccounts' 
+        })
+        if (accounts && accounts.length > 0) {
+          console.log('[ConnectWallet] Farcaster wallet connected:', accounts[0])
+          onConnect(accounts[0])
+        }
+        return
+      } catch (error) {
+        console.error('[ConnectWallet] Farcaster wallet connection failed:', error)
+        // Fall through to Privy login
+      }
+    }
+    
     // Check if authenticated with wallet
     if (authenticated && walletAddress) {
       console.log('[ConnectWallet] Already connected with wallet:', walletAddress)
@@ -49,8 +77,9 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
       return
     }
     
-    // Normal login flow
+    // Normal Privy login flow
     try {
+      console.log('[ConnectWallet] Initiating Privy login...')
       await login()
     } catch (error) {
       console.error('Failed to connect:', error)
@@ -75,15 +104,28 @@ export function ConnectWallet({ onConnect, onDisconnect }: ConnectWalletProps) {
   }
   
   // Show disconnect button for both Farcaster and regular wallets
-  if (authenticated && walletAddress) {
+  if (walletAddress) {
+    const isFarcasterWallet = !!farcasterAddress
     return (
-      <button
-        onClick={handleDisconnect}
-        className="p-3 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-all border border-gray-200"
-        title="Disconnect Wallet"
-      >
-        <LogOut size={20} />
-      </button>
+      <div className="flex items-center gap-2">
+        <div className="px-3 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 flex items-center gap-2">
+          {isFarcasterWallet && (
+            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+              Farcaster
+            </span>
+          )}
+          <span>{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
+        </div>
+        {!isFarcasterWallet && (
+          <button
+            onClick={handleDisconnect}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
+            title="Disconnect Wallet"
+          >
+            <LogOut size={20} />
+          </button>
+        )}
+      </div>
     )
   }
   
