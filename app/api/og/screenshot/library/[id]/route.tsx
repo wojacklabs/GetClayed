@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+// @ts-ignore - upng-js doesn't have types
 import UPNG from 'upng-js';
 import { PNG } from 'pngjs';
 
@@ -67,7 +68,7 @@ export async function GET(
     console.log('[Screenshot API] Canvas found');
     
     // Capture multiple frames for APNG animation
-    const frames: Buffer[] = [];
+    const frames: any[] = [];
     const numFrames = 30;
     const frameDelay = 50; // 50ms = 20 FPS
     
@@ -88,7 +89,7 @@ export async function GET(
     console.log('[Screenshot API] All frames captured, encoding APNG...');
     
     // Convert frames to UPNG format
-    const pngFrames: Buffer[] = [];
+    const pngFrames: Uint8Array[] = [];
     let width = 0;
     let height = 0;
     
@@ -98,12 +99,12 @@ export async function GET(
         width = png.width;
         height = png.height;
       }
-      pngFrames.push(png.data);
+      pngFrames.push(png.data as Uint8Array);
     }
     
     // Create APNG
     const delays = new Array(numFrames).fill(frameDelay);
-    const apng = UPNG.encode(pngFrames, width, height, 0, delays);
+    const apng = UPNG.encode(pngFrames as any, width, height, 0, delays);
     
     console.log('[Screenshot API] APNG encoded, size:', apng.byteLength);
     
