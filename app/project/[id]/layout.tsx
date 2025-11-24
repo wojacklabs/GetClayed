@@ -53,8 +53,8 @@ export async function generateMetadata({
     // Use default values
   }
   
-  // Use screenshot API for real 3D rendering via iframe/Puppeteer
-  const ogImageUrl = `${baseUrl}/api/og/screenshot/project/${id}`
+  // Use the existing OG API with SVG rendering (proven to work)
+  const ogImageUrl = `${baseUrl}/api/og/project/${id}`
   
   return {
     metadataBase: new URL(baseUrl),
