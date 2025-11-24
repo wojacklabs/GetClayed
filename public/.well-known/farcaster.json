@@ -22,25 +22,7 @@
     "heroImageUrl": "https://getclayed.io/api/hero-banner",
     "tagline": "No Blender, Just Clay",
     "ogTitle": "GetClayed",
-    "ogDescription": "Create 3D art on-chain with the simplicity of childhood play. No complex tools, just intuitive sculpting.",
-    "ogImageUrl": "https://getclayed.io/api/og-default",
-    "castShareUrl": "https://warpcast.com/~/compose?text=Just%20made%203D%20art%20on%20GetClayed!%20%F0%9F%8E%A8%0A%0ANo%20Blender%2C%20no%20tutorials%20-%20just%20clay.%0Ahttps%3A%2F%2Fgetclayed.io"
-  },
-  "frame": {
-    "version": "next",
-    "name": "GetClayed",
-    "iconUrl": "https://getclayed.io/animated-logo.png?v=2",
-    "homeUrl": "https://getclayed.io",
-    "imageUrl": "https://getclayed.io/animated-logo.png?v=2",
-    "aspectRatio": "1:1",
-    "splashImageUrl": "https://getclayed.io/animated-logo.png?v=2",
-    "splashBackgroundColor": "#000000",
-    "webhookUrl": "https://getclayed.io/api/farcaster/webhook",
-    "button": {
-      "title": "No Blender, Just Clay",
-      "action": {
-        "type": "launch_frame"
-      }
-    }
+    "ogDescription": "Create 3D art on-chain with the simplicity of childhood play. No complex tools needed.",
+    "ogImageUrl": "https://getclayed.io/api/og-default"
   }
 }
