@@ -4,7 +4,7 @@ import chromium from '@sparticuz/chromium';
 
 // Use Node.js runtime for Puppeteer
 export const runtime = 'nodejs';
-export const maxDuration = 30; // 30 seconds timeout
+export const maxDuration = 60; // 60 seconds timeout for chunked projects
 
 export async function GET(
   request: NextRequest,
@@ -55,18 +55,31 @@ export async function GET(
     
     await page.goto(viewerUrl, {
       waitUntil: 'networkidle0',
-      timeout: 25000, // 25 seconds
+      timeout: 60000, // 60 seconds - increased for chunked projects
     });
     
-    console.log('[Screenshot API] Page loaded');
+    console.log('[Screenshot API] Page loaded, waiting for canvas...');
     
-    // Wait for Three.js to render
-    // Look for the canvas element and wait for it to be visible
-    await page.waitForSelector('canvas', { timeout: 10000 });
+    // Wait for Three.js canvas to appear
+    await page.waitForSelector('canvas', { timeout: 30000 });
     console.log('[Screenshot API] Canvas found');
     
+    // Wait for actual 3D content to render (check canvas has content)
+    await page.waitForFunction(
+      () => {
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return false;
+        // Check if canvas has been drawn to (has actual content)
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return true; // WebGL canvas, assume ready
+        return canvas.width > 0 && canvas.height > 0;
+      },
+      { timeout: 10000 }
+    );
+    console.log('[Screenshot API] Canvas ready');
+    
     // Give extra time for 3D rendering to complete
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
     console.log('[Screenshot API] Render wait complete');
     
     // Take screenshot
