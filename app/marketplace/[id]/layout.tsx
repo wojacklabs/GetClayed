@@ -101,8 +101,8 @@ export async function generateMetadata({
   }
   
   // Use screenshot API for real 3D rendering via iframe/Puppeteer
-  const today = new Date().toISOString().split('T')[0].replace(/-/g, '')
-  const ogImageUrl = `${baseUrl}/api/og/screenshot/marketplace/${id}?v=${today}`
+  const cacheKey = id.slice(-8)
+  const ogImageUrl = `${baseUrl}/api/og/screenshot/marketplace/${id}?v=${cacheKey}`
   
   return {
     metadataBase: new URL(baseUrl),

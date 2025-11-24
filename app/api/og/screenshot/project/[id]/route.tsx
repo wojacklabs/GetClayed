@@ -64,7 +64,7 @@ export async function GET(
     console.log('[Screenshot API] Page loaded, waiting for canvas...');
     
     // Wait for Three.js canvas to appear
-    await page.waitForSelector('canvas', { timeout: 30000 });
+    await page.waitForSelector('canvas', { timeout: 20000 });
     console.log('[Screenshot API] Canvas found');
     
     // Wait for actual 3D content to render (check canvas has content)
@@ -81,10 +81,10 @@ export async function GET(
     );
     console.log('[Screenshot API] Canvas ready');
     
-    // Capture multiple frames for APNG animation (30 frames = 1.5 seconds at 20 FPS)
+    // Capture multiple frames for APNG animation (15 frames = 1 second at 15 FPS)
     const frames: any[] = [];
-    const numFrames = 30;
-    const frameDelay = 50; // 50ms = 20 FPS
+    const numFrames = 15;
+    const frameDelay = 66; // 66ms ≈ 15 FPS
     
     console.log('[Screenshot API] Capturing', numFrames, 'frames...');
     
