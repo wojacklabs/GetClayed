@@ -4,6 +4,9 @@
     "payload": "eyJkb21haW4iOiJnZXRjbGF5ZWQuaW8ifQ",
     "signature": "z0qqOW/KK1LXNMgm0BXzwRJRNF0ceEj0qsw8BAgbRx8v08gd6zAcd+Vlb9ar/of8wVkaP5YqsmWqJcout7Zumxw="
   },
+  "baseBuilder": {
+    "ownerAddress": "0x33fc4fb3Dd41fe94dc96825a63f9dAA509a0b83F"
+  },
   "miniapp": {
     "version": "next",
     "name": "GetClayed",
