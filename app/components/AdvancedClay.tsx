@@ -4555,17 +4555,29 @@ export default function AdvancedClay() {
         }
       }
       
+      if (!privyProvider) {
+        console.warn('[Delete] No wallet provider available - blockchain operations will be skipped');
+      }
+      
       // Step 1: Delete from Library (if registered)
       // FIX: Use deleteLibraryAsset instead of disableLibraryRoyalty
       // This completely removes the asset from Library, not just disables royalty
       try {
         const { deleteLibraryAsset } = await import('../../lib/libraryService')
+        console.log('[Delete] Attempting to delete library asset...')
         const result = await deleteLibraryAsset(projectId, privyProvider)
         if (result.success && result.txHash) {
           console.log('[Delete] Library asset deleted:', result.txHash)
+        } else if (result.success) {
+          console.log('[Delete] Library asset was not registered or already deleted')
+        } else {
+          // Library deletion failed but asset might be registered
+          console.warn('[Delete] Library delete failed:', result.error)
+          showPopup(`Warning: Library entry may still exist. ${result.error || 'Please delete manually from library page.'}`, 'warning')
         }
-      } catch (error) {
-        console.log('[Delete] Library delete skipped:', error)
+      } catch (error: any) {
+        console.error('[Delete] Library delete error:', error)
+        showPopup('Warning: Could not delete library entry. Please delete manually from library page.', 'warning')
       }
       
       // Step 2: Cancel Marketplace listing (if listed)

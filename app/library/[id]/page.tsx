@@ -388,10 +388,10 @@ export default function LibraryDetailPage() {
                   </button>
                   <button
                     onClick={() => {
-                    showPopup('Deactivate this library asset? Users will no longer pay royalties.', 'warning', {
+                    showPopup('Delete this library from blockchain? This will permanently remove it from the library.', 'warning', {
                       autoClose: false,
                       confirmButton: {
-                        text: 'Deactivate',
+                        text: 'Delete',
                         onConfirm: async () => {
                           try {
                             // Get Privy provider
@@ -399,24 +399,41 @@ export default function LibraryDetailPage() {
                             if (wallets && wallets.length > 0) {
                               try {
                                 provider = await wallets[0].getEthereumProvider();
-                                console.log('[LibraryDetail] Got Privy provider');
+                                console.log('[LibraryDetail] Got Privy provider for delete');
                               } catch (error) {
                                 console.error('[LibraryDetail] Failed to get provider:', error);
+                                showPopup('Failed to connect wallet. Please try again.', 'error');
+                                return;
                               }
                             }
                             
-                            const { disableLibraryRoyalty } = await import('@/lib/libraryService');
-                            const result = await disableLibraryRoyalty(assetId, provider);
-                            if (result.success) {
-                              showPopup('Library royalty disabled', 'success');
+                            if (!provider) {
+                              showPopup('Please connect your wallet first', 'error');
+                              return;
+                            }
+                            
+                            showPopup('Sending delete transaction...', 'info');
+                            
+                            const { deleteLibraryAsset } = await import('@/lib/libraryService');
+                            const result = await deleteLibraryAsset(assetId, provider);
+                            
+                            if (result.success && result.txHash) {
+                              showPopup('Library deleted from blockchain!', 'success');
                               setTimeout(() => {
-                                window.location.reload();
+                                router.push('/library');
+                              }, 1500);
+                            } else if (result.success) {
+                              // Already deleted or not registered
+                              showPopup('Library already removed or not found', 'info');
+                              setTimeout(() => {
+                                router.push('/library');
                               }, 1500);
                             } else {
-                              showPopup(result.error || 'Failed to deactivate', 'error');
+                              showPopup(result.error || 'Failed to delete library', 'error');
                             }
                           } catch (error: any) {
-                            showPopup(error.message || 'Failed to deactivate', 'error');
+                            console.error('[LibraryDetail] Delete error:', error);
+                            showPopup(error.message || 'Failed to delete', 'error');
                           }
                         }
                       },
@@ -428,9 +445,9 @@ export default function LibraryDetailPage() {
                       }
                     });
                   }}
-                  className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
                 >
-                  Deactivate from Library
+                  Delete from Library
                 </button>
                 </div>
               )}

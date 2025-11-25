@@ -289,14 +289,21 @@ export async function deleteLibraryAsset(
     console.log('[LibraryService] Deleting library asset:', projectId);
     
     let signer;
-    if (customProvider) {
-      console.log('[LibraryService] Using custom provider (Privy) for delete');
-      const provider = new ethers.BrowserProvider(customProvider);
-      signer = await provider.getSigner();
-    } else {
-      console.log('[LibraryService] Using getWalletProvider for delete');
-      const result = await getWalletProvider();
-      signer = result.signer;
+    try {
+      if (customProvider) {
+        console.log('[LibraryService] Using custom provider (Privy) for delete');
+        const provider = new ethers.BrowserProvider(customProvider);
+        signer = await provider.getSigner();
+        console.log('[LibraryService] Got signer from Privy provider');
+      } else {
+        console.log('[LibraryService] Using getWalletProvider for delete');
+        const result = await getWalletProvider();
+        signer = result.signer;
+        console.log('[LibraryService] Got signer from getWalletProvider');
+      }
+    } catch (signerError: any) {
+      console.error('[LibraryService] Failed to get signer:', signerError.message);
+      return { success: false, error: 'Failed to connect wallet. Please ensure your wallet is connected.' };
     }
     
     const contract = new ethers.Contract(
@@ -307,16 +314,19 @@ export async function deleteLibraryAsset(
     
     // Check if asset is registered
     try {
+      console.log('[LibraryService] Checking if asset exists in blockchain...');
       const asset = await contract.getAsset(projectId);
+      console.log('[LibraryService] Asset check result:', { exists: asset.exists, royaltyEnabled: asset.royaltyEnabled });
       if (!asset.exists) {
         // Already deleted or never registered
-        console.log('[LibraryService] Asset not registered in library, skipping');
+        console.log('[LibraryService] Asset already deleted or not registered in library');
         return { success: true };
       }
-    } catch (error) {
-      // Not registered in library, skip
-      console.log('[LibraryService] Asset not found in library, skipping');
-      return { success: true };
+    } catch (error: any) {
+      // Error checking asset - this might be a network error, not "asset not found"
+      console.error('[LibraryService] Error checking asset:', error.message);
+      // Don't return success here - the asset might exist but we couldn't check
+      // Instead, try to delete anyway and let the blockchain reject if invalid
     }
     
     console.log('[LibraryService] Calling deleteAsset contract method...');
