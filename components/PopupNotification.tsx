@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, createContext, useContext, ReactNode } from 'react'
-import { X } from 'lucide-react'
+import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react'
 
 export type PopupType = 'success' | 'error' | 'warning' | 'info'
 
@@ -82,69 +82,123 @@ export function PopupNotification({
 
   if (!isOpen) return null
 
-  const getTypeStyles = () => {
+  const getTypeConfig = () => {
     switch (type) {
       case 'success':
-        return 'text-green-600'
+        return {
+          icon: CheckCircle,
+          iconColor: 'text-emerald-600',
+          iconBg: 'bg-emerald-50',
+          titleColor: 'text-gray-900',
+          accentBorder: 'border-l-emerald-500'
+        }
       case 'error':
-        return 'text-red-600'
+        return {
+          icon: XCircle,
+          iconColor: 'text-red-600',
+          iconBg: 'bg-red-50',
+          titleColor: 'text-gray-900',
+          accentBorder: 'border-l-red-500'
+        }
       case 'warning':
-        return 'text-yellow-600'
+        return {
+          icon: AlertTriangle,
+          iconColor: 'text-amber-600',
+          iconBg: 'bg-amber-50',
+          titleColor: 'text-gray-900',
+          accentBorder: 'border-l-amber-500'
+        }
       case 'info':
       default:
-        return 'text-gray-600'
+        return {
+          icon: Info,
+          iconColor: 'text-gray-600',
+          iconBg: 'bg-gray-100',
+          titleColor: 'text-gray-900',
+          accentBorder: 'border-l-gray-400'
+        }
     }
   }
 
+  const config = getTypeConfig()
+  const IconComponent = config.icon
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[10000] pointer-events-none">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 pointer-events-none">
+      {/* Modal */}
       <div
         className={`
-          bg-white rounded-lg shadow-lg border border-gray-200 p-6 max-w-md w-full pointer-events-auto
+          relative bg-white rounded-xl shadow-2xl border border-gray-200/80
+          max-w-md w-full overflow-hidden pointer-events-auto
           transform transition-all duration-300 ease-out
-          ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
+          ${isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-2'}
         `}
       >
-        <div className="mb-4">
-          {title && (
-            <h3 className={`text-lg font-medium mb-2 ${getTypeStyles()}`}>
-              {title}
-            </h3>
+        {/* Accent border */}
+        <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.accentBorder} border-l-4`} />
+        
+        {/* Content */}
+        <div className="p-6 pl-7">
+          <div className="flex items-start gap-4">
+            {/* Icon */}
+            <div className={`flex-shrink-0 w-10 h-10 rounded-full ${config.iconBg} flex items-center justify-center`}>
+              <IconComponent className={`w-5 h-5 ${config.iconColor}`} strokeWidth={2} />
+            </div>
+            
+            {/* Text content */}
+            <div className="flex-1 min-w-0 pt-0.5">
+              {title && (
+                <h3 className={`text-base font-semibold ${config.titleColor} mb-1`}>
+                  {title}
+                </h3>
+              )}
+              <div className="text-sm text-gray-600 leading-relaxed">
+                {message}
+              </div>
+            </div>
+            
+            {/* Close button (X) for non-confirmation popups */}
+            {!confirmButton && !cancelButton && (
+              <button
+                onClick={handleClose}
+                className="flex-shrink-0 p-1 -mt-1 -mr-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          
+          {/* Buttons */}
+          {(confirmButton || cancelButton) ? (
+            <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+              {cancelButton && (
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  {cancelButton.text}
+                </button>
+              )}
+              {confirmButton && (
+                <button
+                  onClick={handleConfirm}
+                  className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  {confirmButton.text}
+                </button>
+              )}
+            </div>
+          ) : showCloseButton && (
+            <div className="flex justify-end mt-5 pt-4 border-t border-gray-100">
+              <button
+                onClick={handleClose}
+                className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                OK
+              </button>
+            </div>
           )}
-          <div className="text-sm text-gray-700 leading-relaxed">
-            {message}
-          </div>
         </div>
-        {/* Show confirm/cancel buttons if provided, otherwise show close button */}
-        {confirmButton || cancelButton ? (
-          <div className="flex justify-end gap-2">
-            {cancelButton && (
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg transition-all text-sm font-medium"
-              >
-                {cancelButton.text}
-              </button>
-            )}
-            {confirmButton && (
-              <button
-                onClick={handleConfirm}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all text-sm font-medium"
-              >
-                {confirmButton.text}
-              </button>
-            )}
-          </div>
-        ) : showCloseButton ? (
-          <div className="flex justify-end">
-            <button
-              onClick={handleClose}
-              className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg transition-all text-sm font-medium"
-            >
-              OK
-            </button>
-          </div>
-        ) : null}
       </div>
     </div>
   )
