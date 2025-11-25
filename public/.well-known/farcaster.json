@@ -8,24 +8,24 @@
     "ownerAddress": "0x33fc4fb3Dd41fe94dc96825a63f9dAA509a0b83F"
   },
   "miniapp": {
-    "version": "next",
+    "version": "1",
     "name": "GetClayed",
     "subtitle": "3D creation made simple",
-    "description": "Who said 3D creation needs a PhD? Squish, stretch, if you played with clay as a kid, you're already a pro. GetClayed turns your inner child into an on-chain artist.",
-    "iconUrl": "https://getclayed.io/animated-logo.png?v=2",
+    "description": "Squish and stretch your way to 3D art. If you played with clay as a kid you are already a pro. Turn your inner child into an on-chain artist.",
+    "iconUrl": "https://getclayed.io/icon-1024x1024.png",
     "homeUrl": "https://getclayed.io",
-    "imageUrl": "https://getclayed.io/animated-logo.png?v=2",
+    "imageUrl": "https://getclayed.io/icon-1024x1024.png",
     "buttonTitle": "No Blender, Just Clay",
-    "splashImageUrl": "https://getclayed.io/animated-logo.png?v=2",
+    "splashImageUrl": "https://getclayed.io/icon-1024x1024.png",
     "splashBackgroundColor": "#000000",
     "webhookUrl": "https://getclayed.io/api/farcaster/webhook",
     "primaryCategory": "art-creativity",
     "tags": ["3d", "art", "nft", "creative", "web3"],
     "screenshotUrls": [],
-    "heroImageUrl": "https://getclayed.io/api/hero-banner",
+    "heroImageUrl": "https://getclayed.io/og-image.png",
     "tagline": "No Blender, Just Clay",
     "ogTitle": "GetClayed",
-    "ogDescription": "Create 3D art on-chain with the simplicity of childhood play. No complex tools needed.",
-    "ogImageUrl": "https://getclayed.io/api/og-default"
+    "ogDescription": "Create 3D art on-chain with the simplicity of childhood play",
+    "ogImageUrl": "https://getclayed.io/og-image.png"
   }
 }
