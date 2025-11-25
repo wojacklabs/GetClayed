@@ -4557,6 +4557,14 @@ export default function AdvancedClay() {
       
       if (!privyProvider) {
         console.warn('[Delete] No wallet provider available - blockchain operations will be skipped');
+      } else {
+        // Verify network before blockchain operations
+        const { verifyAndSwitchNetwork } = await import('../../lib/networkUtils')
+        const isCorrectNetwork = await verifyAndSwitchNetwork(showPopup, privyProvider)
+        if (!isCorrectNetwork) {
+          showPopup('Please switch to Base network to delete', 'error')
+          return
+        }
       }
       
       // Step 1: Delete from Library (if registered)

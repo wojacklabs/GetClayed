@@ -412,6 +412,14 @@ export default function LibraryDetailPage() {
                               return;
                             }
                             
+                            // Verify network before proceeding
+                            const { verifyAndSwitchNetwork } = await import('@/lib/networkUtils');
+                            const isCorrectNetwork = await verifyAndSwitchNetwork(showPopup, provider);
+                            if (!isCorrectNetwork) {
+                              showPopup('Please switch to Base network', 'error');
+                              return;
+                            }
+                            
                             showPopup('Sending delete transaction...', 'info');
                             
                             const { deleteLibraryAsset } = await import('@/lib/libraryService');
@@ -445,7 +453,7 @@ export default function LibraryDetailPage() {
                       }
                     });
                   }}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium"
                 >
                   Delete from Library
                 </button>
