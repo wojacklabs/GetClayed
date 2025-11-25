@@ -32,7 +32,8 @@ import {
   Copy,
   Clipboard,
   Video,
-  MoreVertical
+  MoreVertical,
+  AlertTriangle
 } from 'lucide-react'
 import SaveButton from '../../components/SaveButton'
 import FolderStructure, { FolderStructureHandle } from '../../components/FolderStructure'
@@ -6136,42 +6137,53 @@ export default function AdvancedClay() {
       
       {/* Export GLB Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
-            <h3 className="text-lg font-semibold mb-4">Export as GLB</h3>
-            <input
-              type="text"
-              value={exportProjectName}
-              onChange={(e) => setExportProjectName(e.target.value)}
-              placeholder="Enter project name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && exportProjectName.trim()) {
-                  handleExportConfirm();
-                } else if (e.key === 'Escape') {
-                  setShowExportModal(false);
-                  setExportProjectName('');
-                }
-              }}
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => {
-                  setShowExportModal(false);
-                  setExportProjectName('');
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleExportConfirm}
-                disabled={!exportProjectName.trim()}
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Export
-              </button>
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 w-full max-w-md overflow-hidden pointer-events-auto">
+            <div className="absolute left-0 top-0 bottom-0 w-1 border-l-4 border-l-gray-400" />
+            <div className="p-6 pl-7">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Download className="w-5 h-5 text-gray-600" />
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">Export as GLB</h3>
+                  <p className="text-sm text-gray-600 mb-4">Enter a name for your exported file</p>
+                  <input
+                    type="text"
+                    value={exportProjectName}
+                    onChange={(e) => setExportProjectName(e.target.value)}
+                    placeholder="Enter project name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && exportProjectName.trim()) {
+                        handleExportConfirm();
+                      } else if (e.key === 'Escape') {
+                        setShowExportModal(false);
+                        setExportProjectName('');
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => {
+                    setShowExportModal(false);
+                    setExportProjectName('');
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExportConfirm}
+                  disabled={!exportProjectName.trim()}
+                  className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  Export
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -6179,28 +6191,38 @@ export default function AdvancedClay() {
       
       {/* New File Confirmation Modal */}
       {showNewFileModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
-            <h3 className="text-lg font-semibold mb-4">Create New Project?</h3>
-            <p className="text-gray-600 mb-6">
-              {usedLibraries.length > 0 
-                ? `You have ${usedLibraries.length} unsaved library import${usedLibraries.length > 1 ? 's' : ''} (royalties unpaid). Creating a new project will lose all current work.`
-                : 'Creating a new project will reset all current work. Are you sure you want to continue?'
-              }
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowNewFileModal(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createNewFile}
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-blue-600"
-              >
-                Create New
-              </button>
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 w-full max-w-md overflow-hidden pointer-events-auto">
+            <div className="absolute left-0 top-0 bottom-0 w-1 border-l-4 border-l-amber-500" />
+            <div className="p-6 pl-7">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">Create New Project?</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {usedLibraries.length > 0 
+                      ? `You have ${usedLibraries.length} unsaved library import${usedLibraries.length > 1 ? 's' : ''} (royalties unpaid). Creating a new project will lose all current work.`
+                      : 'Creating a new project will reset all current work. Are you sure you want to continue?'
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowNewFileModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createNewFile}
+                  className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  Create New
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -6208,25 +6230,35 @@ export default function AdvancedClay() {
       
       {/* Project Switch Warning Modal */}
       {showProjectSwitchModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-96 pointer-events-auto">
-            <h3 className="text-lg font-semibold mb-4">Switch Project?</h3>
-            <p className="text-gray-600 mb-6">
-              You have {usedLibraries.length} unsaved library import{usedLibraries.length > 1 ? 's' : ''}. Switching now will lose them. You'll need to re-import and pay royalties again when uploading.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={cancelProjectSwitch}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmProjectSwitch}
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-blue-600"
-              >
-                Switch Anyway
-              </button>
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 w-full max-w-md overflow-hidden pointer-events-auto">
+            <div className="absolute left-0 top-0 bottom-0 w-1 border-l-4 border-l-amber-500" />
+            <div className="p-6 pl-7">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">Switch Project?</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    You have {usedLibraries.length} unsaved library import{usedLibraries.length > 1 ? 's' : ''}. Switching now will lose them. You'll need to re-import and pay royalties again when uploading.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+                <button
+                  onClick={cancelProjectSwitch}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmProjectSwitch}
+                  className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  Switch Anyway
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -6234,25 +6266,25 @@ export default function AdvancedClay() {
       
       {/* Library Search Panel */}
       {showLibrarySearch && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Import from Library</h3>
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 pointer-events-none">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">Import from Library</h3>
               <button
                 onClick={() => setShowLibrarySearch(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
-    </div>
+            </div>
             
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-100">
               <input
                 type="text"
                 placeholder="Search library..."
                 value={librarySearchQuery}
                 onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm"
               />
             </div>
             
@@ -6317,72 +6349,12 @@ export default function AdvancedClay() {
       
       {/* Library Registration Modal */}
       {showLibraryModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Register to Library</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">Asset Name</label>
-                <input
-                  type="text"
-                  value={libraryAssetName}
-                  onChange={(e) => setLibraryAssetName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter asset name"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">Description</label>
-                <textarea
-                  value={libraryDescription}
-                  onChange={(e) => setLibraryDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  rows={3}
-                  placeholder="Brief description"
-                />
-              </div>
-              
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
-                <p className="text-xs text-gray-600">
-                  Set the royalty fee users will pay each time they import this library into their projects.
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm text-gray-700 mb-2">Royalty Currency</label>
-                  <select
-                    value={libraryPriceCurrency}
-                    onChange={(e) => setLibraryPriceCurrency(e.target.value as 'ETH' | 'USDC')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800 bg-white"
-                  >
-                    <option value="USDC">USDC</option>
-                    <option value="ETH">ETH</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-2">Royalty Per Import</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
-                      min={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
-                      value={libraryPrice}
-                      onChange={(e) => setLibraryPrice(e.target.value)}
-                      className="w-full px-3 py-2 pr-16 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800"
-                      placeholder={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                      {libraryPriceCurrency}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Users pay this amount each time they import your library</p>
-                </div>
-              </div>
-              
-              <div className="flex gap-3 pt-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 pointer-events-none">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 max-w-md w-full overflow-hidden pointer-events-auto">
+            <div className="absolute left-0 top-0 bottom-0 w-1 border-l-4 border-l-gray-400" />
+            <div className="p-6 pl-7">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-base font-semibold text-gray-900">Register to Library</h3>
                 <button
                   onClick={() => {
                     setShowLibraryModal(false)
@@ -6392,14 +6364,92 @@ export default function AdvancedClay() {
                     setLibraryPriceCurrency('USDC')
                     setLibraryProjectId(null)
                   }}
-                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors text-sm font-medium"
+                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Asset Name</label>
+                  <input
+                    type="text"
+                    value={libraryAssetName}
+                    onChange={(e) => setLibraryAssetName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm"
+                    placeholder="Enter asset name"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                  <textarea
+                    value={libraryDescription}
+                    onChange={(e) => setLibraryDescription(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 resize-none text-sm"
+                    rows={3}
+                    placeholder="Brief description"
+                  />
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-600">
+                    Set the royalty fee users will pay each time they import this library into their projects.
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Royalty Currency</label>
+                    <select
+                      value={libraryPriceCurrency}
+                      onChange={(e) => setLibraryPriceCurrency(e.target.value as 'ETH' | 'USDC')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 bg-white text-sm"
+                    >
+                      <option value="USDC">USDC</option>
+                      <option value="ETH">ETH</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Royalty Per Import</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
+                        min={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
+                        value={libraryPrice}
+                        onChange={(e) => setLibraryPrice(e.target.value)}
+                        className="w-full px-3 py-2 pr-16 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm"
+                        placeholder={libraryPriceCurrency === 'ETH' ? '0.001' : '0.01'}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                        {libraryPriceCurrency}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1.5">Users pay this amount each time they import your library</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => {
+                    setShowLibraryModal(false)
+                    setLibraryAssetName('')
+                    setLibraryDescription('')
+                    setLibraryPrice('')
+                    setLibraryPriceCurrency('USDC')
+                    setLibraryProjectId(null)
+                  }}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleLibraryUpload}
                   disabled={!libraryAssetName || parseFloat(libraryPrice || '0') === 0 || isRegisteringLibrary}
-                  className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isRegisteringLibrary ? 'Registering...' : 'Register'}
                 </button>
@@ -6426,7 +6476,7 @@ export default function AdvancedClay() {
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-[10001]"
+          className="fixed bg-white border border-gray-200/80 rounded-xl shadow-2xl py-1.5 z-[10001]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >

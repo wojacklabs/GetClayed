@@ -865,7 +865,7 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50"
+          className="fixed bg-white border border-gray-200/80 rounded-xl shadow-2xl py-1.5 z-50"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           {contextMenu.item.type === 'folder' && (
@@ -929,42 +929,53 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
       
       {/* Create Folder Modal */}
       {showFolderModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">New Folder</h3>
-            <input
-              type="text"
-              value={folderModalName}
-              onChange={(e) => setFolderModalName(e.target.value)}
-              placeholder="Enter folder name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && folderModalName.trim()) {
-                  handleCreateFolderConfirm();
-                } else if (e.key === 'Escape') {
-                  setShowFolderModal(false);
-                  setFolderModalName('');
-                }
-              }}
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => {
-                  setShowFolderModal(false);
-                  setFolderModalName('');
-                }}
-                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg transition-all text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateFolderConfirm}
-                disabled={!folderModalName.trim()}
-                className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Create
-              </button>
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 w-full max-w-md overflow-hidden pointer-events-auto">
+            <div className="absolute left-0 top-0 bottom-0 w-1 border-l-4 border-l-gray-400" />
+            <div className="p-6 pl-7">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  <FolderPlus className="w-5 h-5 text-gray-600" />
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">New Folder</h3>
+                  <p className="text-sm text-gray-600 mb-4">Enter a name for your new folder</p>
+                  <input
+                    type="text"
+                    value={folderModalName}
+                    onChange={(e) => setFolderModalName(e.target.value)}
+                    placeholder="Enter folder name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && folderModalName.trim()) {
+                        handleCreateFolderConfirm();
+                      } else if (e.key === 'Escape') {
+                        setShowFolderModal(false);
+                        setFolderModalName('');
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => {
+                    setShowFolderModal(false);
+                    setFolderModalName('');
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateFolderConfirm}
+                  disabled={!folderModalName.trim()}
+                  className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Create
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -972,29 +983,39 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
       
       {/* Delete Confirmation Modal */}
       {showDeleteModal && deleteItem && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Delete {deleteItem.type === 'folder' ? 'Folder' : 'File'}</h3>
-            <p className="text-gray-600 mb-6">
-              Delete "{deleteItem.name}"?
-              {deleteItem.type === 'folder' && ' (includes all contents)'}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteItem(null);
-                }}
-                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg transition-all text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all text-sm font-medium"
-              >
-                Delete
-              </button>
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 w-full max-w-md overflow-hidden pointer-events-auto">
+            <div className="absolute left-0 top-0 bottom-0 w-1 border-l-4 border-l-red-500" />
+            <div className="p-6 pl-7">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">Delete {deleteItem.type === 'folder' ? 'Folder' : 'File'}</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Delete "{deleteItem.name}"?
+                    {deleteItem.type === 'folder' && ' This will also delete all contents inside.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteItem(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>

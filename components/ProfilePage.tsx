@@ -1142,7 +1142,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                             <MoreVertical size={16} className="text-gray-500" />
                           </button>
                           {projectMenu === project.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 w-48">
+                            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-gray-200/80 py-1.5 z-50 w-48">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()

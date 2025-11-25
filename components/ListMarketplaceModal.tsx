@@ -78,72 +78,76 @@ export default function ListMarketplaceModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-200">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <X size={20} />
-        </button>
-
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          List on Marketplace
-        </h2>
-
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm text-gray-600 mb-1">Project</p>
-            <p className="text-sm font-medium text-gray-900">{projectName}</p>
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+      <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 max-w-md w-full overflow-hidden pointer-events-auto">
+        <div className="absolute left-0 top-0 bottom-0 w-1 border-l-4 border-l-gray-400" />
+        <div className="p-6 pl-7">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-semibold text-gray-900">
+              List on Marketplace
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X size={18} />
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sale Price
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
-                step="0.001"
-                min="0"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
-                disabled={isListing}
-              />
-              <select
-                value={selectedCurrency}
-                onChange={(e) => setSelectedCurrency(e.target.value as 'ETH' | 'USDC')}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
-                disabled={isListing}
-              >
-                <option value="ETH">ETH</option>
-                <option value="USDC">USDC</option>
-              </select>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-0.5">Project</p>
+              <p className="text-sm font-medium text-gray-900">{projectName}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Sale Price
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0.00"
+                  step="0.001"
+                  min="0"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm"
+                  disabled={isListing}
+                />
+                <select
+                  value={selectedCurrency}
+                  onChange={(e) => setSelectedCurrency(e.target.value as 'ETH' | 'USDC')}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm"
+                  disabled={isListing}
+                >
+                  <option value="ETH">ETH</option>
+                  <option value="USDC">USDC</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-600">
+                • Wait for buyers after listing<br/>
+                • Cancel listing anytime<br/>
+                • 2.5% platform fee on sale
+              </p>
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs text-gray-600">
-              • Wait for buyers after listing<br/>
-              • Cancel listing anytime<br/>
-              • 2.5% platform fee on sale
-            </p>
-          </div>
-
-          <div className="flex gap-3">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
             <button
               onClick={onClose}
               disabled={isListing}
-              className="flex-1 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg transition-all text-sm font-medium disabled:opacity-50"
+              className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleList}
               disabled={isListing || !price}
-              className="flex-1 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isListing ? (
                 <>Processing...</>

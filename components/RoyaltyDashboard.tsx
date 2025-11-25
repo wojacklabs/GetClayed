@@ -209,15 +209,15 @@ export default function RoyaltyDashboard({ walletAddress }: RoyaltyDashboardProp
 
       {/* Royalty Details Modal */}
       {showDetails && (
-        <div className="fixed inset-0 flex items-center justify-center z-[10000] p-4">
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Royalty History</h3>
+        <div className="fixed inset-0 flex items-center justify-center z-[10000] p-4 pointer-events-none">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200/80 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col pointer-events-auto">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">Royalty History</h3>
               <button
                 onClick={() => setShowDetails(false)}
-                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <X size={20} className="text-gray-600" />
+                <X size={18} />
               </button>
             </div>
             
