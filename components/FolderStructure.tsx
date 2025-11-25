@@ -618,11 +618,7 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
     const isEmpty = folders.length === 0 && files.length === 0 && currentPath === 'root';
     
     if (isEmpty) {
-      return (
-        <div className="flex justify-center items-center h-16 w-full">
-          <p className="text-xs text-gray-400">No files or folders</p>
-        </div>
-      );
+      return null; // Empty state handled in parent
     }
     
     return (
@@ -844,9 +840,26 @@ const FolderStructure = forwardRef<FolderStructureHandle, FolderStructureProps>(
       </div>
       
       <div className="overflow-x-auto">
-        <div className="inline-flex items-start py-4 min-w-0">
-          {renderFolderGrid()}
-        </div>
+        {(() => {
+          const currentNode = getCurrentFolderNode();
+          const folders = currentNode.children?.filter(item => item.type === 'folder') || [];
+          const files = currentNode.children?.filter(item => item.type === 'file') || [];
+          const isEmpty = folders.length === 0 && files.length === 0 && currentPath === 'root';
+          
+          if (isEmpty) {
+            return (
+              <div className="flex justify-center items-center h-16 w-full">
+                <p className="text-xs text-gray-400">No files or folders</p>
+              </div>
+            );
+          }
+          
+          return (
+            <div className="inline-flex items-start py-4 min-w-0">
+              {renderFolderGrid()}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Context Menu */}
