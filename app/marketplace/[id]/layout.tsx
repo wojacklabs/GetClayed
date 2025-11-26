@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { createFarcasterEmbedTags, BASE_URL } from '@/lib/farcasterMetadata'
 
 export async function generateMetadata({
   params,
@@ -6,9 +7,6 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  
-  // Base URL for OG images
-  const baseUrl = 'https://getclayed.io'
   
   // Try to fetch marketplace listing data
   let itemName = 'Unique Creation'
@@ -102,10 +100,18 @@ export async function generateMetadata({
   
   // Use screenshot API for real 3D rendering via iframe/Puppeteer
   const cacheKey = id.slice(-8)
-  const ogImageUrl = `${baseUrl}/api/og/screenshot/marketplace/${id}?v=${cacheKey}`
+  const ogImageUrl = `${BASE_URL}/api/og/screenshot/marketplace/${id}?v=${cacheKey}`
+  const pageUrl = `${BASE_URL}/marketplace/${id}`
+  
+  // Farcaster 미니앱용 메타 태그 생성
+  const farcasterTags = createFarcasterEmbedTags({
+    buttonTitle: `View ${itemName}`,
+    targetUrl: pageUrl,
+    imageUrl: ogImageUrl,
+  })
   
   return {
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(BASE_URL),
     title: `${itemName} - For Sale on GetClayed`,
     description: itemDescription,
     openGraph: {
@@ -115,7 +121,7 @@ export async function generateMetadata({
         {
           url: ogImageUrl,
           width: 1200,
-          height: 630,
+          height: 800,
           alt: itemName,
         },
       ],
@@ -129,15 +135,7 @@ export async function generateMetadata({
       description: itemDescription,
       images: [ogImageUrl],
     },
-    other: {
-      // Farcaster frame metadata for better preview
-      'fc:frame': 'vNext',
-      'fc:frame:image': ogImageUrl,
-      'fc:frame:image:aspect_ratio': '1.91:1',
-      'fc:frame:button:1': 'View Listing',
-      'fc:frame:button:1:action': 'link',
-      'fc:frame:button:1:target': `${baseUrl}/marketplace/${id}`,
-    },
+    other: farcasterTags,
   }
 }
 

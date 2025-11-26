@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
-
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getclayed.io';
+import { createFarcasterEmbedTags, BASE_URL } from '@/lib/farcasterMetadata';
 
 // Helper to shorten address
 function shortenAddress(address: string): string {
@@ -97,10 +96,18 @@ export async function generateMetadata({
     console.log('Could not fetch profile data for metadata:', error);
   }
   
-  const ogImageUrl = `${baseUrl}/api/og/profile/${address}`;
+  const ogImageUrl = `${BASE_URL}/api/og/profile/${address}`;
+  const pageUrl = `${BASE_URL}/user/${address}`;
+  
+  // Farcaster 미니앱용 메타 태그 생성
+  const farcasterTags = createFarcasterEmbedTags({
+    buttonTitle: `View ${displayName}`,
+    targetUrl: pageUrl,
+    imageUrl: ogImageUrl,
+  });
   
   return {
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(BASE_URL),
     title: `${displayName} - GetClayed`,
     description,
     openGraph: {
@@ -110,7 +117,7 @@ export async function generateMetadata({
         {
           url: ogImageUrl,
           width: 1200,
-          height: 630,
+          height: 800,
           alt: `${displayName}'s profile`,
         },
       ],
@@ -124,15 +131,7 @@ export async function generateMetadata({
       description,
       images: [ogImageUrl],
     },
-    other: {
-      // Farcaster frame metadata for better preview
-      'fc:frame': 'vNext',
-      'fc:frame:image': ogImageUrl,
-      'fc:frame:image:aspect_ratio': '1.91:1',
-      'fc:frame:button:1': 'View Profile',
-      'fc:frame:button:1:action': 'link',
-      'fc:frame:button:1:target': `${baseUrl}/user/${address}`,
-    },
+    other: farcasterTags,
   };
 }
 
