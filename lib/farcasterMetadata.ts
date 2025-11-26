@@ -13,10 +13,10 @@ export interface FarcasterMiniAppEmbed {
   version: '1';
   imageUrl: string;
   button: {
-    title: string;
-    action: {
-      type: 'launch_miniapp';
-      url: string;
+  title: string;
+  action: {
+    type: 'launch_miniapp';
+    url: string;
       name: string;
       splashImageUrl: string;
       splashBackgroundColor: string;

@@ -15,7 +15,7 @@ export async function GET(
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=1200,height=630">
+  <meta name="viewport" content="width=1200,height=800">
   <style>
     body {
       margin: 0;
@@ -25,7 +25,7 @@ export async function GET(
     }
     #canvas-container {
       width: 1200px;
-      height: 630px;
+      height: 800px;
       position: relative;
     }
     #loading {
@@ -51,14 +51,14 @@ export async function GET(
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf9fafb);
     
-    const camera = new THREE.PerspectiveCamera(75, 1200/630, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(75, 1200/800, 0.1, 1000);
     camera.position.z = 15;
     
     const renderer = new THREE.WebGLRenderer({ 
       canvas: document.getElementById('three-canvas'),
       antialias: true 
     });
-    renderer.setSize(1200, 630);
+    renderer.setSize(1200, 800);
     
     // Add lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
