@@ -23,7 +23,7 @@ export async function GET(
       args: isDev ? [] : chromium.args,
       defaultViewport: {
         width: 1200,
-        height: 630,
+        height: 800, // 3:2 aspect ratio for Farcaster
       },
       executablePath: isDev 
         ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' // Mac default
@@ -35,10 +35,10 @@ export async function GET(
     
     const page = await browser.newPage();
     
-    // Set viewport to OG image size
+    // Set viewport to OG image size (3:2 for Farcaster)
     await page.setViewport({
       width: 1200,
-      height: 630,
+      height: 800,
       deviceScaleFactor: 1,
     });
     

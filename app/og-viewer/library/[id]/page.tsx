@@ -126,7 +126,7 @@ export default function OGViewerLibraryPage() {
   }
   
   return (
-    <div className="relative w-screen h-screen overflow-hidden" style={{ width: '1200px', height: '630px', margin: 0, padding: 0 }}>
+    <div className="relative w-screen h-screen overflow-hidden" style={{ width: '1200px', height: '800px', margin: 0, padding: 0 }}>
       {/* 3D Canvas */}
       <div className="absolute inset-0">
         <Canvas
