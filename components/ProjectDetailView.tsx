@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { TrackballControls, Environment, Grid } from '@react-three/drei'
-import { Heart, Star, ArrowLeft, Eye, RotateCw, Maximize2, Home } from 'lucide-react'
+import { Heart, Star, ArrowLeft, Eye, RotateCw, Maximize2, Home, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import * as THREE from 'three'
 import { downloadClayProject, restoreClayObjects } from '../lib/clayStorageService'
@@ -96,6 +96,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   const [project, setProject] = useState<any>(null)
   const [clayObjects, setClayObjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
   const [isFavorited, setIsFavorited] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
@@ -179,6 +180,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       // Check if this is a corrupted project (image data)
       if (error.message?.includes('image data')) {
         showPopup('This project appears to be corrupted. It contains image data instead of project data.', 'error')
+      } else if (error.message?.includes('Transaction not found') || error.message?.includes('not found')) {
+        // Project was deleted or doesn't exist
+        setNotFound(true)
       } else {
         showPopup('Failed to load project', 'error')
       }
@@ -289,10 +293,33 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
     }
   }
   
+  const handleShare = () => {
+    const url = window.location.href
+    navigator.clipboard.writeText(url)
+    showPopup('URL copied to clipboard', 'success')
+  }
+  
   if (loading) {
     return (
       <div className="fixed inset-0 bg-gray-100 z-[9998] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
+      </div>
+    )
+  }
+  
+  if (notFound) {
+    return (
+      <div className="fixed inset-0 bg-gray-100 z-[9998] flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Project not found</h2>
+          <p className="text-gray-600 mb-4">This project may have been deleted or doesn't exist.</p>
+          <button
+            onClick={onBack}
+            className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     )
   }
@@ -362,6 +389,13 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             
             {/* Actions */}
             <div className="flex items-center gap-1">
+              <button
+                onClick={handleShare}
+                className="p-2 rounded-md transition-all bg-gray-100 hover:bg-gray-200 text-gray-700"
+                title="Share"
+              >
+                <Share2 size={16} />
+              </button>
               <button
                 onClick={handleLike}
                 className={`p-2 rounded-md transition-all ${
@@ -454,9 +488,10 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       </div>
       
       {/* Bottom UI Controls - Minimal style */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+      {/* Desktop: Center, Mobile: Right to avoid wallet button */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 hidden sm:block">
         {/* Desktop buttons */}
-        <div className="hidden sm:flex items-center gap-2 bg-white rounded-md border border-gray-200 p-1">
+        <div className="flex items-center gap-2 bg-white rounded-md border border-gray-200 p-1">
           <button
             onClick={() => setShowGrid(!showGrid)}
             className={`px-3 py-1.5 rounded transition-all text-sm ${
@@ -476,8 +511,10 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             <span>Reset</span>
           </button>
         </div>
-        
-        {/* Mobile select */}
+      </div>
+      
+      {/* Mobile select - Right side to avoid wallet button on left */}
+      <div className="absolute bottom-4 right-4 z-10 sm:hidden">
         <select
           value={showGrid ? 'grid' : 'view'}
           onChange={(e) => {
@@ -491,7 +528,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
               e.target.value = showGrid ? 'grid' : 'view'
             }
           }}
-          className="sm:hidden px-3 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
+          className="px-3 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
         >
           <option value="view">Normal View</option>
           <option value="grid">Grid View</option>

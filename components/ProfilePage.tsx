@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { Canvas } from '@react-three/fiber'
-import { User, Heart, Star, Edit2, Globe, Twitter, Github, Calendar, Eye, ArrowLeft, Wallet, ChevronLeft, ChevronRight, Home, MoreVertical, Trash2, DollarSign } from 'lucide-react'
+import { User, Heart, Star, Edit2, Globe, Twitter, Github, Calendar, Eye, ArrowLeft, Wallet, ChevronLeft, ChevronRight, Home, MoreVertical, Trash2, DollarSign, Share2 } from 'lucide-react'
 import { UserProfile, downloadUserProfile, uploadUserProfile, getUserFavorites, getProjectLikeCount, getProjectViewCount, uploadProfileAvatar, downloadProfileAvatar, getProfileMutableReference, followUser, unfollowUser, isFollowing, getUserFollowStats } from '../lib/profileService'
 import { queryUserProjects, downloadProjectThumbnail } from '../lib/clayStorageService'
 import { usePopup } from './PopupNotification'
@@ -635,6 +635,16 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             </div>
           ) : (
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href)
+                  showPopup('URL copied to clipboard', 'success')
+                }}
+                className="p-2 rounded-md transition-all bg-gray-100 hover:bg-gray-200 text-gray-700"
+                title="Share"
+              >
+                <Share2 size={18} />
+              </button>
               {!currentUserAddress ? (
                 <ConnectWallet 
                   onConnect={(address) => setCurrentUserAddress(address)}

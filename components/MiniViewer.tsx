@@ -138,7 +138,7 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
   
   if (!isVisible || hasError) {
     return (
-      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center ${className}`}>
+      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center border border-gray-200 ${className}`}>
         <div className="text-2xl font-bold text-gray-300">3D</div>
       </div>
     )
@@ -146,7 +146,7 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
   
   if (loading) {
     return (
-      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center ${className}`}>
+      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center border border-gray-200 ${className}`}>
         <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
       </div>
     )
@@ -154,14 +154,14 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
   
   if (!clayObjects || clayObjects.length === 0) {
     return (
-      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center ${className}`}>
+      <div ref={containerRef} className={`bg-gray-100 flex items-center justify-center border border-gray-200 ${className}`}>
         <div className="text-2xl font-bold text-gray-300">3D</div>
       </div>
     )
   }
   
   return (
-    <div ref={containerRef} className={className}>
+    <div ref={containerRef} className={`border border-gray-200 ${className}`}>
       <Canvas
         camera={{ position: [10, 4, 10], fov: 45 }}
         style={{ pointerEvents: 'none' }}

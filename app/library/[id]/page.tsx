@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, ShoppingCart, TrendingUp, User, Calendar, DollarSign } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, TrendingUp, User, Calendar, DollarSign, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { TrackballControls } from '@react-three/drei'
@@ -311,7 +311,19 @@ export default function LibraryDetailPage() {
               </div>
             </Link>
             
-            <ConnectWallet onConnect={setWalletAddress} onDisconnect={() => setWalletAddress(null)} />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href)
+                  showPopup('URL copied to clipboard', 'success')
+                }}
+                className="p-2 rounded-md transition-all bg-gray-100 hover:bg-gray-200 text-gray-700"
+                title="Share"
+              >
+                <Share2 size={18} />
+              </button>
+              <ConnectWallet onConnect={setWalletAddress} onDisconnect={() => setWalletAddress(null)} />
+            </div>
           </div>
         </div>
       </header>
