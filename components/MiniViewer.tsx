@@ -163,7 +163,7 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
   return (
     <div ref={containerRef} className={className}>
       <Canvas
-        camera={{ position: [5, 5, 5], fov: 50 }}
+        camera={{ position: [10, 4, 10], fov: 45 }}
         style={{ pointerEvents: 'none' }}
         gl={{ 
           preserveDrawingBuffer: true,
@@ -180,9 +180,10 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
         frameloop={isVisible ? 'always' : 'never'}
       >
         <Suspense fallback={null}>
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[5, 5, 5]} intensity={0.8} />
-          <directionalLight position={[-5, -5, -5]} intensity={0.3} />
+          <ambientLight intensity={0.35} />
+          <directionalLight position={[8, 12, 8]} intensity={1.2} />
+          <directionalLight position={[-6, 4, -6]} intensity={0.5} />
+          <directionalLight position={[0, -8, 4]} intensity={0.25} />
           <Scene clayObjects={clayObjects} backgroundColor={backgroundColor} />
         </Suspense>
       </Canvas>

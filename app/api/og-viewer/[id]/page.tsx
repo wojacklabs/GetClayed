@@ -35,9 +35,11 @@ export default function OGViewerPage({ params }: { params: Promise<{ id: string 
   
   return (
     <div style={{ width: '100%', height: '100vh', background: bgColor }}>
-      <Canvas camera={{ position: [0, 0, 15], fov: 75 }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 5, 5]} intensity={0.8} />
+      <Canvas camera={{ position: [12, 5, 12], fov: 50 }}>
+        <ambientLight intensity={0.35} />
+        <directionalLight position={[8, 12, 8]} intensity={1.2} />
+        <directionalLight position={[-6, 4, -6]} intensity={0.5} />
+        <directionalLight position={[0, -8, 4]} intensity={0.25} />
         
         {clayObjects.map((clay) => (
           <mesh

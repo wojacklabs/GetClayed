@@ -131,16 +131,17 @@ export default function OGViewerLibraryPage() {
       <div className="absolute inset-0">
         <Canvas
           camera={{
-            position: [10, 10, 10],
-            fov: 60,
+            position: [14, 7, 14],
+            fov: 50,
             near: 0.1,
             far: 1000
           }}
           style={{ background: 'linear-gradient(135deg, #831843 0%, #dc2626 100%)' }}
         >
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[10, 10, 5]} intensity={0.8} />
-          <directionalLight position={[-10, -10, -5]} intensity={0.3} />
+          <ambientLight intensity={0.35} />
+          <directionalLight position={[8, 12, 8]} intensity={1.2} />
+          <directionalLight position={[-6, 4, -6]} intensity={0.5} />
+          <directionalLight position={[0, -8, 4]} intensity={0.25} />
           <Environment preset="studio" />
           
           <OrbitControls 

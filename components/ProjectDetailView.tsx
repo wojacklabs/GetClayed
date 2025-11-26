@@ -393,15 +393,17 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       <div className="absolute inset-0 pt-14">
         <Canvas
           camera={{
-            position: [10, 10, 10],
-            fov: 60,
+            position: [14, 7, 14],
+            fov: 50,
             near: 0.1,
             far: 1000
           }}
           style={{ background: project?.backgroundColor || '#f8f8f8' }}
         >
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[10, 10, 5]} intensity={0.4} />
+          <ambientLight intensity={0.35} />
+          <directionalLight position={[8, 12, 8]} intensity={1.2} />
+          <directionalLight position={[-6, 4, -6]} intensity={0.5} />
+          <directionalLight position={[0, -8, 4]} intensity={0.25} />
           <Environment preset="studio" />
           
           <ViewOnlyControls controlsRef={controlsRef} cameraRef={cameraRef} />

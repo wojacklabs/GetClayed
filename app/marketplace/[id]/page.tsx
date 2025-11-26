@@ -190,10 +190,12 @@ export default function MarketplaceDetailPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="aspect-square bg-gray-100">
               {project ? (
-                <Canvas camera={{ position: [5, 5, 5], fov: 50 }}>
+                <Canvas camera={{ position: [10, 4, 10], fov: 45 }}>
                   <Suspense fallback={null}>
-                    <ambientLight intensity={0.6} />
-                    <directionalLight position={[10, 10, 5]} intensity={0.8} />
+                    <ambientLight intensity={0.35} />
+                    <directionalLight position={[8, 12, 8]} intensity={1.2} />
+                    <directionalLight position={[-6, 4, -6]} intensity={0.5} />
+                    <directionalLight position={[0, -8, 4]} intensity={0.25} />
                     {restoreClayObjects(project).map((clay, index) => (
                       <PreviewClay key={index} clay={clay} />
                     ))}
