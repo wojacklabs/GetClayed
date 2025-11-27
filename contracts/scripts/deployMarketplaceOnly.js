@@ -1,10 +1,11 @@
 const hre = require("hardhat");
 
 async function main() {
-  console.log("🛒 Deploying ClayMarketplace only...\n");
+  console.log("🛒 Deploying ClayMarketplace V3 (with direct ownership support)...\n");
   
-  const LIBRARY_ADDRESS = "0xB48d4B9067af863AAC10D2B0e213C01ef51df3a0";
-  const ROYALTY_ADDRESS = "0x9204F459508cD03850F53E5064E778f88C0C8D45";  // UPDATED: Add royalty address
+  // Current production addresses (from .env)
+  const LIBRARY_ADDRESS = "0x400501A45664B3493Fb6f1E1BB574187BBBB8AA4";
+  const ROYALTY_ADDRESS = "0x71FF8F2Dc4B174D799E46182fa660cb7021f9cE1";
   
   const [deployer] = await hre.ethers.getSigners();
   console.log("💼 Deploying with account:", deployer.address);
@@ -28,8 +29,10 @@ async function main() {
   console.log("═".repeat(60));
   console.log("\n📋 All Addresses:");
   console.log("   ClayLibrary     :", LIBRARY_ADDRESS);
-  console.log("   ClayRoyalty     :", "0x9204F459508cD03850F53E5064E778f88C0C8D45");
+  console.log("   ClayRoyalty     :", ROYALTY_ADDRESS);
   console.log("   ClayMarketplace :", marketplaceAddress);
+  console.log("\n📝 Update .env with:");
+  console.log(`   NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS=${marketplaceAddress}`);
   console.log("");
 }
 

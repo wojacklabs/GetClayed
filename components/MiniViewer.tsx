@@ -163,7 +163,7 @@ export default function MiniViewer({ projectId, clayObjects: initialClayObjects,
   return (
     <div ref={containerRef} className={`border-b border-gray-200 ${className}`}>
       <Canvas
-        camera={{ position: [10, 4, 10], fov: 45 }}
+        camera={{ position: [10, 8, 10], fov: 45 }}
         style={{ pointerEvents: 'none' }}
         gl={{ 
           preserveDrawingBuffer: true,

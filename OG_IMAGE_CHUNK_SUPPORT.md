@@ -163,3 +163,4 @@ curl -I "https://getclayed.io/api/og/project/[ID]"
 - ✅ 기본 clay ball 대신 실제 도형 표시
 
 
+

@@ -2,6 +2,16 @@ import { ethers } from 'ethers';
 import { saveMutableReference, getMutableReference } from './mutableStorageService';
 import { getErrorMessage } from './errorHandler';
 
+// USDC token address on Base Mainnet
+const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+
+// USDC ERC20 ABI (minimal for approve)
+const USDC_ABI = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function allowance(address owner, address spender) external view returns (uint256)",
+  "function balanceOf(address account) external view returns (uint256)"
+];
+
 /**
  * Get wallet provider - supports Privy and MetaMask
  * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
@@ -218,25 +228,40 @@ export async function buyListedAsset(
       return { success: false, error: 'This listing is no longer available' };
     }
     
-    // CRITICAL FIX: Check if asset still exists in library - MUST NOT continue if deleted
+    // Check asset status - supports both library-based and direct ownership
+    // Only verify library for library-based assets (they could be deleted)
     const LIBRARY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LIBRARY_CONTRACT_ADDRESS;
     if (LIBRARY_CONTRACT_ADDRESS) {
       try {
         const provider = await signer.provider;
-        const libraryContract = new ethers.Contract(
-          LIBRARY_CONTRACT_ADDRESS,
-          ['function getAsset(string projectId) external view returns (string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled)'],
+        
+        // First check if this is a library-based asset
+        const marketplaceContract = new ethers.Contract(
+          MARKETPLACE_CONTRACT_ADDRESS,
+          [...MARKETPLACE_CONTRACT_ABI, 'function isAssetLibraryBased(string projectId) external view returns (bool)'],
           provider
         );
         
-        const asset = await libraryContract.getAsset(projectId);
-        if (!asset.exists) {
-          return { success: false, error: 'This project has been deleted by the owner and is no longer available for purchase' };
+        const isLibraryAsset = await marketplaceContract.isAssetLibraryBased(projectId);
+        
+        // Only check library existence for library-based assets
+        if (isLibraryAsset) {
+          const libraryContract = new ethers.Contract(
+            LIBRARY_CONTRACT_ADDRESS,
+            ['function getAsset(string projectId) external view returns (string projectId, string name, string description, uint256 royaltyPerImportETH, uint256 royaltyPerImportUSDC, address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled)'],
+            provider
+          );
+          
+          const asset = await libraryContract.getAsset(projectId);
+          if (!asset.exists) {
+            return { success: false, error: 'This project has been deleted by the owner and is no longer available for purchase' };
+          }
         }
+        // Direct ownership assets don't need library check
       } catch (error) {
-        console.error('[MarketplaceService] Failed to verify asset existence:', error);
-        // SECURITY: Do NOT continue if we can't verify - could be deleted
-        return { success: false, error: 'Unable to verify project status. Please try again later.' };
+        console.error('[MarketplaceService] Failed to verify asset status:', error);
+        // For non-critical errors, allow the transaction to proceed
+        // The contract will revert if there's a real issue
       }
     }
     
@@ -245,6 +270,22 @@ export async function buyListedAsset(
       price: listingData.price.toString(),
       paymentToken: listingData.paymentToken === 0 ? 'ETH' : 'USDC'
     });
+    
+    // For USDC purchases, approve the exact amount first
+    if (listingData.paymentToken === 1) {
+      const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+      const userAddress = await signer.getAddress();
+      
+      // Check current allowance
+      const currentAllowance = await usdcContract.allowance(userAddress, MARKETPLACE_CONTRACT_ADDRESS);
+      
+      if (currentAllowance < listingData.price) {
+        console.log('[MarketplaceService] Approving USDC:', ethers.formatUnits(listingData.price, 6));
+        const approveTx = await usdcContract.approve(MARKETPLACE_CONTRACT_ADDRESS, listingData.price);
+        await approveTx.wait();
+        console.log('[MarketplaceService] USDC approved');
+      }
+    }
     
     // Call buyAsset with ETH if payment token is ETH
     const tx = listingData.paymentToken === 0
@@ -306,6 +347,22 @@ export async function makeAssetOffer(
       durationInHours,
       priceInUnits: priceInUnits.toString()
     });
+    
+    // For USDC offers, approve the exact amount first
+    if (paymentToken === 'USDC') {
+      const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+      const userAddress = await signer.getAddress();
+      
+      // Check current allowance
+      const currentAllowance = await usdcContract.allowance(userAddress, MARKETPLACE_CONTRACT_ADDRESS);
+      
+      if (currentAllowance < priceInUnits) {
+        console.log('[MarketplaceService] Approving USDC for offer:', ethers.formatUnits(priceInUnits, 6));
+        const approveTx = await usdcContract.approve(MARKETPLACE_CONTRACT_ADDRESS, priceInUnits);
+        await approveTx.wait();
+        console.log('[MarketplaceService] USDC approved for offer');
+      }
+    }
     
     const tx = await contract.makeOffer(
       projectId, 

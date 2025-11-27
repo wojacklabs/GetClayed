@@ -76,6 +76,13 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
     // Array of all active listing IDs
     string[] public activeListings;
     
+    // Direct ownership for non-library assets (no royalty)
+    // Allows marketplace listing without library registration
+    mapping(string => address) public directOwners;
+    
+    // Track if asset is library-based or direct
+    mapping(string => bool) public isLibraryBased;
+    
     // Platform fee percentage (e.g., 250 = 2.5%)
     uint256 public platformFeePercentage = 250;
     uint256 public constant FEE_DENOMINATOR = 10000;
@@ -154,34 +161,63 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
      * @param projectId The project ID
      * @param price Sale price
      * @param paymentToken Payment token (0: ETH, 1: USDC)
-     * @dev CRITICAL SECURITY FIX: Validates price against PAID royalties (not current)
-     *      This prevents underpricing even if libraries are deleted after project creation
+     * @dev Supports two paths:
+     *      1. Library-based: Asset registered in ClayLibrary (with royalties)
+     *      2. Direct: Asset not in library (no royalties, direct ownership)
      */
     function listAsset(string memory projectId, uint256 price, PaymentToken paymentToken) external {
         require(price > 0, "Price must be greater than 0");
         require(!listings[projectId].isActive, "Asset already listed");
         
-        // Verify caller owns the asset in library
-        (,,,,,address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled) = libraryContract.getAsset(projectId);
-        require(exists, "Asset not found in library");
-        require(currentOwner == msg.sender, "Only owner can list asset");
+        address assetOwner;
+        bool libraryAsset = false;
         
-        // CRITICAL SECURITY FIX: Validate price against PAID royalties (not current state)
-        // This prevents selling below cost even if libraries are deleted/disabled
-        // Uses totalRoyaltiesPaid instead of calculateTotalRoyalties
-        if (address(royaltyContract) != address(0)) {
-            // Get PAID royalties from ClayRoyalty contract
-            uint256 paidETH = royaltyContract.totalRoyaltiesPaidETH(projectId);
-            uint256 paidUSDC = royaltyContract.totalRoyaltiesPaidUSDC(projectId);
-            
-            if (paymentToken == PaymentToken.ETH) {
-                // Price must be HIGHER than royalties PAID (not current state)
-                // This protects creators even if their libraries are later deleted
-                require(price > paidETH, "Price must be higher than royalties paid");
-            } else {
-                require(price > paidUSDC, "Price must be higher than royalties paid");
+        // 1. Try to get asset from library
+        try libraryContract.getAsset(projectId) returns (
+            string memory,
+            string memory,
+            string memory,
+            uint256,
+            uint256,
+            address currentOwner,
+            address,
+            uint256,
+            bool exists,
+            bool
+        ) {
+            if (exists) {
+                libraryAsset = true;
+                assetOwner = currentOwner;
+                
+                // For library assets, validate price against PAID royalties
+                if (address(royaltyContract) != address(0)) {
+                    uint256 paidETH = royaltyContract.totalRoyaltiesPaidETH(projectId);
+                    uint256 paidUSDC = royaltyContract.totalRoyaltiesPaidUSDC(projectId);
+                    
+                    if (paymentToken == PaymentToken.ETH) {
+                        require(price > paidETH, "Price must be higher than royalties paid");
+                    } else {
+                        require(price > paidUSDC, "Price must be higher than royalties paid");
+                    }
+                }
             }
+        } catch {
+            // Library call failed, asset not in library
         }
+        
+        // 2. If not in library, use direct ownership
+        if (!libraryAsset) {
+            if (directOwners[projectId] == address(0)) {
+                // First listing - caller becomes owner
+                directOwners[projectId] = msg.sender;
+            }
+            assetOwner = directOwners[projectId];
+        }
+        
+        require(assetOwner == msg.sender, "Only owner can list asset");
+        
+        // Store asset type
+        isLibraryBased[projectId] = libraryAsset;
         
         Listing memory newListing = Listing({
             projectId: projectId,
@@ -201,6 +237,7 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
     /**
      * @notice Buy an asset at the listed price
      * @param projectId The project ID
+     * @dev Handles both library-based and direct ownership transfers
      */
     function buyAsset(string memory projectId) external payable nonReentrant {
         Listing storage listing = listings[projectId];
@@ -234,8 +271,14 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
             );
         }
         
-        // Transfer ownership in library contract
-        libraryContract.transferAssetOwnership(projectId, msg.sender);
+        // Transfer ownership based on asset type
+        if (isLibraryBased[projectId]) {
+            // Library-based: transfer via library contract
+            libraryContract.transferAssetOwnership(projectId, msg.sender);
+        } else {
+            // Direct: update direct ownership mapping
+            directOwners[projectId] = msg.sender;
+        }
         
         // Deactivate listing
         listing.isActive = false;
@@ -290,6 +333,7 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
      * @param offerPrice Offer price
      * @param paymentToken Payment token (0: ETH, 1: USDC)
      * @param duration Offer validity duration in seconds
+     * @dev Supports both library-based and direct ownership assets
      */
     function makeOffer(
         string memory projectId,
@@ -300,9 +344,9 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         require(offerPrice > 0, "Offer must have value");
         require(duration >= 1 hours && duration <= 30 days, "Invalid duration");
         
-        // Verify asset exists in library
-        (,,,,,address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled) = libraryContract.getAsset(projectId);
-        require(exists, "Asset not found in library");
+        // Get current asset owner (library or direct)
+        address currentOwner = _getAssetOwner(projectId);
+        require(currentOwner != address(0), "Asset has no owner");
         require(currentOwner != msg.sender, "Cannot offer on your own asset");
         
         // Handle payment based on token type
@@ -339,15 +383,16 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
     /**
      * @notice Accept an offer
      * @param offerId The offer ID
+     * @dev Handles both library-based and direct ownership transfers
      */
     function acceptOffer(uint256 offerId) external nonReentrant {
         Offer storage offer = offers[offerId];
         require(offer.isActive, "Offer not active");
         require(block.timestamp < offer.expiresAt, "Offer expired");
         
-        // Verify caller owns the asset
-        (,,,,,address currentOwner, address originalCreator, uint256 listedAt, bool exists, bool royaltyEnabled) = libraryContract.getAsset(offer.projectId);
-        require(exists, "Asset not found in library");
+        // Verify caller owns the asset (library or direct)
+        address currentOwner = _getAssetOwner(offer.projectId);
+        require(currentOwner != address(0), "Asset has no owner");
         require(currentOwner == msg.sender, "Only owner can accept offer");
         
         // Calculate fees
@@ -365,8 +410,14 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
             );
         }
         
-        // Transfer ownership in library contract
-        libraryContract.transferAssetOwnership(offer.projectId, offer.buyer);
+        // Transfer ownership based on asset type
+        if (isLibraryBased[offer.projectId]) {
+            // Library-based: transfer via library contract
+            libraryContract.transferAssetOwnership(offer.projectId, offer.buyer);
+        } else {
+            // Direct: update direct ownership mapping
+            directOwners[offer.projectId] = offer.buyer;
+        }
         
         // Deactivate offer
         offer.isActive = false;
@@ -493,6 +544,78 @@ contract ClayMarketplace is Ownable, ReentrancyGuard {
         require(balance > 0, "No USDC fees to withdraw");
         
         require(usdcToken.transfer(owner(), balance), "Withdrawal failed");
+    }
+    
+    /**
+     * @notice Get asset owner (library or direct)
+     * @param projectId The project ID
+     * @return owner The current owner address
+     */
+    function getAssetOwner(string memory projectId) external view returns (address) {
+        return _getAssetOwner(projectId);
+    }
+    
+    /**
+     * @notice Check if asset is library-based
+     * @param projectId The project ID
+     * @return True if library-based, false if direct ownership
+     */
+    function isAssetLibraryBased(string memory projectId) external view returns (bool) {
+        return isLibraryBased[projectId];
+    }
+    
+    /**
+     * @dev Internal function to get asset owner (library or direct)
+     */
+    function _getAssetOwner(string memory projectId) internal view returns (address) {
+        // First check if it's already marked as library-based
+        if (isLibraryBased[projectId]) {
+            try libraryContract.getAsset(projectId) returns (
+                string memory,
+                string memory,
+                string memory,
+                uint256,
+                uint256,
+                address currentOwner,
+                address,
+                uint256,
+                bool exists,
+                bool
+            ) {
+                if (exists) {
+                    return currentOwner;
+                }
+            } catch {
+                // Library call failed
+            }
+        }
+        
+        // Check direct ownership
+        if (directOwners[projectId] != address(0)) {
+            return directOwners[projectId];
+        }
+        
+        // Try library as fallback (for assets not yet listed)
+        try libraryContract.getAsset(projectId) returns (
+            string memory,
+            string memory,
+            string memory,
+            uint256,
+            uint256,
+            address currentOwner,
+            address,
+            uint256,
+            bool exists,
+            bool
+        ) {
+            if (exists) {
+                return currentOwner;
+            }
+        } catch {
+            // Library call failed
+        }
+        
+        return address(0);
     }
 }
 

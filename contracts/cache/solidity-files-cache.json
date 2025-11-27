@@ -275,8 +275,8 @@
       ]
     },
     "/Users/USER/web3/getclayed/contracts/ClayMarketplace.sol": {
-      "lastModificationDate": 1762416792388,
-      "contentHash": "f4dd68be55867a6905d09aaaf855c31f",
+      "lastModificationDate": 1764165781836,
+      "contentHash": "4578620e25f599df2f2352199e81ab90",
       "sourceName": "ClayMarketplace.sol",
       "solcConfig": {
         "version": "0.8.20",

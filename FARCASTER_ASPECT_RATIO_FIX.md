@@ -79,3 +79,4 @@ Farcaster에서 지원하는 aspect ratio:
 - 필요시 Warpcast Developer Console에서 수동으로 재검증
 
 
+
