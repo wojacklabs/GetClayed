@@ -552,11 +552,16 @@ export async function getProjectOffers(
  */
 export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> {
   try {
+    console.log('[MarketplaceService] queryMarketplaceListings called');
+    console.log('[MarketplaceService] Contract address:', MARKETPLACE_CONTRACT_ADDRESS);
+    
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
+      console.warn('[MarketplaceService] No marketplace contract address configured');
       return [];
     }
     
     if (typeof window === 'undefined' || !window.ethereum) {
+      console.warn('[MarketplaceService] No window.ethereum available');
       return [];
     }
     
@@ -568,8 +573,10 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
     );
     
     // Get past AssetListed events
+    console.log('[MarketplaceService] Querying AssetListed events...');
     const filter = contract.filters.AssetListed();
     const events = await contract.queryFilter(filter, -10000); // Last ~10000 blocks
+    console.log('[MarketplaceService] Found', events.length, 'events');
     
     const listings: MarketplaceListing[] = [];
     
@@ -578,6 +585,7 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
         const parsedLog = contract.interface.parseLog(event as any);
         if (parsedLog && parsedLog.args) {
           const projectId = parsedLog.args.projectId;
+          console.log('[MarketplaceService] Processing listing for project:', projectId);
           
           // Check if listing is still active
           const listingData = await contract.listings(projectId);
@@ -595,13 +603,15 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
               listedAt: Number(listingData.listedAt),
               isActive: listingData.isActive
             });
+            console.log('[MarketplaceService] Added active listing:', projectId);
           }
         }
       } catch (e) {
-        // Skip events that can't be parsed
+        console.error('[MarketplaceService] Error parsing event:', e);
       }
     }
     
+    console.log('[MarketplaceService] Returning', listings.length, 'listings');
     return listings;
   } catch (error) {
     console.error('[MarketplaceService] Error querying listings:', error);
