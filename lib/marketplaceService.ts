@@ -617,23 +617,43 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
           }
           processedProjectIds.add(projectId);
           
-          // Check if listing is still active
-          const listingData = await contract.listings(projectId);
-          console.log('[MarketplaceService] Listing data for', projectId, '- isActive:', listingData.isActive);
+          // Check if listing is still active using raw call (ABI tuple parsing issues)
+          // The contract returns: (string projectId, address seller, uint256 price, uint8 paymentToken, uint256 listedAt, bool isActive)
+          // Raw format: [offset][seller][price][paymentToken][listedAt][isActive][stringLength][stringData]
+          const callData = contract.interface.encodeFunctionData('listings', [projectId]);
+          const rawResult = await provider.call({
+            to: MARKETPLACE_CONTRACT_ADDRESS,
+            data: callData
+          });
           
-          if (listingData.isActive) {
+          // Parse raw result manually
+          // Skip first 32 bytes (offset to string), then parse fixed fields
+          // word 1 (offset 0x20): seller address
+          // word 2 (offset 0x40): price
+          // word 3 (offset 0x60): paymentToken
+          // word 4 (offset 0x80): listedAt
+          // word 5 (offset 0xa0): isActive
+          const seller = '0x' + rawResult.slice(26, 66); // address at offset 0x20
+          const price = BigInt('0x' + rawResult.slice(66, 130)); // uint256 at offset 0x40
+          const paymentToken = parseInt(rawResult.slice(130, 194), 16); // uint8 at offset 0x60
+          const listedAt = BigInt('0x' + rawResult.slice(194, 258)); // uint256 at offset 0x80
+          const isActive = parseInt(rawResult.slice(258, 322), 16) === 1; // bool at offset 0xa0
+          
+          console.log('[MarketplaceService] Listing data for', projectId, '- isActive:', isActive, 'seller:', seller);
+          
+          if (isActive) {
             // Format price based on payment token
-            const formattedPrice = listingData.paymentToken === 0
-              ? ethers.formatEther(listingData.price)
-              : ethers.formatUnits(listingData.price, 6);
+            const formattedPrice = paymentToken === 0
+              ? ethers.formatEther(price)
+              : ethers.formatUnits(price, 6);
             
             listings.push({
               projectId,
-              seller: listingData.seller,
+              seller,
               price: formattedPrice,
-              paymentToken: listingData.paymentToken === 0 ? 'ETH' : 'USDC',
-              listedAt: Number(listingData.listedAt),
-              isActive: listingData.isActive
+              paymentToken: paymentToken === 0 ? 'ETH' : 'USDC',
+              listedAt: Number(listedAt),
+              isActive
             });
             console.log('[MarketplaceService] Added active listing:', projectId);
           }
