@@ -33,6 +33,33 @@ function Clay({ clay }: { clay: any }) {
 function Scene({ clayObjects, backgroundColor }: { clayObjects: any[]; backgroundColor: string }) {
   const groupRef = useRef<THREE.Group>(null)
   
+  // Calculate center of all clay objects to center the view
+  const center = useMemo(() => {
+    if (clayObjects.length === 0) return { x: 0, y: 0, z: 0 }
+    
+    let minY = Infinity, maxY = -Infinity
+    let minX = Infinity, maxX = -Infinity
+    let minZ = Infinity, maxZ = -Infinity
+    
+    clayObjects.forEach(clay => {
+      const pos = clay.position
+      const size = clay.size || 1
+      
+      minX = Math.min(minX, pos.x - size)
+      maxX = Math.max(maxX, pos.x + size)
+      minY = Math.min(minY, pos.y - size)
+      maxY = Math.max(maxY, pos.y + size)
+      minZ = Math.min(minZ, pos.z - size)
+      maxZ = Math.max(maxZ, pos.z + size)
+    })
+    
+    return {
+      x: (minX + maxX) / 2,
+      y: (minY + maxY) / 2,
+      z: (minZ + maxZ) / 2
+    }
+  }, [clayObjects])
+  
   // Auto rotate
   useFrame((state, delta) => {
     if (groupRef.current) {
@@ -43,7 +70,7 @@ function Scene({ clayObjects, backgroundColor }: { clayObjects: any[]; backgroun
   return (
     <>
       <color attach="background" args={[backgroundColor]} />
-      <group ref={groupRef}>
+      <group ref={groupRef} position={[-center.x, -center.y, -center.z]}>
         {clayObjects.map(clay => (
           <Clay key={clay.id} clay={clay} />
         ))}
