@@ -1164,11 +1164,13 @@ function CameraChangeDetector({ onCameraChange }: { onCameraChange: (changed: bo
 function AddClayHelper({ 
   onAdd, 
   shape,
-  onHoverPoint
+  onHoverPoint,
+  onDrawingStateChange
 }: { 
   onAdd: (position: THREE.Vector3, size: number, thickness: number, rotation?: THREE.Euler, controlPoints?: THREE.Vector3[]) => void
   shape: 'sphere' | 'cube' | 'line' | 'curve' | 'rectangle' | 'circle' | 'freehand'
   onHoverPoint?: (point: THREE.Vector3 | null) => void
+  onDrawingStateChange?: (isDrawing: boolean) => void
 }) {
   const { camera, raycaster, gl } = useThree()
   const [dragStart, setDragStart] = useState<THREE.Vector3 | null>(null)
@@ -1185,6 +1187,12 @@ function AddClayHelper({
   const thirdPointDepthRef = useRef(0) // Use ref for scroll handling
   const [isDrawingFreehand, setIsDrawingFreehand] = useState(false)
   const [freehandPoints, setFreehandPoints] = useState<THREE.Vector3[]>([])
+  
+  // Notify parent when drawing state changes
+  useEffect(() => {
+    const isDrawing = isDragging || clickPoints.length > 0 || isDraggingCurve || isDrawingFreehand
+    onDrawingStateChange?.(isDrawing)
+  }, [isDragging, clickPoints.length, isDraggingCurve, isDrawingFreehand, onDrawingStateChange])
   
   // Get camera-distance independent size for guide points
   const getConstantScreenSize = useCallback((position: THREE.Vector3, targetPixelSize: number = 10): number => {
@@ -2245,6 +2253,7 @@ export default function AdvancedClay() {
   const [currentColor, setCurrentColor] = useState('#B8C5D6')
   const [detail, setDetail] = useState(48)
   const [isDeforming, setIsDeforming] = useState(false)
+  const [isDrawingShape, setIsDrawingShape] = useState(false)
   const [selectedClayId, setSelectedClayId] = useState<string | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [copiedClay, setCopiedClay] = useState<ClayObject | null>(null)
@@ -3121,6 +3130,13 @@ export default function AdvancedClay() {
     window.addEventListener('wheel', handleWheel, { passive: false })
     return () => window.removeEventListener('wheel', handleWheel)
   }, [tool, hoveredClayId])
+  
+  // Reset drawing state when tool changes away from 'add'
+  useEffect(() => {
+    if (tool !== 'add') {
+      setIsDrawingShape(false)
+    }
+  }, [tool])
   
   // Warn before leaving page with unsaved changes
   useEffect(() => {
@@ -5104,7 +5120,7 @@ export default function AdvancedClay() {
           
           <TrackballControls 
             ref={controlsRef}
-            enabled={!isDeforming}
+            enabled={!isDeforming && !isDrawingShape && !(tool === 'move' && selectedClayId)}
             makeDefault={false}
             rotateSpeed={1.5}
             zoomSpeed={((tool === 'push' || tool === 'pull') && hoveredClayId) ? 0 : 1.5}
@@ -5205,6 +5221,7 @@ export default function AdvancedClay() {
               onAdd={addNewClay} 
               shape={selectedShape}
               onHoverPoint={setHoveredPoint}
+              onDrawingStateChange={setIsDrawingShape}
             />
           )}
           

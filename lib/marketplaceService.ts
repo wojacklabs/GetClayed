@@ -1,6 +1,8 @@
 import { ethers } from 'ethers';
 import { saveMutableReference, getMutableReference } from './mutableStorageService';
 import { getErrorMessage } from './errorHandler';
+import { fixedKeyUploader } from './fixedKeyUploadService';
+import { batchContractCalls } from './rpcProvider';
 
 // USDC token address on Base Mainnet
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
@@ -120,6 +122,35 @@ export async function listAssetForSale(
     
     const tx = await contract.listAsset(projectId, priceInUnits, paymentTokenEnum);
     await tx.wait();
+    
+    // Save listing metadata to Irys for fast querying
+    try {
+      const sellerAddress = await signer.getAddress();
+      const listingMetadata = {
+        projectId,
+        seller: sellerAddress.toLowerCase(),
+        price: price.toString(),
+        paymentToken,
+        listedAt: Date.now()
+      };
+      
+      const data = Buffer.from(JSON.stringify(listingMetadata), 'utf-8');
+      const tags = [
+        { name: 'App-Name', value: 'GetClayed' },
+        { name: 'Data-Type', value: 'marketplace-listing' },
+        { name: 'Project-ID', value: projectId },
+        { name: 'Seller', value: sellerAddress.toLowerCase() },
+        { name: 'Price', value: price.toString() },
+        { name: 'Payment-Token', value: paymentToken },
+        { name: 'Listed-At', value: Date.now().toString() }
+      ];
+      
+      await fixedKeyUploader.upload(data, tags);
+      console.log('[MarketplaceService] Listing metadata saved to Irys');
+    } catch (irysError) {
+      console.warn('[MarketplaceService] Failed to save listing to Irys (non-critical):', irysError);
+      // Don't fail the operation - blockchain listing succeeded
+    }
     
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
@@ -455,6 +486,30 @@ export async function cancelListing(
     const tx = await contract.cancelListing(projectId);
     await tx.wait();
     
+    // Save cancellation marker to Irys for fast querying
+    try {
+      const sellerAddress = await signer.getAddress();
+      const cancellationData = {
+        projectId,
+        cancelledBy: sellerAddress.toLowerCase(),
+        cancelledAt: Date.now()
+      };
+      
+      const data = Buffer.from(JSON.stringify(cancellationData), 'utf-8');
+      const tags = [
+        { name: 'App-Name', value: 'GetClayed' },
+        { name: 'Data-Type', value: 'marketplace-listing-cancelled' },
+        { name: 'Project-ID', value: projectId },
+        { name: 'Cancelled-By', value: sellerAddress.toLowerCase() },
+        { name: 'Cancelled-At', value: Date.now().toString() }
+      ];
+      
+      await fixedKeyUploader.upload(data, tags);
+      console.log('[MarketplaceService] Cancellation marker saved to Irys');
+    } catch (irysError) {
+      console.warn('[MarketplaceService] Failed to save cancellation to Irys (non-critical):', irysError);
+    }
+    
     return { success: true, txHash: tx.hash };
   } catch (error: any) {
     console.error('[MarketplaceService] Error cancelling listing:', error);
@@ -547,39 +602,15 @@ export async function getProjectOffers(
   }
 }
 
-// Public RPC endpoints for Base mainnet (for read-only operations)
-const BASE_RPC_ENDPOINTS = [
-  'https://mainnet.base.org',
-  'https://base.meowrpc.com',
-  'https://base.publicnode.com',
-  'https://1rpc.io/base'
-];
+const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
 
 /**
- * Get a working JSON-RPC provider for Base mainnet
- */
-async function getPublicProvider(): Promise<ethers.JsonRpcProvider> {
-  for (const rpc of BASE_RPC_ENDPOINTS) {
-    try {
-      const provider = new ethers.JsonRpcProvider(rpc);
-      await provider.getBlockNumber(); // Test connection
-      console.log('[MarketplaceService] Connected to RPC:', rpc);
-      return provider;
-    } catch (e) {
-      console.warn('[MarketplaceService] RPC failed:', rpc);
-    }
-  }
-  throw new Error('All RPC endpoints failed');
-}
-
-/**
- * Query all marketplace listings
- * Note: Since projectId is an indexed string in the event, we need to decode
- * the transaction input data to get the actual projectId value.
+ * Query all marketplace listings using Irys GraphQL + blockchain verification
+ * This is much faster than scanning blockchain events
  */
 export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> {
   try {
-    console.log('[MarketplaceService] queryMarketplaceListings called');
+    console.log('[MarketplaceService] queryMarketplaceListings called (GraphQL method)');
     console.log('[MarketplaceService] Contract address:', MARKETPLACE_CONTRACT_ADDRESS);
     
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
@@ -587,111 +618,109 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
       return [];
     }
     
-    // Use dedicated public RPC for log queries (avoids MetaMask rate limits)
-    const provider = await getPublicProvider();
-    const contract = new ethers.Contract(
-      MARKETPLACE_CONTRACT_ADDRESS,
-      MARKETPLACE_CONTRACT_ABI,
-      provider
-    );
-    
-    // Get contract deployment block to limit search range
-    // Marketplace contract deployed around block 38719750
-    const currentBlock = await provider.getBlockNumber();
-    const fromBlock = Math.max(currentBlock - 50000, 38719000); // ~1 week of blocks or deployment
-    
-    // Get past AssetListed events
-    console.log('[MarketplaceService] Querying AssetListed events from block', fromBlock, 'to', currentBlock);
-    const filter = contract.filters.AssetListed();
-    const events = await contract.queryFilter(filter, fromBlock, currentBlock);
-    console.log('[MarketplaceService] Found', events.length, 'events');
-    
-    const listings: MarketplaceListing[] = [];
-    const processedProjectIds = new Set<string>();
-    
-    for (const event of events) {
-      try {
-        // Since projectId is indexed (hashed), we need to decode from transaction input
-        const txHash = event.transactionHash;
-        console.log('[MarketplaceService] Processing event from tx:', txHash);
-        
-        const tx = await provider.getTransaction(txHash);
-        if (!tx || !tx.data) {
-          console.warn('[MarketplaceService] Could not get transaction data');
-          continue;
+    // Step 1: Query listing metadata from Irys GraphQL (fast!)
+    const query = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["marketplace-listing"] }
+          ],
+          first: 200,
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+              timestamp
+              tags {
+                name
+                value
+              }
+            }
+          }
         }
-        
-        // Decode the transaction input to get the actual projectId
-        // listAsset(string projectId, uint256 price, uint8 paymentToken)
-        const iface = new ethers.Interface([
-          "function listAsset(string projectId, uint256 price, uint8 paymentToken)"
-        ]);
-        
-        try {
-          const decoded = iface.parseTransaction({ data: tx.data });
-          if (!decoded || !decoded.args) {
-            console.warn('[MarketplaceService] Could not decode transaction');
-            continue;
-          }
-          
-          const projectId = decoded.args[0] as string; // First argument is projectId
-          console.log('[MarketplaceService] Decoded projectId:', projectId);
-          
-          // Skip if already processed (in case of multiple events for same project)
-          if (processedProjectIds.has(projectId)) {
-            continue;
-          }
-          processedProjectIds.add(projectId);
-          
-          // Check if listing is still active using raw call (ABI tuple parsing issues)
-          // The contract returns: (string projectId, address seller, uint256 price, uint8 paymentToken, uint256 listedAt, bool isActive)
-          // Raw format: [offset][seller][price][paymentToken][listedAt][isActive][stringLength][stringData]
-          const callData = contract.interface.encodeFunctionData('listings', [projectId]);
-          const rawResult = await provider.call({
-            to: MARKETPLACE_CONTRACT_ADDRESS,
-            data: callData
-          });
-          
-          // Parse raw result manually
-          // Skip first 32 bytes (offset to string), then parse fixed fields
-          // word 1 (offset 0x20): seller address
-          // word 2 (offset 0x40): price
-          // word 3 (offset 0x60): paymentToken
-          // word 4 (offset 0x80): listedAt
-          // word 5 (offset 0xa0): isActive
-          const seller = '0x' + rawResult.slice(26, 66); // address at offset 0x20
-          const price = BigInt('0x' + rawResult.slice(66, 130)); // uint256 at offset 0x40
-          const paymentToken = parseInt(rawResult.slice(130, 194), 16); // uint8 at offset 0x60
-          const listedAt = BigInt('0x' + rawResult.slice(194, 258)); // uint256 at offset 0x80
-          const isActive = parseInt(rawResult.slice(258, 322), 16) === 1; // bool at offset 0xa0
-          
-          console.log('[MarketplaceService] Listing data for', projectId, '- isActive:', isActive, 'seller:', seller);
-          
-          if (isActive) {
-            // Format price based on payment token
-            const formattedPrice = paymentToken === 0
-              ? ethers.formatEther(price)
-              : ethers.formatUnits(price, 6);
-            
-            listings.push({
-              projectId,
-              seller,
-              price: formattedPrice,
-              paymentToken: paymentToken === 0 ? 'ETH' : 'USDC',
-              listedAt: Number(listedAt),
-              isActive
-            });
-            console.log('[MarketplaceService] Added active listing:', projectId);
-          }
-        } catch (decodeError) {
-          console.error('[MarketplaceService] Error decoding transaction:', decodeError);
-        }
-      } catch (e) {
-        console.error('[MarketplaceService] Error processing event:', e);
       }
+    `;
+    
+    const response = await fetch(IRYS_GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    
+    const result = await response.json();
+    const edges = result.data?.transactions?.edges || [];
+    
+    console.log('[MarketplaceService] Found', edges.length, 'listing records from Irys');
+    
+    // Step 2: Deduplicate by projectId (keep latest)
+    const seenProjects = new Set<string>();
+    const projectsToVerify: Array<{ projectId: string; tags: any }> = [];
+    
+    for (const edge of edges) {
+      const tags = edge.node.tags.reduce((acc: any, tag: any) => {
+        acc[tag.name] = tag.value;
+        return acc;
+      }, {});
+      
+      const projectId = tags['Project-ID'];
+      if (!projectId || seenProjects.has(projectId)) {
+        continue;
+      }
+      seenProjects.add(projectId);
+      projectsToVerify.push({ projectId, tags });
     }
     
-    console.log('[MarketplaceService] Returning', listings.length, 'listings');
+    console.log('[MarketplaceService] Unique projects to verify:', projectsToVerify.length);
+    
+    if (projectsToVerify.length === 0) {
+      return [];
+    }
+    
+    // Step 3: Batch verify listing status on blockchain
+    const calls = projectsToVerify.map(({ projectId }) => ({
+      contractAddress: MARKETPLACE_CONTRACT_ADDRESS,
+      abi: MARKETPLACE_CONTRACT_ABI,
+      method: 'listings',
+      args: [projectId]
+    }));
+    
+    console.log('[MarketplaceService] Batch verifying', calls.length, 'listings on blockchain...');
+    const blockchainResults = await batchContractCalls<any>(calls);
+    
+    // Step 4: Combine Irys metadata with blockchain status
+    const listings: MarketplaceListing[] = [];
+    
+    for (let i = 0; i < projectsToVerify.length; i++) {
+      const { projectId, tags } = projectsToVerify[i];
+      const blockchainData = blockchainResults[i];
+      
+      // Skip if blockchain data not available or listing is not active
+      if (!blockchainData || !blockchainData.isActive) {
+        console.log('[MarketplaceService] Skipping inactive listing:', projectId);
+        continue;
+      }
+      
+      // Use blockchain data as source of truth for price and status
+      const paymentToken = Number(blockchainData.paymentToken);
+      const formattedPrice = paymentToken === 0
+        ? ethers.formatEther(blockchainData.price)
+        : ethers.formatUnits(blockchainData.price, 6);
+      
+      listings.push({
+        projectId,
+        seller: blockchainData.seller,
+        price: formattedPrice,
+        paymentToken: paymentToken === 0 ? 'ETH' : 'USDC',
+        listedAt: Number(blockchainData.listedAt),
+        isActive: blockchainData.isActive
+      });
+      
+      console.log('[MarketplaceService] Added active listing:', projectId);
+    }
+    
+    console.log('[MarketplaceService] Returning', listings.length, 'verified active listings');
     return listings;
   } catch (error) {
     console.error('[MarketplaceService] Error querying listings:', error);
