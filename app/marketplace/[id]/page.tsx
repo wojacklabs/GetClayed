@@ -251,7 +251,7 @@ export default function MarketplaceDetailPage() {
                     <p className="text-xs text-gray-500">Seller</p>
                     <Link 
                       href={`/user/${listing.seller}`}
-                      className="text-blue-600 hover:underline truncate block"
+                      className="text-gray-900 hover:text-gray-600 hover:underline truncate block"
                     >
                       {listing.seller.slice(0, 6)}...{listing.seller.slice(-4)}
                     </Link>
@@ -321,17 +321,17 @@ export default function MarketplaceDetailPage() {
                     let expiryColor = 'text-gray-400';
                     
                     if (isExpired) {
-                      expiryWarning = '⚠️ EXPIRED - Click cancel to refund';
-                      expiryColor = 'text-red-600 font-semibold';
+                      expiryWarning = 'EXPIRED - Click cancel to refund';
+                      expiryColor = 'text-gray-900 font-semibold';
                     } else if (hoursLeft < 1) {
-                      expiryWarning = '⚠️ Expires in less than 1 hour!';
-                      expiryColor = 'text-red-600 font-semibold';
+                      expiryWarning = 'Expires in less than 1 hour';
+                      expiryColor = 'text-gray-700 font-semibold';
                     } else if (hoursLeft < 24) {
-                      expiryWarning = `⏰ Expires in ${Math.floor(hoursLeft)} hours`;
-                      expiryColor = 'text-orange-600 font-medium';
+                      expiryWarning = `Expires in ${Math.floor(hoursLeft)} hours`;
+                      expiryColor = 'text-gray-600 font-medium';
                     } else if (daysLeft < 3) {
                       expiryWarning = `Expires in ${Math.floor(daysLeft)} days`;
-                      expiryColor = 'text-yellow-600';
+                      expiryColor = 'text-gray-500';
                     } else {
                       expiryWarning = `Expires ${new Date(offer.expiresAt * 1000).toLocaleDateString()}`;
                     }
@@ -359,7 +359,7 @@ export default function MarketplaceDetailPage() {
                               className={`px-3 py-1.5 text-white text-sm rounded ${
                                 isExpired 
                                   ? 'bg-gray-400 cursor-not-allowed' 
-                                  : 'bg-green-500 hover:bg-green-600'
+                                  : 'bg-gray-800 hover:bg-gray-700'
                               }`}
                             >
                               {isExpired ? 'Expired' : 'Accept'}
@@ -371,7 +371,7 @@ export default function MarketplaceDetailPage() {
                               onClick={() => handleCancelOffer(offer.offerId)}
                               className={`px-3 py-1.5 text-sm rounded ${
                                 isExpired
-                                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                                  ? 'bg-gray-800 hover:bg-gray-700 text-white'
                                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                               }`}
                             >
@@ -385,10 +385,10 @@ export default function MarketplaceDetailPage() {
                 </div>
                 {/* FIX P1-11: Help text for expired offers */}
                 {offers.some(o => o.expiresAt < Math.floor(Date.now() / 1000)) && (
-                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="mt-3 p-3 bg-gray-100 border border-gray-200 rounded-lg">
                     <div className="flex items-start gap-2">
-                      <AlertCircle size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-yellow-800">
+                      <AlertCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-gray-600">
                         {walletAddress === listing.seller 
                           ? 'Expired offers cannot be accepted. Buyers can cancel them to get refunds.'
                           : 'Your expired offers are still holding your funds. Click "Claim Refund" to get them back.'}
@@ -446,7 +446,7 @@ export default function MarketplaceDetailPage() {
                   value={offerPrice}
                   onChange={(e) => setOfferPrice(e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                 />
               </div>
               
@@ -455,7 +455,7 @@ export default function MarketplaceDetailPage() {
                 <select
                   value={offerDuration}
                   onChange={(e) => setOfferDuration(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                 >
                   <option value="24">24 hours</option>
                   <option value="48">48 hours</option>
