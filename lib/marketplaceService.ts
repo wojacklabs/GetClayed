@@ -698,20 +698,21 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
         
         // Parse raw result manually
         // The contract returns: (string projectId, address seller, uint256 price, uint8 paymentToken, uint256 listedAt, bool isActive)
-        // Raw format with dynamic string:
-        // word 0 (0x00): offset to string data
-        // word 1 (0x20): seller address
-        // word 2 (0x40): price
-        // word 3 (0x60): paymentToken
-        // word 4 (0x80): listedAt
-        // word 5 (0xa0): isActive
-        const seller = '0x' + rawResult.slice(26, 66); // address at offset 0x20
-        const price = BigInt('0x' + rawResult.slice(66, 130)); // uint256 at offset 0x40
-        const paymentTokenVal = parseInt(rawResult.slice(130, 194), 16); // uint8 at offset 0x60
-        const listedAt = BigInt('0x' + rawResult.slice(194, 258)); // uint256 at offset 0x80
-        const isActive = parseInt(rawResult.slice(258, 322), 16) === 1; // bool at offset 0xa0
+        // Raw format (0x prefix + hex data):
+        // Each word is 64 hex characters (32 bytes)
+        // word 0 (chars 2-66): offset to string data
+        // word 1 (chars 66-130): seller address (last 40 chars are the address)
+        // word 2 (chars 130-194): price
+        // word 3 (chars 194-258): paymentToken
+        // word 4 (chars 258-322): listedAt
+        // word 5 (chars 322-386): isActive
+        const seller = '0x' + rawResult.slice(90, 130); // address: last 40 hex chars of word 1
+        const price = BigInt('0x' + rawResult.slice(130, 194)); // uint256 word 2
+        const paymentTokenVal = parseInt(rawResult.slice(194, 258), 16); // uint8 word 3
+        const listedAt = BigInt('0x' + rawResult.slice(258, 322)); // uint256 word 4
+        const isActive = parseInt(rawResult.slice(322, 386), 16) === 1; // bool word 5
         
-        console.log('[MarketplaceService] Listing data for', projectId, '- isActive:', isActive, 'seller:', seller);
+        console.log('[MarketplaceService] Listing data for', projectId, '- isActive:', isActive, 'seller:', seller, 'price:', price.toString());
         
         if (!isActive) {
           console.log('[MarketplaceService] Skipping inactive listing:', projectId);
