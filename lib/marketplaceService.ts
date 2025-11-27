@@ -560,6 +560,7 @@ export async function cancelOfferById(
 
 /**
  * Get offers for a project
+ * Uses raw call to avoid tuple decoding issues with ethers.js
  */
 export async function getProjectOffers(
   projectId: string
@@ -574,33 +575,81 @@ export async function getProjectOffers(
     }
     
     const provider = new ethers.BrowserProvider(window.ethereum);
-    const contract = new ethers.Contract(
-      MARKETPLACE_CONTRACT_ADDRESS,
-      MARKETPLACE_CONTRACT_ABI,
-      provider
-    );
+    const iface = new ethers.Interface(MARKETPLACE_CONTRACT_ABI);
     
-    const offerIds = await contract.getProjectOffers(projectId);
+    // First get offer IDs for this project
+    const getOffersCallData = iface.encodeFunctionData('getProjectOffers', [projectId]);
+    const rawOfferIds = await provider.call({
+      to: MARKETPLACE_CONTRACT_ADDRESS,
+      data: getOffersCallData
+    });
+    
+    // Decode offer IDs array
+    const decodedOfferIds = iface.decodeFunctionResult('getProjectOffers', rawOfferIds);
+    const offerIds: bigint[] = decodedOfferIds[0];
+    
+    console.log('[MarketplaceService] Found', offerIds.length, 'offers for project:', projectId);
+    
     const offers: MarketplaceOffer[] = [];
+    const currentTime = Math.floor(Date.now() / 1000);
     
     for (const offerId of offerIds) {
-      const offerData = await contract.offers(offerId);
-      if (offerData.isActive && offerData.expiresAt > Math.floor(Date.now() / 1000)) {
-        // Format price based on payment token
-        const formattedPrice = offerData.paymentToken === 0
-          ? ethers.formatEther(offerData.offerPrice)
-          : ethers.formatUnits(offerData.offerPrice, 6);
-        
-        offers.push({
-          offerId: Number(offerId),
-          projectId: offerData.projectId,
-          buyer: offerData.buyer,
-          offerPrice: formattedPrice,
-          paymentToken: offerData.paymentToken === 0 ? 'ETH' : 'USDC',
-          offeredAt: Number(offerData.offeredAt),
-          expiresAt: Number(offerData.expiresAt),
-          isActive: offerData.isActive
+      try {
+        // Use raw call to get offer data to avoid tuple decoding issues
+        const offerCallData = iface.encodeFunctionData('offers', [offerId]);
+        const rawOfferResult = await provider.call({
+          to: MARKETPLACE_CONTRACT_ADDRESS,
+          data: offerCallData
         });
+        
+        // Parse raw result manually
+        // Struct Offer { string projectId, address buyer, uint256 offerPrice, uint8 paymentToken, uint256 offeredAt, uint256 expiresAt, bool isActive }
+        // Raw format:
+        // word 0: offset to string data (projectId)
+        // word 1: buyer address (last 40 chars)
+        // word 2: offerPrice
+        // word 3: paymentToken
+        // word 4: offeredAt
+        // word 5: expiresAt
+        // word 6: isActive
+        // word 7+: string length and data
+        
+        const buyer = '0x' + rawOfferResult.slice(90, 130).toLowerCase();
+        const offerPrice = BigInt('0x' + rawOfferResult.slice(130, 194));
+        const paymentTokenVal = parseInt(rawOfferResult.slice(194, 258), 16);
+        const offeredAt = Number(BigInt('0x' + rawOfferResult.slice(258, 322)));
+        const expiresAt = Number(BigInt('0x' + rawOfferResult.slice(322, 386)));
+        const isActive = parseInt(rawOfferResult.slice(386, 450), 16) === 1;
+        
+        // Extract projectId string from the dynamic data section
+        const stringOffset = Number(BigInt('0x' + rawOfferResult.slice(2, 66)));
+        const stringLengthStart = 2 + (stringOffset * 2);
+        const stringLength = Number(BigInt('0x' + rawOfferResult.slice(stringLengthStart, stringLengthStart + 64)));
+        const stringDataStart = stringLengthStart + 64;
+        const stringDataHex = rawOfferResult.slice(stringDataStart, stringDataStart + (stringLength * 2));
+        const offerProjectId = Buffer.from(stringDataHex, 'hex').toString('utf-8');
+        
+        console.log('[MarketplaceService] Offer', Number(offerId), '- isActive:', isActive, 'buyer:', buyer, 'price:', offerPrice.toString(), 'expiresAt:', expiresAt, 'currentTime:', currentTime);
+        
+        if (isActive && expiresAt > currentTime) {
+          // Format price based on payment token
+          const formattedPrice = paymentTokenVal === 0
+            ? ethers.formatEther(offerPrice)
+            : ethers.formatUnits(offerPrice, 6);
+          
+          offers.push({
+            offerId: Number(offerId),
+            projectId: offerProjectId,
+            buyer,
+            offerPrice: formattedPrice,
+            paymentToken: paymentTokenVal === 0 ? 'ETH' : 'USDC',
+            offeredAt,
+            expiresAt,
+            isActive
+          });
+        }
+      } catch (offerError) {
+        console.error('[MarketplaceService] Error parsing offer', Number(offerId), ':', offerError);
       }
     }
     

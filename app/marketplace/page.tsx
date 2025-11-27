@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { queryMarketplaceListings, getProjectOffers, buyListedAsset, makeAssetOffer, acceptOffer, MarketplaceListing, MarketplaceOffer } from '@/lib/marketplaceService'
 import { queryLibraryAssets } from '@/lib/libraryService'
-import { downloadProjectThumbnail } from '@/lib/clayStorageService'
+import { downloadProjectThumbnail, downloadClayProject } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
 import { AnimatedClayLogo } from '@/components/AnimatedClayLogo'
@@ -46,15 +46,30 @@ export default function MarketplacePage() {
       const libraryAssets = await queryLibraryAssets(1000)
       const libraryMap = new Map(libraryAssets.map(a => [a.projectId, a]))
       
-      const enrichedListings = marketplaceListings.map(listing => {
+      // Enrich listings - prefer listing data, then library data
+      const enrichedListings = await Promise.all(marketplaceListings.map(async (listing) => {
         const libraryAsset = libraryMap.get(listing.projectId)
+        
+        // Try to get project name from various sources
+        let projectName = listing.assetName?.trim() || libraryAsset?.name
+        
+        // If still no name, try to fetch from project data
+        if (!projectName) {
+          try {
+            const projectData = await downloadClayProject(listing.projectId)
+            projectName = projectData?.name
+          } catch (e) {
+            console.log('[Marketplace] Could not load project name for', listing.projectId)
+          }
+        }
+        
         return {
           ...listing,
-          assetName: libraryAsset?.name,
-          description: libraryAsset?.description,
+          assetName: projectName || listing.assetName,
+          description: listing.description?.trim() || libraryAsset?.description,
           thumbnailId: libraryAsset?.thumbnailId
         }
-      })
+      }))
       
       setListings(enrichedListings)
       
