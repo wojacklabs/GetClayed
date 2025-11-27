@@ -84,12 +84,16 @@ export interface MarketplaceOffer {
  * List an asset for sale
  * @param paymentToken 'ETH' or 'USDC' (defaults to 'ETH')
  * @param customProvider Optional Privy provider (from wallets[0].getEthereumProvider())
+ * @param assetName Optional asset name (defaults to project name)
+ * @param description Optional description for the listing
  */
 export async function listAssetForSale(
   projectId: string,
   price: number,
   paymentToken: 'ETH' | 'USDC' = 'ETH',
-  customProvider?: any
+  customProvider?: any,
+  assetName?: string,
+  description?: string
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!MARKETPLACE_CONTRACT_ADDRESS) {
@@ -116,6 +120,8 @@ export async function listAssetForSale(
       projectId,
       price,
       paymentToken,
+      assetName,
+      description,
       priceInUnits: priceInUnits.toString()
     });
     
@@ -130,6 +136,8 @@ export async function listAssetForSale(
         seller: sellerAddress.toLowerCase(),
         price: price.toString(),
         paymentToken,
+        assetName: assetName || '',
+        description: description || '',
         listedAt: Date.now()
       };
       
@@ -141,6 +149,8 @@ export async function listAssetForSale(
         { name: 'Seller', value: sellerAddress.toLowerCase() },
         { name: 'Price', value: price.toString() },
         { name: 'Payment-Token', value: paymentToken },
+        { name: 'Asset-Name', value: assetName || '' },
+        { name: 'Description', value: description || '' },
         { name: 'Listed-At', value: Date.now().toString() }
       ];
       
@@ -730,7 +740,9 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
           price: formattedPrice,
           paymentToken: paymentTokenVal === 0 ? 'ETH' : 'USDC',
           listedAt: Number(listedAt),
-          isActive: true
+          isActive: true,
+          assetName: tags['Asset-Name'] || '',
+          description: tags['Description'] || ''
         });
         
         console.log('[MarketplaceService] Added active listing:', projectId);

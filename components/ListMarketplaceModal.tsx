@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, DollarSign } from 'lucide-react'
 import { usePopup } from './PopupNotification'
 import { listAssetForSale } from '@/lib/marketplaceService'
@@ -23,6 +23,7 @@ export default function ListMarketplaceModal({
   const { wallets } = useWallets()
   const { showPopup } = usePopup()
   const [price, setPrice] = useState('')
+  const [description, setDescription] = useState('')
   const [selectedCurrency, setSelectedCurrency] = useState<'ETH' | 'USDC'>('ETH')
   const [isListing, setIsListing] = useState(false)
 
@@ -58,7 +59,9 @@ export default function ListMarketplaceModal({
         projectId,
         parseFloat(price),
         selectedCurrency,
-        provider
+        provider,
+        projectName,
+        description
       )
 
       if (result.success) {
@@ -74,6 +77,15 @@ export default function ListMarketplaceModal({
       setIsListing(false)
     }
   }
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setPrice('')
+      setDescription('')
+      setSelectedCurrency('ETH')
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -125,6 +137,22 @@ export default function ListMarketplaceModal({
                   <option value="USDC">USDC</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Description <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe your artwork..."
+                rows={3}
+                maxLength={500}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm resize-none"
+                disabled={isListing}
+              />
+              <p className="text-xs text-gray-400 mt-1">{description.length}/500</p>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-3">

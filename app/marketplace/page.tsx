@@ -143,7 +143,7 @@ export default function MarketplacePage() {
       const result = await makeAssetOffer(
         selectedListing.projectId,
         parseFloat(offerPrice),
-        'ETH', // Default to ETH
+        selectedListing.paymentToken, // Use listing's payment token
         parseInt(offerDuration)
       )
       
@@ -312,10 +312,10 @@ export default function MarketplacePage() {
                   
                   <div className="p-3">
                     <h3 className="text-sm font-medium text-gray-900 truncate mb-1">
-                      {listing.assetName || 'Unnamed Asset'}
+                      {(listing.assetName && listing.assetName.trim()) || 'Unnamed Asset'}
                     </h3>
                     <p className="text-xs text-gray-500 mb-2">{formatTimeAgo(listing.listedAt)}</p>
-                    <p className="text-lg font-bold text-gray-900">{listing.price}</p>
+                    <p className="text-lg font-bold text-gray-900">{listing.price} {listing.paymentToken}</p>
                   </div>
                 </Link>
               ))}
@@ -331,8 +331,8 @@ export default function MarketplacePage() {
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">{selectedListing.assetName || 'Unnamed Asset'}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{selectedListing.description}</p>
+                  <h2 className="text-xl font-semibold text-gray-900">{(selectedListing.assetName && selectedListing.assetName.trim()) || 'Unnamed Asset'}</h2>
+                  <p className="text-sm text-gray-500 mt-1">{(selectedListing.description && selectedListing.description.trim()) || 'No description'}</p>
                 </div>
                 <button onClick={() => setSelectedListing(null)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X size={20} />
@@ -343,7 +343,7 @@ export default function MarketplacePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Price</p>
-                    <p className="text-2xl font-bold text-gray-900">{selectedListing.price} IRYS</p>
+                    <p className="text-2xl font-bold text-gray-900">{selectedListing.price} {selectedListing.paymentToken}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Seller</p>
@@ -365,7 +365,7 @@ export default function MarketplacePage() {
                     {offers.map((offer) => (
                       <div key={offer.offerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{offer.offerPrice} IRYS</p>
+                          <p className="text-sm font-medium text-gray-900">{offer.offerPrice} {offer.paymentToken}</p>
                           <p className="text-xs text-gray-500">
                             From {offer.buyer.slice(0, 6)}...{offer.buyer.slice(-4)}
                           </p>
@@ -416,7 +416,7 @@ export default function MarketplacePage() {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-700 mb-2">Offer Price (IRYS)</label>
+                <label className="block text-sm text-gray-700 mb-2">Offer Price ({selectedListing.paymentToken})</label>
                 <input
                   type="number"
                   step="0.01"

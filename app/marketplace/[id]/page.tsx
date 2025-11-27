@@ -2,13 +2,13 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, ShoppingCart, TrendingUp, Tag, Clock, DollarSign, AlertCircle, Share2 } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Share2, Percent } from 'lucide-react'
 import Link from 'next/link'
 import { Canvas } from '@react-three/fiber'
 import { TrackballControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { queryMarketplaceListings, getProjectOffers, buyListedAsset, makeAssetOffer, acceptOffer, cancelOfferById, MarketplaceListing, MarketplaceOffer } from '@/lib/marketplaceService'
-import { queryLibraryAssets } from '@/lib/libraryService'
+import { getLibraryCurrentRoyalties } from '@/lib/libraryService'
 import { downloadClayProject, restoreClayObjects, downloadProjectThumbnail } from '@/lib/clayStorageService'
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { usePopup } from '@/components/PopupNotification'
@@ -40,6 +40,7 @@ export default function MarketplaceDetailPage() {
   const [showOfferModal, setShowOfferModal] = useState(false)
   const [offerPrice, setOfferPrice] = useState('')
   const [offerDuration, setOfferDuration] = useState('24')
+  const [royaltyInfo, setRoyaltyInfo] = useState<{ ethAmount: number; usdcAmount: number; exists: boolean; enabled: boolean } | null>(null)
   const { showPopup } = usePopup()
   
   useEffect(() => {
@@ -68,6 +69,17 @@ export default function MarketplaceDetailPage() {
       // Load offers
       const projectOffers = await getProjectOffers(listingId)
       setOffers(projectOffers)
+      
+      // Load royalty info if available
+      try {
+        const royalties = await getLibraryCurrentRoyalties([listingId])
+        const royalty = royalties.get(listingId)
+        if (royalty) {
+          setRoyaltyInfo(royalty)
+        }
+      } catch (e) {
+        console.log('[MarketplaceDetail] No royalty info available')
+      }
     } catch (error) {
       console.error('Failed to load listing:', error)
       showPopup('Failed to load listing', 'error')
@@ -225,15 +237,14 @@ export default function MarketplaceDetailPage() {
           {/* Info */}
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Tag size={20} className="text-gray-400" />
-                <h1 className="text-2xl font-bold text-gray-900">{listing.assetName || 'Unnamed Asset'}</h1>
-              </div>
-              <p className="text-gray-600 mb-6">{listing.description || 'No description'}</p>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                {(listing.assetName && listing.assetName.trim()) || project?.name || 'Unnamed Asset'}
+              </h1>
+              <p className="text-gray-600 mb-6">{(listing.description && listing.description.trim()) || 'No description'}</p>
               
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <p className="text-xs text-gray-500 mb-1">Listed Price</p>
-                <p className="text-3xl font-bold text-gray-900 mb-4">{listing.price} {listing.price.includes('.') ? 'ETH/USDC' : 'ETH'}</p>
+                <p className="text-3xl font-bold text-gray-900 mb-4">{listing.price} {listing.paymentToken}</p>
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -251,6 +262,21 @@ export default function MarketplaceDetailPage() {
                   </div>
                 </div>
               </div>
+              
+              {/* Royalty Info */}
+              {royaltyInfo && royaltyInfo.exists && royaltyInfo.enabled && (royaltyInfo.ethAmount > 0 || royaltyInfo.usdcAmount > 0) && (
+                <div className="bg-amber-50 rounded-lg p-4 mb-6 border border-amber-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Percent size={16} className="text-amber-600" />
+                    <p className="text-sm font-medium text-amber-900">Royalty Information</p>
+                  </div>
+                  <p className="text-xs text-amber-800">
+                    This asset is registered in the library with royalties.
+                    {royaltyInfo.ethAmount > 0 && <span className="block">• {royaltyInfo.ethAmount} ETH per import</span>}
+                    {royaltyInfo.usdcAmount > 0 && <span className="block">• {royaltyInfo.usdcAmount} USDC per import</span>}
+                  </p>
+                </div>
+              )}
               
               {/* Actions */}
               {walletAddress !== listing.seller ? (
@@ -406,19 +432,20 @@ export default function MarketplaceDetailPage() {
       </main>
       
       {/* Offer Modal */}
-      {showOfferModal && (
+      {showOfferModal && listing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h3 className="text-lg font-semibold mb-4">Make an Offer</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-700 mb-2">Offer Price (ETH/USDC)</label>
+                <label className="block text-sm text-gray-700 mb-2">Offer Price ({listing.paymentToken})</label>
                 <input
                   type="number"
                   step="0.01"
                   value={offerPrice}
                   onChange={(e) => setOfferPrice(e.target.value)}
+                  placeholder="0.00"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
