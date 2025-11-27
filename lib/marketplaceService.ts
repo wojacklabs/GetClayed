@@ -549,6 +549,8 @@ export async function getProjectOffers(
 
 /**
  * Query all marketplace listings
+ * Note: Since projectId is an indexed string in the event, we need to decode
+ * the transaction input data to get the actual projectId value.
  */
 export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> {
   try {
@@ -579,16 +581,46 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
     console.log('[MarketplaceService] Found', events.length, 'events');
     
     const listings: MarketplaceListing[] = [];
+    const processedProjectIds = new Set<string>();
     
     for (const event of events) {
       try {
-        const parsedLog = contract.interface.parseLog(event as any);
-        if (parsedLog && parsedLog.args) {
-          const projectId = parsedLog.args.projectId;
-          console.log('[MarketplaceService] Processing listing for project:', projectId);
+        // Since projectId is indexed (hashed), we need to decode from transaction input
+        const txHash = event.transactionHash;
+        console.log('[MarketplaceService] Processing event from tx:', txHash);
+        
+        const tx = await provider.getTransaction(txHash);
+        if (!tx || !tx.data) {
+          console.warn('[MarketplaceService] Could not get transaction data');
+          continue;
+        }
+        
+        // Decode the transaction input to get the actual projectId
+        // listAsset(string projectId, uint256 price, uint8 paymentToken)
+        const iface = new ethers.Interface([
+          "function listAsset(string projectId, uint256 price, uint8 paymentToken)"
+        ]);
+        
+        try {
+          const decoded = iface.parseTransaction({ data: tx.data });
+          if (!decoded || !decoded.args) {
+            console.warn('[MarketplaceService] Could not decode transaction');
+            continue;
+          }
+          
+          const projectId = decoded.args[0] as string; // First argument is projectId
+          console.log('[MarketplaceService] Decoded projectId:', projectId);
+          
+          // Skip if already processed (in case of multiple events for same project)
+          if (processedProjectIds.has(projectId)) {
+            continue;
+          }
+          processedProjectIds.add(projectId);
           
           // Check if listing is still active
           const listingData = await contract.listings(projectId);
+          console.log('[MarketplaceService] Listing data for', projectId, '- isActive:', listingData.isActive);
+          
           if (listingData.isActive) {
             // Format price based on payment token
             const formattedPrice = listingData.paymentToken === 0
@@ -605,9 +637,11 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
             });
             console.log('[MarketplaceService] Added active listing:', projectId);
           }
+        } catch (decodeError) {
+          console.error('[MarketplaceService] Error decoding transaction:', decodeError);
         }
       } catch (e) {
-        console.error('[MarketplaceService] Error parsing event:', e);
+        console.error('[MarketplaceService] Error processing event:', e);
       }
     }
     
