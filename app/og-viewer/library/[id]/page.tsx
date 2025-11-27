@@ -10,7 +10,7 @@ import { downloadClayProject, restoreClayObjects } from '../../../../lib/claySto
 // Loading fallback
 function LoadingFallback() {
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-800 to-red-900">
+    <div className="w-full h-full flex items-center justify-center bg-slate-800">
       <div className="text-white text-2xl font-bold animate-pulse">Loading Library Asset...</div>
     </div>
   )
@@ -117,7 +117,7 @@ export default function OGViewerLibraryPage() {
   
   if (error || !asset) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-800 to-red-900">
+      <div className="w-full h-full flex items-center justify-center bg-slate-800">
         <div className="text-white text-2xl font-bold">
           {error || 'Asset not found'}
         </div>
@@ -136,7 +136,7 @@ export default function OGViewerLibraryPage() {
             near: 0.1,
             far: 1000
           }}
-          style={{ background: 'linear-gradient(135deg, #831843 0%, #dc2626 100%)' }}
+          style={{ background: asset.backgroundColor || '#1e293b' }}
         >
           <ambientLight intensity={0.35} />
           <directionalLight position={[8, 12, 8]} intensity={1.2} />

@@ -10,7 +10,7 @@ import { downloadClayProject, restoreClayObjects } from '../../../../lib/claySto
 // Loading fallback
 function LoadingFallback() {
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-yellow-600 to-orange-700">
+    <div className="w-full h-full flex items-center justify-center bg-slate-800">
       <div className="text-white text-2xl font-bold animate-pulse">Loading Marketplace Item...</div>
     </div>
   )
@@ -116,7 +116,7 @@ export default function OGViewerMarketplacePage() {
   
   if (error || !item) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-yellow-600 to-orange-700">
+      <div className="w-full h-full flex items-center justify-center bg-slate-800">
         <div className="text-white text-2xl font-bold">
           {error || 'Item not found'}
         </div>
@@ -135,7 +135,7 @@ export default function OGViewerMarketplacePage() {
             near: 0.1,
             far: 1000
           }}
-          style={{ background: 'linear-gradient(135deg, #ca8a04 0%, #c2410c 100%)' }}
+          style={{ background: item.backgroundColor || '#1e293b' }}
         >
           <ambientLight intensity={0.35} />
           <directionalLight position={[8, 12, 8]} intensity={1.2} />
