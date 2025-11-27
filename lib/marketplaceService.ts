@@ -547,6 +547,30 @@ export async function getProjectOffers(
   }
 }
 
+// Base Mainnet public RPC endpoints for read-only queries
+const BASE_RPC_ENDPOINTS = [
+  'https://base.publicnode.com',
+  'https://base.meowrpc.com',
+  'https://mainnet.base.org'
+];
+
+/**
+ * Get a working provider from the list of RPC endpoints
+ */
+async function getReadOnlyProvider(): Promise<ethers.JsonRpcProvider> {
+  for (const rpc of BASE_RPC_ENDPOINTS) {
+    try {
+      const provider = new ethers.JsonRpcProvider(rpc);
+      await provider.getBlockNumber(); // Test connection
+      console.log('[MarketplaceService] Connected to RPC:', rpc);
+      return provider;
+    } catch (e) {
+      console.warn('[MarketplaceService] RPC failed:', rpc);
+    }
+  }
+  throw new Error('All RPC endpoints failed');
+}
+
 /**
  * Query all marketplace listings
  * Note: Since projectId is an indexed string in the event, we need to decode
@@ -562,22 +586,20 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
       return [];
     }
     
-    if (typeof window === 'undefined' || !window.ethereum) {
-      console.warn('[MarketplaceService] No window.ethereum available');
-      return [];
-    }
-    
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    // Use public RPC for read-only queries (MetaMask RPC often rejects eth_getLogs)
+    const provider = await getReadOnlyProvider();
     const contract = new ethers.Contract(
       MARKETPLACE_CONTRACT_ADDRESS,
       MARKETPLACE_CONTRACT_ABI,
       provider
     );
     
-    // Get past AssetListed events
+    // Get past AssetListed events - use specific block range to avoid RPC limits
     console.log('[MarketplaceService] Querying AssetListed events...');
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - 50000); // Last ~50000 blocks (~2 days)
     const filter = contract.filters.AssetListed();
-    const events = await contract.queryFilter(filter, -10000); // Last ~10000 blocks
+    const events = await contract.queryFilter(filter, fromBlock, currentBlock);
     console.log('[MarketplaceService] Found', events.length, 'events');
     
     const listings: MarketplaceListing[] = [];
@@ -627,17 +649,20 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
           });
           
           // Parse raw result manually
-          // Skip first 32 bytes (offset to string), then parse fixed fields
-          // word 1 (offset 0x20): seller address
-          // word 2 (offset 0x40): price
-          // word 3 (offset 0x60): paymentToken
-          // word 4 (offset 0x80): listedAt
-          // word 5 (offset 0xa0): isActive
-          const seller = '0x' + rawResult.slice(26, 66); // address at offset 0x20
-          const price = BigInt('0x' + rawResult.slice(66, 130)); // uint256 at offset 0x40
-          const paymentToken = parseInt(rawResult.slice(130, 194), 16); // uint8 at offset 0x60
-          const listedAt = BigInt('0x' + rawResult.slice(194, 258)); // uint256 at offset 0x80
-          const isActive = parseInt(rawResult.slice(258, 322), 16) === 1; // bool at offset 0xa0
+          // Raw result format (with 0x prefix):
+          // - chars 2-65: word 0 (offset to string)
+          // - chars 66-129: word 1 (seller address, last 40 chars are the address)
+          // - chars 130-193: word 2 (price)
+          // - chars 194-257: word 3 (paymentToken)
+          // - chars 258-321: word 4 (listedAt)
+          // - chars 322-385: word 5 (isActive)
+          console.log('[MarketplaceService] Raw result length:', rawResult.length);
+          
+          const seller = '0x' + rawResult.slice(90, 130); // last 40 chars of word 1
+          const price = BigInt('0x' + rawResult.slice(130, 194)); // word 2
+          const paymentToken = parseInt(rawResult.slice(194, 258), 16); // word 3
+          const listedAt = BigInt('0x' + rawResult.slice(258, 322)); // word 4
+          const isActive = parseInt(rawResult.slice(322, 386), 16) === 1; // word 5
           
           console.log('[MarketplaceService] Listing data for', projectId, '- isActive:', isActive, 'seller:', seller);
           
