@@ -2,7 +2,6 @@ import { ethers } from 'ethers';
 import { saveMutableReference, getMutableReference } from './mutableStorageService';
 import { getErrorMessage } from './errorHandler';
 import { fixedKeyUploader } from './fixedKeyUploadService';
-import { batchContractCalls } from './rpcProvider';
 
 // USDC token address on Base Mainnet
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
@@ -678,46 +677,65 @@ export async function queryMarketplaceListings(): Promise<MarketplaceListing[]> 
       return [];
     }
     
-    // Step 3: Batch verify listing status on blockchain
-    const calls = projectsToVerify.map(({ projectId }) => ({
-      contractAddress: MARKETPLACE_CONTRACT_ADDRESS,
-      abi: MARKETPLACE_CONTRACT_ABI,
-      method: 'listings',
-      args: [projectId]
-    }));
+    // Step 3: Verify listing status on blockchain using raw calls
+    // (ethers.js has issues decoding the tuple return type)
+    const { getProvider } = await import('./rpcProvider');
+    const provider = await getProvider();
     
-    console.log('[MarketplaceService] Batch verifying', calls.length, 'listings on blockchain...');
-    const blockchainResults = await batchContractCalls<any>(calls);
-    
-    // Step 4: Combine Irys metadata with blockchain status
     const listings: MarketplaceListing[] = [];
+    const iface = new ethers.Interface(MARKETPLACE_CONTRACT_ABI);
     
-    for (let i = 0; i < projectsToVerify.length; i++) {
-      const { projectId, tags } = projectsToVerify[i];
-      const blockchainData = blockchainResults[i];
-      
-      // Skip if blockchain data not available or listing is not active
-      if (!blockchainData || !blockchainData.isActive) {
-        console.log('[MarketplaceService] Skipping inactive listing:', projectId);
-        continue;
+    console.log('[MarketplaceService] Verifying', projectsToVerify.length, 'listings on blockchain...');
+    
+    for (const { projectId, tags } of projectsToVerify) {
+      try {
+        // Use raw call to avoid tuple decoding issues
+        const callData = iface.encodeFunctionData('listings', [projectId]);
+        const rawResult = await provider.call({
+          to: MARKETPLACE_CONTRACT_ADDRESS,
+          data: callData
+        });
+        
+        // Parse raw result manually
+        // The contract returns: (string projectId, address seller, uint256 price, uint8 paymentToken, uint256 listedAt, bool isActive)
+        // Raw format with dynamic string:
+        // word 0 (0x00): offset to string data
+        // word 1 (0x20): seller address
+        // word 2 (0x40): price
+        // word 3 (0x60): paymentToken
+        // word 4 (0x80): listedAt
+        // word 5 (0xa0): isActive
+        const seller = '0x' + rawResult.slice(26, 66); // address at offset 0x20
+        const price = BigInt('0x' + rawResult.slice(66, 130)); // uint256 at offset 0x40
+        const paymentTokenVal = parseInt(rawResult.slice(130, 194), 16); // uint8 at offset 0x60
+        const listedAt = BigInt('0x' + rawResult.slice(194, 258)); // uint256 at offset 0x80
+        const isActive = parseInt(rawResult.slice(258, 322), 16) === 1; // bool at offset 0xa0
+        
+        console.log('[MarketplaceService] Listing data for', projectId, '- isActive:', isActive, 'seller:', seller);
+        
+        if (!isActive) {
+          console.log('[MarketplaceService] Skipping inactive listing:', projectId);
+          continue;
+        }
+        
+        // Format price based on payment token
+        const formattedPrice = paymentTokenVal === 0
+          ? ethers.formatEther(price)
+          : ethers.formatUnits(price, 6);
+        
+        listings.push({
+          projectId,
+          seller,
+          price: formattedPrice,
+          paymentToken: paymentTokenVal === 0 ? 'ETH' : 'USDC',
+          listedAt: Number(listedAt),
+          isActive: true
+        });
+        
+        console.log('[MarketplaceService] Added active listing:', projectId);
+      } catch (e) {
+        console.error('[MarketplaceService] Error verifying listing:', projectId, e);
       }
-      
-      // Use blockchain data as source of truth for price and status
-      const paymentToken = Number(blockchainData.paymentToken);
-      const formattedPrice = paymentToken === 0
-        ? ethers.formatEther(blockchainData.price)
-        : ethers.formatUnits(blockchainData.price, 6);
-      
-      listings.push({
-        projectId,
-        seller: blockchainData.seller,
-        price: formattedPrice,
-        paymentToken: paymentToken === 0 ? 'ETH' : 'USDC',
-        listedAt: Number(blockchainData.listedAt),
-        isActive: blockchainData.isActive
-      });
-      
-      console.log('[MarketplaceService] Added active listing:', projectId);
     }
     
     console.log('[MarketplaceService] Returning', listings.length, 'verified active listings');
