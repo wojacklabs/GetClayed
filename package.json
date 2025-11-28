@@ -15,6 +15,7 @@
     "@farcaster/miniapp-sdk": "^0.2.1",
     "@irys/upload": "^0.0.15",
     "@irys/upload-ethereum": "^0.0.16",
+    "@irys/upload-solana": "^0.1.8",
     "@irys/web-upload": "^0.0.15",
     "@irys/web-upload-ethereum": "^0.0.16",
     "@irys/web-upload-ethereum-ethers-v6": "^0.0.16",

@@ -21,7 +21,8 @@ const path = require('path');
 const UPNG = require('upng-js');
 const { PNG } = require('pngjs');
 
-// Load environment
+// Load environment (try both .env and .env.local)
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
 
 const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
@@ -38,12 +39,17 @@ const OG_APNG_CONFIG = {
 };
 
 // Irys uploader key (same as fixedKeyUploadService)
-const IRYS_KEY = process.env.IRYS_UPLOADER_KEY;
+// Format: comma-separated numbers like "123,456,789..."
+const IRYS_PRIVATE_KEY_STRING = process.env.NEXT_PUBLIC_IRYS_PRIVATE_KEY;
 
-if (!IRYS_KEY) {
-  console.error('❌ IRYS_UPLOADER_KEY not found in .env.local');
+if (!IRYS_PRIVATE_KEY_STRING) {
+  console.error('❌ NEXT_PUBLIC_IRYS_PRIVATE_KEY not found in environment');
+  console.error('   Please add it to .env or .env.local file');
   process.exit(1);
 }
+
+// Convert comma-separated string to Uint8Array
+const IRYS_PRIVATE_KEY = new Uint8Array(IRYS_PRIVATE_KEY_STRING.split(',').map(n => parseInt(n.trim(), 10)));
 
 /**
  * Load completed projects from file
@@ -307,16 +313,22 @@ async function generateApng(projectId, type) {
 }
 
 /**
- * Upload APNG to Irys
+ * Upload APNG to Irys using same method as fixedKeyUploadService
  */
 async function uploadApng(apngBuffer, projectId, sourceTxId, type, existingRootTxId) {
   console.log(`📤 Uploading APNG to Irys...`);
   
-  // Import the Irys module dynamically
+  // Import required modules
   const { Uploader } = await import('@irys/upload');
   const { Solana } = await import('@irys/upload-solana');
+  const { Keypair } = await import('@solana/web3.js');
 
-  const irys = await Uploader(Solana).withWallet(IRYS_KEY);
+  // Create keypair from private key (same as fixedKeyUploadService)
+  const keypair = Keypair.fromSecretKey(IRYS_PRIVATE_KEY);
+  console.log(`   Using wallet: ${keypair.publicKey.toBase58()}`);
+
+  // Create Irys uploader with Solana wallet
+  const irysUploader = await Uploader(Solana).withWallet(IRYS_PRIVATE_KEY);
 
   const tags = [
     { name: 'App-Name', value: 'GetClayed' },
@@ -332,7 +344,8 @@ async function uploadApng(apngBuffer, projectId, sourceTxId, type, existingRootT
     tags.push({ name: 'Root-TX', value: existingRootTxId });
   }
 
-  const receipt = await irys.upload(apngBuffer, { tags });
+  // Upload APNG buffer
+  const receipt = await irysUploader.upload(apngBuffer, { tags });
   const rootTxId = existingRootTxId || receipt.id;
 
   console.log(`   ✅ Uploaded: ${receipt.id}`);
