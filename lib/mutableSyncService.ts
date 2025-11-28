@@ -225,12 +225,13 @@ export async function getProjectLatestTxId(projectIdOrTxId: string): Promise<str
         if (actualProjectId) {
           console.log('[MutableSync] Found Project-ID from transaction:', actualProjectId);
           
-          // Now query for all versions of this project
+          // Now query for all versions of this project (only clay-project types)
           const projectQuery = `
             query {
               transactions(
                 tags: [
                   { name: "App-Name", values: ["GetClayed"] },
+                  { name: "Data-Type", values: ["clay-project", "clay-project-manifest"] },
                   { name: "Project-ID", values: ["${actualProjectId}"] }
                 ],
                 first: 100,
