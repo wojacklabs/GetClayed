@@ -589,12 +589,12 @@ export default function HomePage() {
               {filteredProjects
                 .slice((currentPage - 1) * projectsPerPage, currentPage * projectsPerPage)
                 .map((project) => (
-              <div key={project.id} className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow group border border-gray-200">
+              <div key={project.projectId} className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow group border border-gray-200">
                 <Link
-                  href={`/project/${project.id}`}
+                  href={`/project/${project.projectId}`}
                   className="block"
                 >
-                  {/* 3D Preview */}
+                  {/* 3D Preview - use transaction id for actual data loading */}
                   <MiniViewer 
                     projectId={project.id}
                     className="aspect-square"

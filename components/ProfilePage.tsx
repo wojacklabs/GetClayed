@@ -1121,8 +1121,8 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                   key={project.id}
                   className="bg-white rounded-lg hover:shadow-md transition-shadow border border-gray-200 relative group"
                 >
-                  {/* 3D Preview */}
-                  <div className="relative cursor-pointer rounded-t-lg overflow-hidden" onClick={() => router.push(`/project/${project.id}`)}>
+                  {/* 3D Preview - Link uses stable projectId, MiniViewer uses transaction id for data */}
+                  <div className="relative cursor-pointer rounded-t-lg overflow-hidden" onClick={() => router.push(`/project/${project.projectId || project.id}`)}>
                     <MiniViewer 
                       projectId={project.id}
                       className="aspect-square"
@@ -1139,7 +1139,7 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                     <div className="flex items-center justify-between">
                       <h4 
                         className="text-sm font-medium text-gray-900 mb-1 truncate flex-1 cursor-pointer"
-                        onClick={() => router.push(`/project/${project.id}`)}
+                        onClick={() => router.push(`/project/${project.projectId || project.id}`)}
                       >
                         {project.name}
                       </h4>
