@@ -2,6 +2,12 @@
  * OG APNG Service
  * Manages animated OG images for projects, libraries, and marketplace items
  * Uses Irys mutable pattern for versioned APNG storage
+ * 
+ * Architecture:
+ * 1. API registers APNG request (apng-request) to Irys
+ * 2. External server polls for pending requests
+ * 3. Server generates APNG and uploads (og-apng) to Irys
+ * 4. Screenshot API checks for og-apng, falls back to static PNG
  */
 
 import axios from 'axios';
@@ -25,6 +31,14 @@ export interface OgApngReference {
   sourceTxId: string;        // Project version this APNG was generated from
   type: OgApngType;
   createdAt: number;
+}
+
+export interface ApngRequest {
+  projectId: string;
+  sourceTxId: string;        // Project version to generate APNG from
+  type: OgApngType;
+  requestedAt: number;
+  txId: string;              // Request transaction ID
 }
 
 const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
@@ -193,5 +207,192 @@ export function apngNeedsUpdate(
     return true; // No APNG exists, need to generate
   }
   return apngRef.sourceTxId !== currentProjectTxId;
+}
+
+/**
+ * Register an APNG generation request to Irys
+ * This will be picked up by the external server for processing
+ */
+export async function registerApngRequest(
+  projectId: string,
+  sourceTxId: string,
+  type: OgApngType
+): Promise<{ txId: string } | null> {
+  try {
+    console.log('[OgApngService] Registering APNG request...');
+    console.log('  - Project ID:', projectId);
+    console.log('  - Source TX:', sourceTxId);
+    console.log('  - Type:', type);
+
+    // Check if there's already a pending request for this project/source
+    const existingRequest = await getPendingApngRequest(projectId, sourceTxId, type);
+    if (existingRequest) {
+      console.log('[OgApngService] Request already exists:', existingRequest.txId);
+      return { txId: existingRequest.txId };
+    }
+
+    const tags = [
+      { name: 'App-Name', value: 'GetClayed' },
+      { name: 'Data-Type', value: 'apng-request' },
+      { name: 'Content-Type', value: 'application/json' },
+      { name: 'Project-ID', value: projectId },
+      { name: 'Source-TX', value: sourceTxId },
+      { name: 'OG-Type', value: type },
+      { name: 'Requested-At', value: Date.now().toString() },
+    ];
+
+    const requestData = JSON.stringify({
+      projectId,
+      sourceTxId,
+      type,
+      requestedAt: Date.now(),
+    });
+
+    const receipt = await fixedKeyUploader.upload(Buffer.from(requestData), tags);
+    
+    console.log('[OgApngService] ✅ APNG request registered:', receipt.id);
+    return { txId: receipt.id };
+  } catch (error) {
+    console.error('[OgApngService] Error registering APNG request:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if there's already a pending APNG request for this project/source
+ */
+export async function getPendingApngRequest(
+  projectId: string,
+  sourceTxId: string,
+  type: OgApngType
+): Promise<ApngRequest | null> {
+  try {
+    const query = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["apng-request"] },
+            { name: "Project-ID", values: ["${projectId}"] },
+            { name: "Source-TX", values: ["${sourceTxId}"] },
+            { name: "OG-Type", values: ["${type}"] }
+          ],
+          order: DESC,
+          limit: 1
+        ) {
+          edges {
+            node {
+              id
+              timestamp
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await axios.post(IRYS_GRAPHQL_URL, { query });
+    const edges = response.data?.data?.transactions?.edges || [];
+
+    if (edges.length === 0) {
+      return null;
+    }
+
+    return {
+      projectId,
+      sourceTxId,
+      type,
+      requestedAt: edges[0].node.timestamp,
+      txId: edges[0].node.id,
+    };
+  } catch (error) {
+    console.error('[OgApngService] Error checking pending request:', error);
+    return null;
+  }
+}
+
+/**
+ * Get all pending APNG requests (for server processing)
+ */
+export async function getAllPendingApngRequests(): Promise<ApngRequest[]> {
+  try {
+    const query = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["apng-request"] }
+          ],
+          order: ASC,
+          limit: 100
+        ) {
+          edges {
+            node {
+              id
+              timestamp
+              tags {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await axios.post(IRYS_GRAPHQL_URL, { query });
+    const edges = response.data?.data?.transactions?.edges || [];
+
+    return edges.map((edge: any) => {
+      const tags = edge.node.tags.reduce((acc: any, tag: any) => {
+        acc[tag.name] = tag.value;
+        return acc;
+      }, {});
+
+      return {
+        projectId: tags['Project-ID'],
+        sourceTxId: tags['Source-TX'],
+        type: tags['OG-Type'] as OgApngType,
+        requestedAt: parseInt(tags['Requested-At'] || edge.node.timestamp),
+        txId: edge.node.id,
+      };
+    });
+  } catch (error) {
+    console.error('[OgApngService] Error getting pending requests:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if APNG already exists for a project (quick check for Screenshot API)
+ */
+export async function hasApng(projectId: string, type: OgApngType): Promise<boolean> {
+  try {
+    const query = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["og-apng"] },
+            { name: "Project-ID", values: ["${projectId}"] },
+            { name: "OG-Type", values: ["${type}"] }
+          ],
+          limit: 1
+        ) {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await axios.post(IRYS_GRAPHQL_URL, { query });
+    const edges = response.data?.data?.transactions?.edges || [];
+    return edges.length > 0;
+  } catch (error) {
+    console.error('[OgApngService] Error checking APNG existence:', error);
+    return false;
+  }
 }
 

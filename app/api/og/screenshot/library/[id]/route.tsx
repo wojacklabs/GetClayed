@@ -3,8 +3,8 @@ import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { 
   getOgApngReference, 
-  getApngMutableUrl, 
-  apngNeedsUpdate 
+  apngNeedsUpdate,
+  registerApngRequest
 } from '../../../../../../lib/ogApngService';
 
 // Use Node.js runtime for Puppeteer
@@ -67,26 +67,6 @@ async function getProjectLatestTxIdDirect(projectIdOrTxId: string): Promise<stri
   }
 }
 
-/**
- * Trigger APNG generation in background (fire-and-forget)
- */
-function triggerApngGeneration(projectId: string) {
-  const baseUrl = process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : 'https://getclayed.io';
-  
-  console.log('[Screenshot API] Triggering APNG generation for library:', projectId);
-  
-  // Fire and forget - don't await
-  fetch(`${baseUrl}/api/og/apng/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ projectId, type: 'library' }),
-  }).catch(err => {
-    console.error('[Screenshot API] Failed to trigger APNG generation:', err);
-  });
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -126,13 +106,14 @@ export async function GET(
           console.error('[Screenshot API] Error fetching APNG:', apngError);
         }
       } else {
-        // APNG doesn't exist or outdated - trigger generation in background
-        triggerApngGeneration(id);
-        console.log('[Screenshot API] APNG not found or outdated, triggering generation...');
+        // APNG doesn't exist or outdated - register request to Irys for external server processing
+        console.log('[Screenshot API] APNG not found or outdated, registering request to Irys...');
+        registerApngRequest(id, latestTxId, 'library').catch(err => {
+          console.error('[Screenshot API] Failed to register APNG request:', err);
+        });
       }
     } else {
-      triggerApngGeneration(id);
-      console.log('[Screenshot API] Could not get latestTxId, but triggering APNG generation anyway');
+      console.log('[Screenshot API] Could not get latestTxId, skipping APNG request');
     }
     
     // Fall back to generating static PNG screenshot
@@ -169,7 +150,7 @@ export async function GET(
     // Get base URL
     const baseUrl = isDev 
       ? 'http://localhost:3000' 
-      : 'https://getclayed.io';
+      : 'https://www.getclayed.io';
     
     // Navigate to the og-viewer page
     const viewerUrl = `${baseUrl}/og-viewer/library/${id}`;

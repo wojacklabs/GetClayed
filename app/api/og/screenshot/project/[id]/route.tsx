@@ -3,13 +3,13 @@ import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { 
   getOgApngReference, 
-  getApngMutableUrl, 
-  apngNeedsUpdate 
+  apngNeedsUpdate,
+  registerApngRequest
 } from '../../../../../../lib/ogApngService';
 
 // Use Node.js runtime for Puppeteer
 export const runtime = 'nodejs';
-export const maxDuration = 60; // 60 seconds timeout for chunked projects
+export const maxDuration = 60; // 60 seconds timeout for static PNG generation
 
 const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
 
@@ -70,26 +70,6 @@ async function getProjectLatestTxIdDirect(projectIdOrTxId: string): Promise<stri
   }
 }
 
-/**
- * Trigger APNG generation in background (fire-and-forget)
- */
-function triggerApngGeneration(projectId: string) {
-  const baseUrl = process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : 'https://getclayed.io';
-  
-  console.log('[Screenshot API] Triggering APNG generation for:', projectId);
-  
-  // Fire and forget - don't await
-  fetch(`${baseUrl}/api/og/apng/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ projectId, type: 'project' }),
-  }).catch(err => {
-    console.error('[Screenshot API] Failed to trigger APNG generation:', err);
-  });
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -132,15 +112,14 @@ export async function GET(
           // Fall through to generate static PNG
         }
       } else {
-        // APNG doesn't exist or outdated - trigger generation in background
-        triggerApngGeneration(id);
-        console.log('[Screenshot API] APNG not found or outdated, triggering generation...');
+        // APNG doesn't exist or outdated - register request to Irys for external server processing
+        console.log('[Screenshot API] APNG not found or outdated, registering request to Irys...');
+        registerApngRequest(id, latestTxId, 'project').catch(err => {
+          console.error('[Screenshot API] Failed to register APNG request:', err);
+        });
       }
     } else {
-      // Even without latestTxId, try to trigger APNG generation
-      // The APNG API will do its own verification
-      triggerApngGeneration(id);
-      console.log('[Screenshot API] Could not get latestTxId, but triggering APNG generation anyway');
+      console.log('[Screenshot API] Could not get latestTxId, skipping APNG request');
     }
     
     // Fall back to generating static PNG screenshot
@@ -177,7 +156,7 @@ export async function GET(
     // Get base URL
     const baseUrl = isDev 
       ? 'http://localhost:3000' 
-      : 'https://getclayed.io';
+      : 'https://www.getclayed.io';
     
     // Navigate to the og-viewer page
     const viewerUrl = `${baseUrl}/og-viewer/project/${id}`;
