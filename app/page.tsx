@@ -36,6 +36,7 @@ const SimpleClay = dynamic(() => import('@/components/SimpleClay'), {
 
 interface Project {
   id: string
+  projectId: string // Stable Project-ID (persists across updates)
   name: string
   author: string
   timestamp: number
