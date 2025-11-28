@@ -111,8 +111,8 @@ export async function generateMetadata({
   
   // Use screenshot API for real 3D rendering via iframe/Puppeteer
   // Use project ID + short hash of ID as cache buster (stable but unique per project)
-  const cacheKey = id.slice(-8)
-  const ogImageUrl = `${BASE_URL}/api/og/screenshot/project/${id}?v=${cacheKey}`
+  // Use version 2 to bust Farcaster's cache of old static PNG
+  const ogImageUrl = `${BASE_URL}/api/og/screenshot/project/${id}?v=apng2`
   const pageUrl = `${BASE_URL}/project/${id}`
   
   // Farcaster 미니앱용 메타 태그 생성
