@@ -1159,7 +1159,8 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleAddToLibrary(project.id, project.name)
+                                  // Use stable projectId for library registration
+                                  handleAddToLibrary(project.projectId || project.id, project.name)
                                   setProjectMenu(null)
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -1173,7 +1174,8 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleListOnMarketplace(project.id, project.name)
+                                  // Use stable projectId for marketplace listing
+                                  handleListOnMarketplace(project.projectId || project.id, project.name)
                                   setProjectMenu(null)
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
