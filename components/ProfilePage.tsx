@@ -297,24 +297,26 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
         })
       }
       
-      // Load project stats asynchronously
+      // Load project stats asynchronously using projectId (stable across updates)
       const stats = new Map<string, ProjectStats>()
       const loadStats = async () => {
         for (const project of userProjects) {
           try {
+            // Use projectId (stable) instead of id (transaction ID) for view/like tracking
+            const stableId = project.projectId || project.id
             const [likes, views] = await Promise.all([
-              getProjectLikeCount(project.id),
-              getProjectViewCount(project.id)
+              getProjectLikeCount(stableId),
+              getProjectViewCount(stableId)
             ])
-            stats.set(project.id, {
-              projectId: project.id,
+            stats.set(stableId, {
+              projectId: stableId,
               likes,
               views
             })
             // Update state incrementally
             setProjectStats(new Map(stats))
           } catch (error) {
-            console.error('Failed to load stats for project:', project.id, error)
+            console.error('Failed to load stats for project:', project.projectId || project.id, error)
           }
         }
       }
@@ -1112,7 +1114,8 @@ export default function ProfilePage({ walletAddress, currentUserAddress: initial
             {projects
               .slice((currentPage - 1) * projectsPerPage, currentPage * projectsPerPage)
               .map((project) => {
-              const stats = projectStats.get(project.id)
+              // Use projectId (stable) for stats lookup
+              const stats = projectStats.get(project.projectId || project.id)
               return (
                 <div
                   key={project.id}

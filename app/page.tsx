@@ -108,10 +108,10 @@ export default function HomePage() {
       // Transform and enrich project data
       const enrichedProjects = await Promise.all(
         allProjects.map(async (project) => {
-          // Get actual stats
+          // Get actual stats using projectId (stable across updates), not transaction id
           const [views, likes] = await Promise.all([
-            getProjectViewCount(project.id),
-            getProjectLikeCount(project.id)
+            getProjectViewCount(project.projectId),
+            getProjectLikeCount(project.projectId)
           ])
           
           // Get thumbnail if available

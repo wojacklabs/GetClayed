@@ -117,10 +117,11 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   }, [projectId])
   
   useEffect(() => {
-    if (walletAddress) {
+    // Only check interactions after project is loaded (need project.id for stable ID)
+    if (walletAddress && project) {
       checkUserInteractions()
     }
-  }, [projectId, walletAddress])
+  }, [project, walletAddress])
   
   const loadProject = async () => {
     setLoading(true)
@@ -148,11 +149,15 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       })))
       console.log('[ProjectDetail] Used libraries:', projectData.usedLibraries)
       
-      const likes = await getProjectLikeCount(projectId)
+      // Use project.id (stable Project-ID) for view/like tracking, not the transaction ID from URL
+      const stableProjectId = projectData.id
+      console.log('[ProjectDetail] Using stable project ID for stats:', stableProjectId)
+      
+      const likes = await getProjectLikeCount(stableProjectId)
       setLikeCount(likes)
       
       // Get view count
-      const views = await getProjectViewCount(projectId)
+      const views = await getProjectViewCount(stableProjectId)
       setViewCount(views)
       
       // Load author profile
@@ -165,9 +170,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         }
       }
       
-      // Record view if not already recorded
+      // Record view if not already recorded - use stable project ID
       if (!hasRecordedView) {
-        await recordProjectView(projectId, walletAddress || undefined)
+        await recordProjectView(stableProjectId, walletAddress || undefined)
         setViewCount(views + 1)
         setHasRecordedView(true)
       }
@@ -222,17 +227,21 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
     }
   }
   
+  // Use stable project ID (from loaded project) for all interactions
+  const getStableProjectId = () => project?.id || projectId
+  
   const checkUserInteractions = async () => {
-    if (!walletAddress) return
+    if (!walletAddress || !project) return
     
+    const stableId = getStableProjectId()
     try {
       const [liked, favorites] = await Promise.all([
-        hasUserLikedProject(projectId, walletAddress),
+        hasUserLikedProject(stableId, walletAddress),
         getUserFavorites(walletAddress)
       ])
       
       setIsLiked(liked)
-      setIsFavorited(favorites.includes(projectId))
+      setIsFavorited(favorites.includes(stableId))
     } catch (error) {
       console.error('Failed to check user interactions:', error)
     }
@@ -249,8 +258,9 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       return
     }
     
+    const stableId = getStableProjectId()
     try {
-      await likeProject(projectId, walletAddress)
+      await likeProject(stableId, walletAddress)
       setIsLiked(true)
       setLikeCount(prev => prev + 1)
       showPopup('Project liked!', 'success')
@@ -266,13 +276,14 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       return
     }
     
+    const stableId = getStableProjectId()
     try {
       if (isFavorited) {
-        await unfavoriteProject(projectId, walletAddress)
+        await unfavoriteProject(stableId, walletAddress)
         setIsFavorited(false)
         showPopup('Removed from favorites', 'success')
       } else {
-        await favoriteProject(projectId, walletAddress)
+        await favoriteProject(stableId, walletAddress)
         setIsFavorited(true)
         showPopup('Added to favorites!', 'success')
       }

@@ -946,6 +946,7 @@ export async function queryAllProjects(
   limit: number = 100
 ): Promise<Array<{
   id: string;
+  projectId: string; // Persistent Project-ID (stable across updates)
   name: string;
   author: string;
   timestamp: number;
@@ -1098,6 +1099,7 @@ export async function queryAllProjects(
         // First time seeing this project
         projectMap.set(projectId, {
           id: node.id,
+          projectId: projectId, // Persistent Project-ID for view/like tracking
           name: tags['Project-Name'] || 'Untitled',
           author: tags['Author'] || '',
           timestamp: node.timestamp,
@@ -1110,6 +1112,7 @@ export async function queryAllProjects(
         if (node.timestamp > existingProject.timestamp) {
           projectMap.set(projectId, {
             id: node.id,
+            projectId: projectId, // Persistent Project-ID for view/like tracking
             name: tags['Project-Name'] || 'Untitled',
             author: tags['Author'] || '',
             timestamp: node.timestamp,
