@@ -14,7 +14,7 @@ function LoadingFallback() {
       {/* Hidden canvas for Puppeteer to detect */}
       <canvas style={{ opacity: 0, position: 'absolute' }} />
       <div className="w-full h-full flex items-center justify-center">
-        <div className="text-white text-2xl font-bold animate-pulse">Loading Library Asset...</div>
+      <div className="text-white text-2xl font-bold animate-pulse">Loading Library Asset...</div>
       </div>
     </div>
   )

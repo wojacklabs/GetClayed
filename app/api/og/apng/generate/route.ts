@@ -179,21 +179,21 @@ export async function POST(request: NextRequest) {
     // Get base URL
     const baseUrl = isDev 
       ? 'http://localhost:3000' 
-      : 'https://getclayed.io';
+      : 'https://www.getclayed.io';
     
     // Navigate to og-viewer page
     const viewerUrl = `${baseUrl}/og-viewer/${type}/${projectId}`;
     console.log('[APNG Generate] Navigating to:', viewerUrl);
     
     await page.goto(viewerUrl, {
-      waitUntil: 'networkidle0',
-      timeout: 60000,
+      waitUntil: 'networkidle2', // Allow up to 2 pending requests (chunks may still be loading)
+      timeout: 90000, // Extended timeout for large chunked projects
     });
     
     console.log('[APNG Generate] Page loaded, waiting for canvas...');
     
     // Wait for Three.js canvas
-    await page.waitForSelector('canvas', { timeout: 30000 });
+    await page.waitForSelector('canvas', { timeout: 60000 });
     
     // Wait for 3D content to render
     await page.waitForFunction(
@@ -202,11 +202,11 @@ export async function POST(request: NextRequest) {
         if (!canvas) return false;
         return canvas.width > 0 && canvas.height > 0;
       },
-      { timeout: 10000 }
+      { timeout: 30000 }
     );
     
-    // Extra time for initial render
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Extra time for initial render and chunk loading completion
+    await new Promise(resolve => setTimeout(resolve, 3000));
     console.log('[APNG Generate] Canvas ready, starting frame capture...');
     
     // Capture frames
