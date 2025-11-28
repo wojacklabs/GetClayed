@@ -98,16 +98,29 @@ export async function GET(
       const apngRef = await getOgApngReference(id, 'project');
       
       if (apngRef && !apngNeedsUpdate(apngRef, latestTxId)) {
-        // APNG exists and is current - redirect to mutable URL
-        const mutableUrl = getApngMutableUrl(apngRef.apngRootTxId);
-        console.log('[Screenshot API] APNG found, redirecting to:', mutableUrl);
+        // APNG exists and is current - fetch and return directly (no redirect)
+        // Farcaster doesn't follow 302 redirects properly for OG images
+        const apngUrl = `https://uploader.irys.xyz/tx/${apngRef.latestApngTxId}/data`;
+        console.log('[Screenshot API] APNG found, fetching from:', apngUrl);
         
-        return NextResponse.redirect(mutableUrl, {
-          status: 302, // Temporary redirect (allows re-checking)
-          headers: {
-            'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=3600',
-          },
-        });
+        try {
+          const apngResponse = await fetch(apngUrl);
+          if (apngResponse.ok) {
+            const apngBuffer = await apngResponse.arrayBuffer();
+            console.log('[Screenshot API] APNG fetched, size:', apngBuffer.byteLength);
+            
+            return new NextResponse(apngBuffer, {
+              status: 200,
+              headers: {
+                'Content-Type': 'image/apng',
+                'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=3600',
+              },
+            });
+          }
+        } catch (apngError) {
+          console.error('[Screenshot API] Error fetching APNG:', apngError);
+          // Fall through to generate static PNG
+        }
       } else {
         // APNG doesn't exist or outdated - trigger generation in background
         triggerApngGeneration(id);

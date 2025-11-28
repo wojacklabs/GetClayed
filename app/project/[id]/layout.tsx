@@ -1,6 +1,53 @@
 import { Metadata } from 'next'
 import { createFarcasterEmbedTags, BASE_URL } from '@/lib/farcasterMetadata'
 
+const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql'
+
+/**
+ * Get project's latest transaction ID via GraphQL
+ */
+async function getProjectLatestTxId(projectId: string): Promise<string | null> {
+  try {
+    const query = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["clay-project", "clay-project-manifest"] },
+            { name: "Project-ID", values: ["${projectId}"] }
+          ],
+          first: 1,
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    `
+
+    const response = await fetch(IRYS_GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    })
+
+    if (!response.ok) return null
+
+    const result = await response.json()
+    const edges = result.data?.transactions?.edges || []
+    
+    if (edges.length === 0) return null
+    return edges[0].node.id
+  } catch (error) {
+    console.error('[Layout] Error querying project:', error)
+    return null
+  }
+}
+
 // Note: This is a Server Component that runs at build time and on request
 // For dynamic data, we'll use the API endpoint with query parameters
 export async function generateMetadata({
@@ -17,9 +64,20 @@ export async function generateMetadata({
   let thumbnailId = ''
   
   try {
-    // Fetch project data from Irys
-    // Use the direct data endpoint
-    const IRYS_DATA_URL = `https://uploader.irys.xyz/tx/${id}/data`
+    // First, check if id is a Project-ID or Transaction ID
+    // Project-IDs start with 'clay-', Transaction IDs are base58 hashes
+    let txId = id
+    
+    if (id.startsWith('clay-')) {
+      // It's a Project-ID, need to get the latest Transaction ID
+      const latestTxId = await getProjectLatestTxId(id)
+      if (latestTxId) {
+        txId = latestTxId
+      }
+    }
+    
+    // Fetch project data from Irys using the Transaction ID
+    const IRYS_DATA_URL = `https://uploader.irys.xyz/tx/${txId}/data`
     const response = await fetch(IRYS_DATA_URL, {
       next: { revalidate: 3600 }, // Cache for 1 hour
       headers: {
