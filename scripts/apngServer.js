@@ -38,18 +38,7 @@ const OG_APNG_CONFIG = {
   HEIGHT: 800,
 };
 
-// Irys uploader key (same as fixedKeyUploadService)
-// Format: comma-separated numbers like "123,456,789..."
-const IRYS_PRIVATE_KEY_STRING = process.env.NEXT_PUBLIC_IRYS_PRIVATE_KEY;
-
-if (!IRYS_PRIVATE_KEY_STRING) {
-  console.error('❌ NEXT_PUBLIC_IRYS_PRIVATE_KEY not found in environment');
-  console.error('   Please add it to .env or .env.local file');
-  process.exit(1);
-}
-
-// Convert comma-separated string to Uint8Array
-const IRYS_PRIVATE_KEY = new Uint8Array(IRYS_PRIVATE_KEY_STRING.split(',').map(n => parseInt(n.trim(), 10)));
+// No local Solana key needed - upload is done via API using Vercel's key
 
 /**
  * Load completed projects from file
@@ -278,10 +267,11 @@ async function generateApng(projectId, type) {
     for (let i = 0; i < OG_APNG_CONFIG.FRAME_COUNT; i++) {
       const screenshot = await page.screenshot({
         type: 'png',
-        encoding: 'binary',
       });
 
-      const png = PNG.sync.read(screenshot);
+      // Ensure it's a Buffer for pngjs
+      const screenshotBuffer = Buffer.isBuffer(screenshot) ? screenshot : Buffer.from(screenshot);
+      const png = PNG.sync.read(screenshotBuffer);
       
       if (width === 0) {
         width = png.width;
@@ -313,48 +303,37 @@ async function generateApng(projectId, type) {
 }
 
 /**
- * Upload APNG to Irys using same method as fixedKeyUploadService
+ * Upload APNG via API (uses Vercel's environment key)
  */
-async function uploadApng(apngBuffer, projectId, sourceTxId, type, existingRootTxId) {
-  console.log(`📤 Uploading APNG to Irys...`);
+async function uploadApng(apngBuffer, projectId, sourceTxId, type) {
+  console.log(`📤 Uploading APNG via API...`);
   
-  // Import required modules
-  const { Uploader } = await import('@irys/upload');
-  const { Solana } = await import('@irys/upload-solana');
-  const { Keypair } = await import('@solana/web3.js');
+  // Convert buffer to base64
+  const apngBase64 = apngBuffer.toString('base64');
+  console.log(`   Base64 size: ${(apngBase64.length / 1024).toFixed(2)} KB`);
 
-  // Create keypair from private key (same as fixedKeyUploadService)
-  const keypair = Keypair.fromSecretKey(IRYS_PRIVATE_KEY);
-  console.log(`   Using wallet: ${keypair.publicKey.toBase58()}`);
+  // Call API endpoint
+  const response = await axios.post(`${BASE_URL}/api/og/apng/upload`, {
+    projectId,
+    sourceTxId,
+    type,
+    apngBase64,
+  }, {
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 120000, // 2 minutes
+  });
 
-  // Create Irys uploader with Solana wallet
-  const irysUploader = await Uploader(Solana).withWallet(IRYS_PRIVATE_KEY);
-
-  const tags = [
-    { name: 'App-Name', value: 'GetClayed' },
-    { name: 'Data-Type', value: 'og-apng' },
-    { name: 'Content-Type', value: 'image/apng' },
-    { name: 'Project-ID', value: projectId },
-    { name: 'OG-Type', value: type },
-    { name: 'Source-TX', value: sourceTxId },
-    { name: 'Created-At', value: Date.now().toString() },
-  ];
-
-  if (existingRootTxId) {
-    tags.push({ name: 'Root-TX', value: existingRootTxId });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'API upload failed');
   }
 
-  // Upload APNG buffer
-  const receipt = await irysUploader.upload(apngBuffer, { tags });
-  const rootTxId = existingRootTxId || receipt.id;
-
-  console.log(`   ✅ Uploaded: ${receipt.id}`);
-  console.log(`   Root TX: ${rootTxId}`);
-  console.log(`   Mutable URL: https://gateway.irys.xyz/mutable/${rootTxId}`);
+  console.log(`   ✅ Uploaded: ${response.data.txId}`);
+  console.log(`   Root TX: ${response.data.rootTxId}`);
+  console.log(`   Mutable URL: ${response.data.mutableUrl}`);
 
   return {
-    txId: receipt.id,
-    rootTxId,
+    txId: response.data.txId,
+    rootTxId: response.data.rootTxId,
   };
 }
 
@@ -386,16 +365,12 @@ async function processRequest(request, completed) {
     // Generate APNG
     const apngBuffer = await generateApng(request.projectId, request.type);
 
-    // Get existing root TX for mutable updates
-    const existingRootTxId = await getExistingApngRootTx(request.projectId, request.type);
-
-    // Upload to Irys
+    // Upload via API (API handles existing root TX lookup)
     const { txId, rootTxId } = await uploadApng(
       apngBuffer,
       request.projectId,
       request.sourceTxId,
-      request.type,
-      existingRootTxId
+      request.type
     );
 
     // Mark as completed
