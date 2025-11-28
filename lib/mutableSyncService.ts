@@ -145,11 +145,14 @@ export async function getProjectLatestTxId(projectIdOrTxId: string): Promise<str
   
   // Query GraphQL for the project by Project-ID tag
   try {
+    console.log('[MutableSync] Querying for project:', projectIdOrTxId);
+    
     const query = `
       query {
         transactions(
           tags: [
             { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["clay-project", "clay-project-manifest"] },
             { name: "Project-ID", values: ["${projectIdOrTxId}"] }
           ],
           first: 100,
@@ -306,9 +309,13 @@ export async function getProjectLatestTxId(projectIdOrTxId: string): Promise<str
       }
     }
     
-    if (latestTxId && rootTxId && author) {
+    console.log('[MutableSync] Query result:', { latestTxId, rootTxId, author, edgesCount: edges.length });
+    
+    if (latestTxId) {
       // Save to local storage for future use (use actual Project-ID)
-      saveMutableReference(actualProjectId, rootTxId, latestTxId, projectName, author);
+      if (rootTxId && author) {
+        saveMutableReference(actualProjectId, rootTxId, latestTxId, projectName, author);
+      }
       return latestTxId;
     }
     
