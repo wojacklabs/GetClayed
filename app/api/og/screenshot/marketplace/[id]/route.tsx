@@ -6,11 +6,57 @@ import {
   getApngMutableUrl, 
   apngNeedsUpdate 
 } from '../../../../../../lib/ogApngService';
-import { getProjectLatestTxId } from '../../../../../../lib/mutableSyncService';
 
 // Use Node.js runtime for Puppeteer
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 60 seconds timeout
+
+const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
+
+/**
+ * Direct GraphQL query to get project's latest transaction ID
+ */
+async function getProjectLatestTxIdDirect(projectId: string): Promise<string | null> {
+  try {
+    const query = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["clay-project", "clay-project-manifest"] },
+            { name: "Project-ID", values: ["${projectId}"] }
+          ],
+          first: 5,
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+              timestamp
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(IRYS_GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) return null;
+
+    const result = await response.json();
+    const edges = result.data?.transactions?.edges || [];
+    
+    if (edges.length === 0) return null;
+    return edges[0].node.id;
+  } catch (error) {
+    console.error('[Screenshot API] Error querying project:', error);
+    return null;
+  }
+}
 
 /**
  * Trigger APNG generation in background (fire-and-forget)
@@ -42,8 +88,9 @@ export async function GET(
     const { id } = await params;
     console.log('[Screenshot API] Request for marketplace item:', id);
     
-    // Check if APNG exists and is up-to-date
-    const latestTxId = await getProjectLatestTxId(id);
+    // Check if APNG exists and is up-to-date using direct GraphQL query
+    const latestTxId = await getProjectLatestTxIdDirect(id);
+    
     if (latestTxId) {
       const apngRef = await getOgApngReference(id, 'marketplace');
       
@@ -61,8 +108,11 @@ export async function GET(
       } else {
         // APNG doesn't exist or outdated - trigger generation in background
         triggerApngGeneration(id);
-        console.log('[Screenshot API] APNG not found or outdated, generating static image...');
+        console.log('[Screenshot API] APNG not found or outdated, triggering generation...');
       }
+    } else {
+      triggerApngGeneration(id);
+      console.log('[Screenshot API] Could not get latestTxId, but triggering APNG generation anyway');
     }
     
     // Fall back to generating static PNG screenshot

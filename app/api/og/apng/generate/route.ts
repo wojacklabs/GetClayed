@@ -10,16 +10,88 @@ import {
   uploadOgApng,
   apngNeedsUpdate 
 } from '../../../../../lib/ogApngService';
-import { getProjectLatestTxId } from '../../../../../lib/mutableSyncService';
 
 // Use Node.js runtime for Puppeteer
 export const runtime = 'nodejs';
 export const maxDuration = 120; // 120 seconds timeout for APNG generation
 
+const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
+
 interface GenerateRequest {
   projectId: string;
   type: OgApngType;
   force?: boolean; // Force regeneration even if up-to-date
+}
+
+/**
+ * Direct GraphQL query to get project's latest transaction ID
+ * This is more reliable than going through mutableSyncService in serverless environment
+ */
+async function getProjectLatestTxIdDirect(projectId: string): Promise<string | null> {
+  try {
+    console.log('[APNG Generate] Querying project directly:', projectId);
+    
+    const query = `
+      query {
+        transactions(
+          tags: [
+            { name: "App-Name", values: ["GetClayed"] },
+            { name: "Data-Type", values: ["clay-project", "clay-project-manifest"] },
+            { name: "Project-ID", values: ["${projectId}"] }
+          ],
+          first: 10,
+          order: DESC
+        ) {
+          edges {
+            node {
+              id
+              timestamp
+              tags {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(IRYS_GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) {
+      console.error('[APNG Generate] GraphQL request failed:', response.status);
+      return null;
+    }
+
+    const result = await response.json();
+    const edges = result.data?.transactions?.edges || [];
+    
+    console.log('[APNG Generate] GraphQL result edges:', edges.length);
+    
+    if (edges.length === 0) {
+      return null;
+    }
+
+    // Find the latest transaction
+    let latestTxId: string | null = null;
+    let latestTimestamp = 0;
+
+    for (const edge of edges) {
+      if (edge.node.timestamp > latestTimestamp) {
+        latestTxId = edge.node.id;
+        latestTimestamp = edge.node.timestamp;
+      }
+    }
+
+    return latestTxId;
+  } catch (error) {
+    console.error('[APNG Generate] Error querying project:', error);
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -41,11 +113,16 @@ export async function POST(request: NextRequest) {
     console.log('  - Type:', type);
     console.log('  - Force:', force);
 
-    // Get current project version
-    const latestTxId = await getProjectLatestTxId(projectId);
+    // Get current project version using direct GraphQL query
+    const latestTxId = await getProjectLatestTxIdDirect(projectId);
+    
     if (!latestTxId) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { 
+          error: 'Project not found',
+          projectId,
+          hint: 'No transactions found for this Project-ID'
+        },
         { status: 404 }
       );
     }
