@@ -15,8 +15,9 @@ const IRYS_GRAPHQL_URL = 'https://uploader.irys.xyz/graphql';
 
 /**
  * Direct GraphQL query to get project's latest transaction ID
+ * Handles both Project-ID (clay-xxx) and Transaction ID (base58 hash)
  */
-async function getProjectLatestTxIdDirect(projectId: string): Promise<string | null> {
+async function getProjectLatestTxIdDirect(projectIdOrTxId: string): Promise<string | null> {
   try {
     const query = `
       query {
@@ -24,7 +25,7 @@ async function getProjectLatestTxIdDirect(projectId: string): Promise<string | n
           tags: [
             { name: "App-Name", values: ["GetClayed"] },
             { name: "Data-Type", values: ["clay-project", "clay-project-manifest"] },
-            { name: "Project-ID", values: ["${projectId}"] }
+            { name: "Project-ID", values: ["${projectIdOrTxId}"] }
           ],
           first: 5,
           order: DESC
@@ -49,6 +50,15 @@ async function getProjectLatestTxIdDirect(projectId: string): Promise<string | n
 
     const result = await response.json();
     const edges = result.data?.transactions?.edges || [];
+    
+    // If no results and ID doesn't look like a Project-ID, it might be a Transaction ID
+    if (edges.length === 0 && !projectIdOrTxId.startsWith('clay-')) {
+      // Verify if the Transaction ID exists
+      const dataUrl = `https://uploader.irys.xyz/tx/${projectIdOrTxId}/data`;
+      const dataResponse = await fetch(dataUrl, { method: 'HEAD' });
+      if (dataResponse.ok) return projectIdOrTxId;
+      return null;
+    }
     
     if (edges.length === 0) return null;
 

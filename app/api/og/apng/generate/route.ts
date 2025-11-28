@@ -25,19 +25,20 @@ interface GenerateRequest {
 
 /**
  * Direct GraphQL query to get project's latest transaction ID
- * This is more reliable than going through mutableSyncService in serverless environment
+ * Handles both Project-ID (clay-xxx) and Transaction ID (base58 hash)
  */
-async function getProjectLatestTxIdDirect(projectId: string): Promise<string | null> {
+async function getProjectLatestTxIdDirect(projectIdOrTxId: string): Promise<string | null> {
   try {
-    console.log('[APNG Generate] Querying project directly:', projectId);
+    console.log('[APNG Generate] Querying project directly:', projectIdOrTxId);
     
+    // First, try searching by Project-ID tag
     const query = `
       query {
         transactions(
           tags: [
             { name: "App-Name", values: ["GetClayed"] },
             { name: "Data-Type", values: ["clay-project", "clay-project-manifest"] },
-            { name: "Project-ID", values: ["${projectId}"] }
+            { name: "Project-ID", values: ["${projectIdOrTxId}"] }
           ],
           first: 10,
           order: DESC
@@ -46,10 +47,6 @@ async function getProjectLatestTxIdDirect(projectId: string): Promise<string | n
             node {
               id
               timestamp
-              tags {
-                name
-                value
-              }
             }
           }
         }
@@ -68,11 +65,24 @@ async function getProjectLatestTxIdDirect(projectId: string): Promise<string | n
     }
 
     const result = await response.json();
-    const edges = result.data?.transactions?.edges || [];
+    let edges = result.data?.transactions?.edges || [];
     
     console.log('[APNG Generate] GraphQL result edges:', edges.length);
     
-    if (edges.length === 0) {
+    // If no results and ID doesn't look like a Project-ID, it might be a Transaction ID
+    if (edges.length === 0 && !projectIdOrTxId.startsWith('clay-')) {
+      console.log('[APNG Generate] No Project-ID match, checking if it is a Transaction ID...');
+      
+      // Verify if the Transaction ID exists by fetching data directly
+      const dataUrl = `https://uploader.irys.xyz/tx/${projectIdOrTxId}/data`;
+      const dataResponse = await fetch(dataUrl, { method: 'HEAD' });
+      
+      if (dataResponse.ok) {
+        console.log('[APNG Generate] Transaction ID is valid:', projectIdOrTxId);
+        // The input IS the transaction ID
+        return projectIdOrTxId;
+      }
+      
       return null;
     }
 
