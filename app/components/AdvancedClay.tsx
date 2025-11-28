@@ -2951,23 +2951,30 @@ export default function AdvancedClay() {
       addToHistory(newClays)
       
       // HIERARCHICAL: Track only direct import
+      // SECURITY: Store the transaction ID at import time for version tracking (abuse prevention)
+      const importedTxId = (project as any)._loadedFromTxId || asset.projectId
       const directLibrary = {
         projectId: asset.projectId,
         name: asset.name,
         royaltyPerImportETH: asset.royaltyPerImportETH || '0',
         royaltyPerImportUSDC: asset.royaltyPerImportUSDC || '0',
-        creator: asset.originalCreator || asset.currentOwner
+        creator: asset.originalCreator || asset.currentOwner,
+        importedTxId: importedTxId,  // Transaction ID at import time
+        importedAt: Date.now()        // Timestamp when imported
       }
       
       // Track all dependencies (for display/reference)
-      const allLibraries = [directLibrary]
+      const allLibraries: Array<typeof directLibrary> = [directLibrary]
       if (project.usedLibraries && project.usedLibraries.length > 0) {
         const converted = project.usedLibraries.map((lib: any) => ({
           projectId: lib.projectId,
           name: lib.name,
           royaltyPerImportETH: lib.royaltyPerImportETH || lib.priceETH || '0',
           royaltyPerImportUSDC: lib.royaltyPerImportUSDC || lib.priceUSDC || '0',
-          creator: lib.creator
+          creator: lib.creator,
+          // Preserve version info from nested libraries if available
+          importedTxId: lib.importedTxId,
+          importedAt: lib.importedAt
         }));
         allLibraries.push(...converted);
       }

@@ -39,6 +39,9 @@ export interface UsedLibrary {
   royaltyPerImportETH: string;
   royaltyPerImportUSDC: string;
   creator?: string;
+  // Version tracking for abuse prevention
+  importedTxId?: string;  // Transaction ID at import time (immutable reference)
+  importedAt?: number;    // Timestamp when imported
 }
 
 export interface ClayProject {
@@ -582,6 +585,8 @@ export async function downloadClayProject(
       try {
         const project = JSON.parse(reassembled);
         console.log('[downloadClayProject] Successfully reassembled chunked project');
+        // Store the transaction ID used for loading (for version tracking)
+        (project as any)._loadedFromTxId = txIdToUse;
         return project;
       } catch (parseError) {
         console.error('[downloadClayProject] Failed to parse reassembled JSON:', parseError);
@@ -601,6 +606,8 @@ export async function downloadClayProject(
     
     // Regular project data
     const project = data as ClayProject;
+    // Store the transaction ID used for loading (for version tracking)
+    (project as any)._loadedFromTxId = txIdToUse;
     
     // SECURITY: Verify project integrity if signature exists
     if (!skipIntegrityCheck && project.signature) {

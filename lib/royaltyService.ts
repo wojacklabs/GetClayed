@@ -30,6 +30,9 @@ export interface RoyaltyReceipt {
     owner: string; // Owner at time of payment
     royaltyETH: string;
     royaltyUSDC: string;
+    // Version tracking for abuse prevention
+    importedTxId?: string;  // Transaction ID at import time
+    importedAt?: number;    // Timestamp when imported
     distributions?: Array<{
       projectId: string;
       name: string;

@@ -545,7 +545,7 @@ export default function LibraryDetailPage() {
                   </div>
                 )}
               
-              {/* History List */}
+              {/* History List - Grouped by version if available */}
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {royaltyHistory.length === 0 ? (
                   <div className="text-center py-4">
@@ -553,27 +553,130 @@ export default function LibraryDetailPage() {
                     <p className="text-xs text-gray-400 mt-1">Revenue will appear here when your library assets are used</p>
                   </div>
                 ) : (
-                  royaltyHistory.map((event, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <DollarSign size={16} className="text-green-600" />
-                        <div>
-                          <p className="text-sm text-gray-600">
-                            {new Date(event.timestamp).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-gray-500">From {event.payerName || 'Unknown project'} ({event.payer ? event.payer.slice(0, 6) + '...' + event.payer.slice(-4) : 'Unknown'})</p>
+                  (() => {
+                    // Group by version (importedTxId) if available
+                    const groupedByVersion = new Map<string, typeof royaltyHistory>();
+                    const noVersionEvents: typeof royaltyHistory = [];
+                    
+                    royaltyHistory.forEach(event => {
+                      const version = (event as any).importedTxId;
+                      if (version) {
+                        if (!groupedByVersion.has(version)) {
+                          groupedByVersion.set(version, []);
+                        }
+                        groupedByVersion.get(version)!.push(event);
+                      } else {
+                        noVersionEvents.push(event);
+                      }
+                    });
+                    
+                    // If no version info, show flat list
+                    if (groupedByVersion.size === 0) {
+                      return royaltyHistory.map((event, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <DollarSign size={16} className="text-green-600" />
+                            <div>
+                              <p className="text-sm text-gray-600">
+                                {new Date(event.timestamp).toLocaleDateString()}
+                              </p>
+                              <p className="text-xs text-gray-500">From {event.payerName || 'Unknown project'} ({event.payer ? event.payer.slice(0, 6) + '...' + event.payer.slice(-4) : 'Unknown'})</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {parseFloat(event.amountETH || '0') > 0 && (
+                              <p className="text-sm font-medium text-gray-900">{event.amountETH} ETH</p>
+                            )}
+                            {parseFloat(event.amountUSDC || '0') > 0 && (
+                              <p className="text-sm font-medium text-gray-900">{event.amountUSDC} USDC</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        {parseFloat(event.amountETH || '0') > 0 && (
-                          <p className="text-sm font-medium text-gray-900">{event.amountETH} ETH</p>
+                      ));
+                    }
+                    
+                    // Show grouped by version
+                    return (
+                      <>
+                        {Array.from(groupedByVersion.entries()).map(([version, events], vIdx) => {
+                          const versionTotal = events.reduce((acc, e) => ({
+                            eth: acc.eth + parseFloat(e.amountETH || '0'),
+                            usdc: acc.usdc + parseFloat(e.amountUSDC || '0')
+                          }), { eth: 0, usdc: 0 });
+                          
+                          return (
+                            <div key={vIdx} className="border border-gray-200 rounded-lg overflow-hidden">
+                              <div className="bg-gray-100 px-3 py-2 flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-700">
+                                  Version: {version.slice(0, 8)}...
+                                </span>
+                                <span className="text-xs text-gray-600">
+                                  {events.length} payment{events.length > 1 ? 's' : ''} • 
+                                  {versionTotal.eth > 0 && ` ${versionTotal.eth.toFixed(6)} ETH`}
+                                  {versionTotal.usdc > 0 && ` ${versionTotal.usdc.toFixed(6)} USDC`}
+                                </span>
+                              </div>
+                              <div className="divide-y divide-gray-100">
+                                {events.map((event, idx) => (
+                                  <div key={idx} className="flex items-center justify-between p-3">
+                                    <div className="flex items-center gap-2">
+                                      <DollarSign size={14} className="text-green-600" />
+                                      <div>
+                                        <p className="text-sm text-gray-600">
+                                          {new Date(event.timestamp).toLocaleDateString()}
+                                        </p>
+                                        <p className="text-xs text-gray-500">From {event.payerName || 'Unknown'}</p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      {parseFloat(event.amountETH || '0') > 0 && (
+                                        <p className="text-sm font-medium text-gray-900">{event.amountETH} ETH</p>
+                                      )}
+                                      {parseFloat(event.amountUSDC || '0') > 0 && (
+                                        <p className="text-sm font-medium text-gray-900">{event.amountUSDC} USDC</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        
+                        {/* Events without version info */}
+                        {noVersionEvents.length > 0 && (
+                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="bg-gray-100 px-3 py-2">
+                              <span className="text-xs font-medium text-gray-700">Legacy (no version info)</span>
+                            </div>
+                            <div className="divide-y divide-gray-100">
+                              {noVersionEvents.map((event, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3">
+                                  <div className="flex items-center gap-2">
+                                    <DollarSign size={14} className="text-green-600" />
+                                    <div>
+                                      <p className="text-sm text-gray-600">
+                                        {new Date(event.timestamp).toLocaleDateString()}
+                                      </p>
+                                      <p className="text-xs text-gray-500">From {event.payerName || 'Unknown'}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    {parseFloat(event.amountETH || '0') > 0 && (
+                                      <p className="text-sm font-medium text-gray-900">{event.amountETH} ETH</p>
+                                    )}
+                                    {parseFloat(event.amountUSDC || '0') > 0 && (
+                                      <p className="text-sm font-medium text-gray-900">{event.amountUSDC} USDC</p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         )}
-                        {parseFloat(event.amountUSDC || '0') > 0 && (
-                          <p className="text-sm font-medium text-gray-900">{event.amountUSDC} USDC</p>
-                        )}
-                      </div>
-                    </div>
-                  ))
+                      </>
+                    );
+                  })()
                 )}
               </div>
             </div>

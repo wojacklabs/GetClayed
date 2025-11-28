@@ -48,6 +48,9 @@ export interface RoyaltyEvent {
   timestamp: number;
   txHash?: string;
   type: 'earned' | 'paid';
+  // Version tracking
+  importedTxId?: string;  // Library version (transaction ID at import time)
+  importedAt?: number;    // When the library was imported
   payer?: string;
   source?: 'library' | 'marketplace'; // Added to distinguish source
   payerName?: string; // Added for better display
@@ -211,7 +214,9 @@ export async function getRoyaltyEvents(userAddress: string, hoursAgo: number = 2
             type: 'earned',
             payer: receipt.payer,
             source: 'library', // Library royalties
-            payerName: receipt.projectName // Store purchasing project name
+            payerName: receipt.projectName, // Store purchasing project name
+            importedTxId: lib.importedTxId, // Version info
+            importedAt: lib.importedAt
           });
         }
       }
