@@ -7,11 +7,15 @@ import { OrbitControls, Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import { downloadClayProject, restoreClayObjects } from '../../../../lib/clayStorageService'
 
-// Loading fallback
+// Loading fallback with canvas so Puppeteer doesn't timeout
 function LoadingFallback() {
   return (
-    <div className="w-full h-full flex items-center justify-center bg-slate-800">
-      <div className="text-white text-2xl font-bold animate-pulse">Loading Library Asset...</div>
+    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900">
+      {/* Hidden canvas for Puppeteer to detect */}
+      <canvas style={{ opacity: 0, position: 'absolute' }} />
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-white text-2xl font-bold animate-pulse">Loading Library Asset...</div>
+      </div>
     </div>
   )
 }

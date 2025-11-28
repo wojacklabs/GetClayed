@@ -1,10 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import { 
+  getOgApngReference, 
+  getApngMutableUrl, 
+  apngNeedsUpdate 
+} from '../../../../../../lib/ogApngService';
+import { getProjectLatestTxId } from '../../../../../../lib/mutableSyncService';
 
 // Use Node.js runtime for Puppeteer
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 60 seconds timeout for chunked projects
+
+/**
+ * Trigger APNG generation in background (fire-and-forget)
+ */
+function triggerApngGeneration(projectId: string) {
+  const baseUrl = process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000'
+    : 'https://getclayed.io';
+  
+  console.log('[Screenshot API] Triggering APNG generation for:', projectId);
+  
+  // Fire and forget - don't await
+  fetch(`${baseUrl}/api/og/apng/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectId, type: 'project' }),
+  }).catch(err => {
+    console.error('[Screenshot API] Failed to trigger APNG generation:', err);
+  });
+}
 
 export async function GET(
   request: NextRequest,
@@ -14,6 +40,32 @@ export async function GET(
   
   try {
     const { id } = await params;
+    console.log('[Screenshot API] Request for project:', id);
+    
+    // Check if APNG exists and is up-to-date
+    const latestTxId = await getProjectLatestTxId(id);
+    if (latestTxId) {
+      const apngRef = await getOgApngReference(id, 'project');
+      
+      if (apngRef && !apngNeedsUpdate(apngRef, latestTxId)) {
+        // APNG exists and is current - redirect to mutable URL
+        const mutableUrl = getApngMutableUrl(apngRef.apngRootTxId);
+        console.log('[Screenshot API] APNG found, redirecting to:', mutableUrl);
+        
+        return NextResponse.redirect(mutableUrl, {
+          status: 302, // Temporary redirect (allows re-checking)
+          headers: {
+            'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=3600',
+          },
+        });
+      } else {
+        // APNG doesn't exist or outdated - trigger generation in background
+        triggerApngGeneration(id);
+        console.log('[Screenshot API] APNG not found or outdated, generating static image...');
+      }
+    }
+    
+    // Fall back to generating static PNG screenshot
     console.log('[Screenshot API] Rendering project:', id);
     
     // Launch browser with Chromium
@@ -129,4 +181,3 @@ export async function GET(
     );
   }
 }
-
