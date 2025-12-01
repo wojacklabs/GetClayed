@@ -1051,35 +1051,33 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
           </span>
         </div>
         
-        {/* View toggle button with label - Mobile only */}
-        {isMobile && (
-          <div className="relative">
-            <button
-              onClick={(e) => { 
-                e.stopPropagation()
-                setViewMode(prev => {
-                  if (prev === 'first') return 'third'
-                  if (prev === 'third') return 'free'
-                  return 'first'
-                })
-              }}
-              className="w-9 h-9 rounded-full bg-white/90 border-2 border-white/80 shadow-md active:scale-95 flex items-center justify-center text-gray-700 text-xs font-bold"
-            >
-              {viewMode === 'first' ? '1' : viewMode === 'third' ? '3' : '∞'}
-            </button>
-            <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-white font-medium px-1 bg-black/50 rounded">
-              view
-            </span>
-          </div>
-        )}
+        {/* View toggle button with label - CSS media query: mobile only */}
+        <div className="relative sm:hidden">
+          <button
+            onClick={(e) => { 
+              e.stopPropagation()
+              setViewMode(prev => {
+                if (prev === 'first') return 'third'
+                if (prev === 'third') return 'free'
+                return 'first'
+              })
+            }}
+            className="w-9 h-9 rounded-full bg-white/90 border-2 border-white/80 shadow-md active:scale-95 flex items-center justify-center text-gray-700 text-xs font-bold"
+          >
+            {viewMode === 'first' ? '1' : viewMode === 'third' ? '3' : '∞'}
+          </button>
+          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-white font-medium px-1 bg-black/50 rounded">
+            view
+          </span>
+        </div>
       </div>
       
-      {/* Mobile controls - Gamepad style, positioned close to bottom */}
-      {isMobile && !isFreeView && (
+      {/* Mobile controls - CSS media query: shown on mobile (<640px), hidden on desktop */}
+      {!isFreeView && (
         <>
           {/* Left: Joystick */}
           <div
-            className="absolute bottom-16 left-4 w-24 h-24 rounded-full bg-black/20 border-2 border-white/40 flex items-center justify-center"
+            className="sm:hidden absolute bottom-16 left-4 w-24 h-24 rounded-full bg-black/20 border-2 border-white/40 flex items-center justify-center"
             onTouchStart={handleJoystickStart}
             onTouchMove={handleJoystickMove}
             onTouchEnd={handleJoystickEnd}
@@ -1093,7 +1091,7 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
           </div>
           
           {/* Right: Action buttons - horizontal: jump, add, del */}
-          <div className="absolute bottom-20 right-4 flex gap-2">
+          <div className="sm:hidden absolute bottom-20 right-4 flex gap-2">
             <button
               onTouchStart={(e) => { e.stopPropagation(); setMobileJump(true) }}
               onTouchEnd={() => setMobileJump(false)}
