@@ -80,3 +80,4 @@ Farcaster에서 지원하는 aspect ratio:
 
 
 
+
