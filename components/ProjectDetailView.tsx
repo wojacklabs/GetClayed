@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef, Suspense } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { TrackballControls, Environment, Grid } from '@react-three/drei'
-import { Heart, Star, ArrowLeft, Eye, RotateCw, Maximize2, Home, Share2 } from 'lucide-react'
+import { EffectComposer } from '@react-three/postprocessing'
+import { Heart, Star, ArrowLeft, Eye, RotateCw, Maximize2, Home, Share2, Video } from 'lucide-react'
 import Link from 'next/link'
 import * as THREE from 'three'
+import { Vector2 } from 'three'
 import { downloadClayProject, restoreClayObjects } from '../lib/clayStorageService'
 import { likeProject, favoriteProject, unfavoriteProject, hasUserLikedProject, getUserFavorites, getProjectLikeCount, recordProjectView, getProjectViewCount, downloadUserProfile } from '../lib/profileService'
 import { usePopup } from './PopupNotification'
@@ -14,6 +16,10 @@ import RoyaltyTree from './RoyaltyTree'
 import { queryMarketplaceListings } from '../lib/marketplaceService'
 import { queryLibraryAssets } from '../lib/libraryService'
 import { formatCombinedCurrency } from '../lib/formatCurrency'
+import { AsciiEffect } from './AsciiEffect'
+import MinecraftView from './MinecraftView'
+
+type ViewMode = 'normal' | 'grid' | 'ascii' | 'minecraft'
 
 interface ProjectDetailViewProps {
   projectId: string
@@ -92,6 +98,20 @@ function ViewOnlyControls({ controlsRef, cameraRef }: { controlsRef: any, camera
   )
 }
 
+// Camera Change Detector - tracks if camera moved from initial position
+function CameraChangeDetector({ onCameraChange }: { onCameraChange: (changed: boolean) => void }) {
+  const { camera } = useThree()
+  const initialPosition = useRef(new THREE.Vector3(14, 7, 14))
+  
+  useFrame(() => {
+    const distance = camera.position.distanceTo(initialPosition.current)
+    const hasChanged = distance > 0.5
+    onCameraChange(hasChanged)
+  })
+  
+  return null
+}
+
 export default function ProjectDetailView({ projectId, walletAddress, onBack }: ProjectDetailViewProps) {
   const [project, setProject] = useState<any>(null)
   const [clayObjects, setClayObjects] = useState<any[]>([])
@@ -103,7 +123,11 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   const [viewCount, setViewCount] = useState(0)
   const { showPopup } = usePopup()
   const [hasRecordedView, setHasRecordedView] = useState(false)
-  const [showGrid, setShowGrid] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('normal')
+  const [cameraHasChanged, setCameraHasChanged] = useState(false)
+  const [resolution, setResolution] = useState(new Vector2(1920, 1080))
+  const [mousePos, setMousePos] = useState(new Vector2(0, 0))
+  const canvasContainerRef = useRef<HTMLDivElement>(null)
   const cameraRef = useRef<THREE.Camera | null>(null)
   const controlsRef = useRef<any>(null)
   const [authorProfile, setAuthorProfile] = useState<{ displayName?: string } | null>(null)
@@ -115,6 +139,37 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
   useEffect(() => {
     loadProject()
   }, [projectId])
+  
+  // Track mouse position and resolution for ASCII effect
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (canvasContainerRef.current) {
+        const rect = canvasContainerRef.current.getBoundingClientRect()
+        const x = e.clientX - rect.left
+        const y = rect.height - (e.clientY - rect.top)
+        setMousePos(new Vector2(x, y))
+      }
+    }
+    
+    const handleResize = () => {
+      if (canvasContainerRef.current) {
+        const rect = canvasContainerRef.current.getBoundingClientRect()
+        setResolution(new Vector2(rect.width, rect.height))
+      }
+    }
+    
+    const container = canvasContainerRef.current
+    if (container) {
+      container.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('resize', handleResize)
+      handleResize()
+      
+      return () => {
+        container.removeEventListener('mousemove', handleMouseMove)
+        window.removeEventListener('resize', handleResize)
+      }
+    }
+  }, [])
   
   useEffect(() => {
     // Only check interactions after project is loaded (need project.id for stable ID)
@@ -434,69 +489,125 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         </div>
       </div>
       
-      {/* 3D Canvas */}
-      <div className="absolute inset-0 pt-14">
-        <Canvas
-          camera={{
-            position: [14, 7, 14],
-            fov: 50,
-            near: 0.1,
-            far: 1000
-          }}
-          style={{ background: project?.backgroundColor || '#f8f8f8' }}
-        >
-          <ambientLight intensity={0.35} />
-          <directionalLight position={[8, 12, 8]} intensity={1.2} />
-          <directionalLight position={[-6, 4, -6]} intensity={0.5} />
-          <directionalLight position={[0, -8, 4]} intensity={0.25} />
-          <Environment preset="studio" />
-          
-          <ViewOnlyControls controlsRef={controlsRef} cameraRef={cameraRef} />
-          
-          {/* Render clay objects */}
-          {clayObjects.map((clay) => {
-            // Calculate color based on Z position (same as AdvancedClay)
-            const z = clay.position.z
+      {/* 3D Canvas - Normal/Grid/ASCII modes */}
+      {viewMode !== 'minecraft' && (
+        <div ref={canvasContainerRef} className="absolute inset-0 pt-14">
+          <Canvas
+            camera={{
+              position: [14, 7, 14],
+              fov: 50,
+              near: 0.1,
+              far: 1000
+            }}
+            style={{ background: project?.backgroundColor || '#f8f8f8' }}
+          >
+            <ambientLight intensity={0.35} />
+            <directionalLight position={[8, 12, 8]} intensity={1.2} />
+            <directionalLight position={[-6, 4, -6]} intensity={0.5} />
+            <directionalLight position={[0, -8, 4]} intensity={0.25} />
+            <Environment preset="studio" />
             
-            // Define Z range for color mapping (-10 to 10)
-            const minZ = -10
-            const maxZ = 10
-            const zRange = maxZ - minZ
+            <ViewOnlyControls controlsRef={controlsRef} cameraRef={cameraRef} />
+            <CameraChangeDetector onCameraChange={setCameraHasChanged} />
             
-            // Normalize Z position to 0-1 range
-            const normalizedZ = Math.max(0, Math.min(1, (z - minZ) / zRange))
+            {/* Render clay objects */}
+            {clayObjects.map((clay) => {
+              // Calculate color based on Z position (same as AdvancedClay)
+              const z = clay.position.z
+              
+              // Define Z range for color mapping (-10 to 10)
+              const minZ = -10
+              const maxZ = 10
+              const zRange = maxZ - minZ
+              
+              // Normalize Z position to 0-1 range
+              const normalizedZ = Math.max(0, Math.min(1, (z - minZ) / zRange))
+              
+              // Map to hue range (blue to red: 240 to 0)
+              const hue = 240 - (normalizedZ * 240) // Blue (240) when low, Red (0) when high
+              const color = `hsl(${hue}, 70%, 50%)`
+              
+              return (
+                <group key={clay.id}>
+                  <ViewOnlyClay 
+                    clay={clay} 
+                    isFromLibrary={!!clay.librarySourceId}
+                    isHighlighted={!!clay.librarySourceId && hoveredLibraryId === clay.librarySourceId}
+                  />
+                  {viewMode === 'grid' && (
+                    <group position={clay.position}>
+                      {/* XZ horizontal plane with dynamic color based on Z position */}
+                      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                        <planeGeometry args={[200, 200, 100, 100]} />
+                        <meshBasicMaterial
+                          color={color}
+                          wireframe
+                          transparent
+                          opacity={0.2}
+                          side={THREE.DoubleSide}
+                        />
+                      </mesh>
+                    </group>
+                  )}
+                </group>
+              )
+            })}
             
-            // Map to hue range (blue to red: 240 to 0)
-            const hue = 240 - (normalizedZ * 240) // Blue (240) when low, Red (0) when high
-            const color = `hsl(${hue}, 70%, 50%)`
-            
-            return (
-              <group key={clay.id}>
-                <ViewOnlyClay 
-                  clay={clay} 
-                  isFromLibrary={!!clay.librarySourceId}
-                  isHighlighted={!!clay.librarySourceId && hoveredLibraryId === clay.librarySourceId}
+            {/* ASCII Effect */}
+            {viewMode === 'ascii' && (
+              <EffectComposer>
+                <AsciiEffect
+                  style="standard"
+                  cellSize={8}
+                  invert={false}
+                  color={true}
+                  resolution={resolution}
+                  mousePos={mousePos}
+                  postfx={{
+                    scanlineIntensity: 0,
+                    scanlineCount: 200,
+                    vignetteIntensity: 0,
+                    vignetteRadius: 0.8,
+                    colorPalette: 0,
+                    brightnessAdjust: 0.4,
+                    contrastAdjust: 1.5,
+                  }}
                 />
-                {showGrid && (
-                  <group position={clay.position}>
-                    {/* XZ horizontal plane with dynamic color based on Z position */}
-                    <mesh rotation={[-Math.PI / 2, 0, 0]}>
-                      <planeGeometry args={[200, 200, 100, 100]} />
-                      <meshBasicMaterial
-                        color={color}
-                        wireframe
-                        transparent
-                        opacity={0.2}
-                        side={THREE.DoubleSide}
-                      />
-                    </mesh>
-                  </group>
-                )}
-              </group>
-            )
-          })}
-        </Canvas>
-      </div>
+              </EffectComposer>
+            )}
+          </Canvas>
+        </div>
+      )}
+      
+      {/* Minecraft View */}
+      {viewMode === 'minecraft' && (
+        <div className="absolute inset-0 pt-14">
+          <MinecraftView 
+            clayObjects={clayObjects}
+            projectName={project?.name}
+            backgroundColor={project?.backgroundColor}
+          />
+        </div>
+      )}
+      
+      {/* Camera Reset Floating Button - Shows when camera has moved (same as AdvancedClay) */}
+      {cameraHasChanged && viewMode !== 'minecraft' && (
+        <div className="absolute bottom-24 right-4 z-20 flex flex-col items-center gap-1">
+          <button
+            onClick={() => {
+              handleResetCamera()
+              setCameraHasChanged(false)
+            }}
+            className="p-4 rounded-full bg-gray-800 hover:bg-gray-700 text-white shadow-lg transition-all hover:scale-110"
+            title="Reset Camera Angle"
+          >
+            <Video size={24} />
+          </button>
+          <span className="text-xs text-gray-600 font-medium bg-white/90 px-2 py-0.5 rounded shadow-sm">
+            Reset
+          </span>
+        </div>
+      )}
       
       {/* Bottom UI Controls - Minimal style */}
       {/* Desktop: Center, Mobile: Right to avoid wallet button */}
@@ -504,22 +615,48 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         {/* Desktop buttons */}
         <div className="flex items-center gap-2 bg-white rounded-md border border-gray-200 p-1">
           <button
-            onClick={() => setShowGrid(!showGrid)}
+            onClick={() => setViewMode('normal')}
             className={`px-3 py-1.5 rounded transition-all text-sm ${
-              showGrid
+              viewMode === 'normal'
                 ? 'bg-gray-800 text-white'
                 : 'hover:bg-gray-100 text-gray-700'
             }`}
-            title={showGrid ? 'Hide grid' : 'Show grid per clay'}
+            title="Normal view"
+          >
+            <span>Normal</span>
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`px-3 py-1.5 rounded transition-all text-sm ${
+              viewMode === 'grid'
+                ? 'bg-gray-800 text-white'
+                : 'hover:bg-gray-100 text-gray-700'
+            }`}
+            title="Show grid per clay"
           >
             <span>Grid</span>
           </button>
           <button
-            onClick={handleResetCamera}
-            className="px-3 py-1.5 hover:bg-gray-100 text-gray-700 rounded transition-all text-sm"
-            title="Reset camera"
+            onClick={() => setViewMode('ascii')}
+            className={`px-3 py-1.5 rounded transition-all text-sm ${
+              viewMode === 'ascii'
+                ? 'bg-gray-800 text-white'
+                : 'hover:bg-gray-100 text-gray-700'
+            }`}
+            title="ASCII art view"
           >
-            <span>Reset</span>
+            <span>ASCII</span>
+          </button>
+          <button
+            onClick={() => setViewMode('minecraft')}
+            className={`px-3 py-1.5 rounded transition-all text-sm ${
+              viewMode === 'minecraft'
+                ? 'bg-green-600 text-white'
+                : 'hover:bg-gray-100 text-gray-700'
+            }`}
+            title="Minecraft style exploration"
+          >
+            <span>Craft</span>
           </button>
         </div>
       </div>
@@ -527,28 +664,29 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
       {/* Mobile select - Right side to avoid wallet button on left */}
       <div className="absolute bottom-4 right-4 z-10 sm:hidden">
         <select
-          value={showGrid ? 'grid' : 'view'}
+          value={viewMode}
           onChange={(e) => {
-            if (e.target.value === 'grid') {
-              setShowGrid(true)
-            } else if (e.target.value === 'view') {
-              setShowGrid(false)
-            } else if (e.target.value === 'reset') {
+            const value = e.target.value
+            if (value === 'normal' || value === 'grid' || value === 'ascii' || value === 'minecraft') {
+              setViewMode(value)
+            } else if (value === 'reset') {
               handleResetCamera()
-              // Reset select to previous value
-              e.target.value = showGrid ? 'grid' : 'view'
+              setCameraHasChanged(false)
+              e.target.value = viewMode
             }
           }}
           className="px-3 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
         >
-          <option value="view">Normal View</option>
+          <option value="normal">Normal View</option>
           <option value="grid">Grid View</option>
+          <option value="ascii">ASCII View</option>
+          <option value="minecraft">Craft Mode</option>
           <option value="reset">Reset Camera</option>
         </select>
       </div>
       
-      {/* Description - Minimal style */}
-      {project?.description && (
+      {/* Description - Minimal style (hidden in minecraft mode) */}
+      {project?.description && viewMode !== 'minecraft' && (
         <div className="absolute bottom-14 left-4 right-4 max-w-2xl mx-auto">
           <div className="bg-white/90 backdrop-blur-sm rounded-md border border-gray-200 p-3">
             <p className="text-sm text-gray-700">{project.description}</p>
@@ -565,8 +703,8 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
         </div>
       )}
       
-      {/* Left side info panel */}
-      <div className="absolute top-20 left-6 space-y-4 z-10">
+      {/* Left side info panel (hidden in minecraft mode) */}
+      {viewMode !== 'minecraft' && <div className="absolute top-20 left-6 space-y-4 z-10">
         {/* Marketplace Info */}
         {marketplaceListing && (
           <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-4 max-w-xs">
@@ -686,7 +824,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   )
 }
