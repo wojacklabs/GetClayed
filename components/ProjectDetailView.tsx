@@ -454,17 +454,17 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
             </div>
             
             {/* Actions */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={handleShare}
-                className="p-2 rounded-md transition-all bg-gray-100 hover:bg-gray-200 text-gray-700"
+                className="w-8 h-8 flex items-center justify-center rounded-md transition-all bg-gray-100 hover:bg-gray-200 text-gray-700"
                 title="Share"
               >
                 <Share2 size={16} />
               </button>
               <button
                 onClick={handleLike}
-                className={`p-2 rounded-md transition-all ${
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${
                   isLiked 
                     ? 'bg-gray-800 text-white' 
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
@@ -475,7 +475,7 @@ export default function ProjectDetailView({ projectId, walletAddress, onBack }: 
               </button>
               <button
                 onClick={handleFavorite}
-                className={`p-2 rounded-md transition-all ${
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${
                   isFavorited 
                     ? 'bg-gray-800 text-white' 
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'

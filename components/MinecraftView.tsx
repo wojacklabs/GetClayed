@@ -799,6 +799,7 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [showHelp, setShowHelp] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [isMobileChecked, setIsMobileChecked] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   
   // For backward compatibility
@@ -813,6 +814,7 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0)
+      setIsMobileChecked(true)
     }
     checkMobile()
     window.addEventListener('resize', checkMobile)
@@ -1141,8 +1143,8 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
         </>
       )}
       
-      {/* PC Help Modal - shows until pointer lock is acquired */}
-      {!isMobile && showHelp && !isLocked && (
+      {/* PC Help Modal - shows until pointer lock is acquired (only after mobile check) */}
+      {isMobileChecked && !isMobile && showHelp && !isLocked && (
         <div 
           className="absolute inset-0 flex items-center justify-center bg-black/40 z-30 cursor-pointer"
           onClick={handleContainerClick}
