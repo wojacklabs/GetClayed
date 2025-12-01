@@ -418,10 +418,11 @@ function PlayerController({
     if (!isLocked) return
     
     const moveSpeed = 1.8
-    const mapBoundary = 30
+    const mapBoundary = 32 // Half of ground size (64/2)
     const newPos = playerPosition.clone()
     
     // Check if player went out of bounds (start falling off map)
+    // Only trigger when fully off the ground edge
     if (!isFallingOffMap.current && !isRespawning.current) {
       if (Math.abs(newPos.x) > mapBoundary || Math.abs(newPos.z) > mapBoundary) {
         isFallingOffMap.current = true
