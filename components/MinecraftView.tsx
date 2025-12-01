@@ -225,12 +225,16 @@ function VoxelBlock({ position, type, color, onRemove, onPlace }: {
       material={materials}
       onClick={(e) => {
         e.stopPropagation()
+        // Only allow click placement on desktop (screen width >= 640px)
+        if (window.innerWidth < 640) return
         if (e.face?.normal) {
           onPlace(e.face.normal)
         }
       }}
       onContextMenu={(e) => {
         e.stopPropagation()
+        // Only allow right-click removal on desktop
+        if (window.innerWidth < 640) return
         onRemove()
       }}
     >
@@ -260,12 +264,14 @@ function Ground({ size = 64, onPlaceBlock }: { size?: number, onPlaceBlock?: (po
   
   return (
     <group>
-      {/* Base grass layer */}
+      {/* Base grass layer - click to place only on desktop (>=640px) */}
       <mesh 
         position={[0, -0.5, 0]} 
         receiveShadow
         onClick={(e) => {
           e.stopPropagation()
+          // Only allow click placement on desktop (screen width >= 640px)
+          if (window.innerWidth < 640) return
           if (onPlaceBlock && e.point) {
             const x = Math.floor(e.point.x) + 0.5
             const z = Math.floor(e.point.z) + 0.5
@@ -335,8 +341,13 @@ function PlayerController({
   const moveRight = useRef(false)
   const isJumping = useRef(false)
   const jumpVelocity = useRef(0)
-  const yaw = useRef(0)
+  const yaw = useRef(playerRotation)
   const pitch = useRef(0)
+  
+  // Sync yaw with playerRotation when it changes externally (mobile touch)
+  useEffect(() => {
+    yaw.current = playerRotation
+  }, [playerRotation])
   
   // Check if there's a block at position
   const getBlockAt = useCallback((x: number, y: number, z: number) => {
@@ -1054,8 +1065,9 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
         {/* View toggle button with label - CSS media query: mobile only */}
         <div className="relative sm:hidden">
           <button
-            onClick={(e) => { 
+            onPointerDown={(e) => { 
               e.stopPropagation()
+              e.preventDefault()
               setViewMode(prev => {
                 if (prev === 'first') return 'third'
                 if (prev === 'third') return 'free'
