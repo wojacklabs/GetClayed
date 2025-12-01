@@ -847,20 +847,7 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
     return () => document.removeEventListener('pointerlockchange', handleLockChange)
   }, [])
   
-  // Auto-start on desktop
-  useEffect(() => {
-    if (!isMobile && containerRef.current) {
-      const startGame = () => {
-        const canvas = containerRef.current?.querySelector('canvas')
-        if (canvas && !isLocked) {
-          canvas.requestPointerLock()
-        }
-      }
-      // Small delay for canvas to be ready
-      const timer = setTimeout(startGame, 500)
-      return () => clearTimeout(timer)
-    }
-  }, [isMobile, isLocked])
+  // No auto-start - user must click to start (to see controls first)
   
   // Request pointer lock on container click (desktop)
   const handleContainerClick = useCallback(() => {
@@ -1130,10 +1117,10 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
         </>
       )}
       
-      {/* PC Help Modal - shows until pointer lock is acquired (only after mobile check) */}
-      {isMobileChecked && !isMobile && showHelp && !isLocked && (
+      {/* PC Help Modal - CSS media query: hidden on mobile (<640px), shown on desktop */}
+      {showHelp && !isLocked && (
         <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/40 z-30 cursor-pointer"
+          className="hidden sm:flex absolute inset-0 items-center justify-center bg-black/40 z-30 cursor-pointer"
           onClick={handleContainerClick}
         >
           <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-6 max-w-sm text-center">
@@ -1154,9 +1141,9 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
         </div>
       )}
       
-      {/* PC locked state hint */}
-      {!isMobile && isLocked && (
-        <div className="absolute top-2 right-3 px-2 py-1 bg-black/40 rounded text-white text-xs z-20">
+      {/* PC locked state hint - CSS media query: hidden on mobile */}
+      {isLocked && (
+        <div className="hidden sm:block absolute top-2 right-3 px-2 py-1 bg-black/40 rounded text-white text-xs z-20">
           ESC to exit · V to change view
         </div>
       )}
