@@ -1044,37 +1044,24 @@ export default function MinecraftView({ clayObjects, projectName, backgroundColo
       
       {/* Top left controls - Color & View (canvas top) */}
       <div className="absolute top-2 left-3 flex gap-1.5 z-20">
-        {/* Color picker button with label */}
+        {/* Native color picker with label */}
         <div className="relative">
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowColorPicker(!showColorPicker) }}
-            className="w-9 h-9 rounded-full border-2 border-white/80 shadow-md transition-transform hover:scale-105 active:scale-95"
-            style={{ backgroundColor: selectedColor }}
-          />
-          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-white font-medium px-1 bg-black/50 rounded">
+          <label className="block cursor-pointer">
+            <input
+              type="color"
+              value={selectedColor}
+              onChange={(e) => setSelectedColor(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-0 w-9 h-9 opacity-0 cursor-pointer"
+            />
+            <div 
+              className="w-9 h-9 rounded-full border-2 border-white/80 shadow-md"
+              style={{ backgroundColor: selectedColor }}
+            />
+          </label>
+          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-white font-medium px-1 bg-black/50 rounded pointer-events-none">
             color
           </span>
-          
-          {/* Color picker dropdown */}
-          {showColorPicker && (
-            <div 
-              className="absolute top-11 left-0 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="grid grid-cols-4 gap-1.5">
-                {BLOCK_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => { setSelectedColor(color); setShowColorPicker(false) }}
-                    className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${
-                      selectedColor === color ? 'border-gray-800 scale-110' : 'border-gray-300'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         
         {/* View toggle button with label - Mobile only */}
