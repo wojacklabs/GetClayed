@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { createFarcasterEmbedTags, BASE_URL, APP_NAME } from '@/lib/farcasterMetadata'
 
 const pageUrl = `${BASE_URL}/library`
-const ogImageUrl = `${BASE_URL}/api/og` // 기본 OG 이미지 사용
+const ogImageUrl = `${BASE_URL}/api/og?v=3` // 기본 OG 이미지 사용 (캐시 버스팅)
 const title = 'Library - GetClayed'
 const description = 'Browse reusable 3D clay components. Import them into your projects and earn royalties when others use your creations.'
 

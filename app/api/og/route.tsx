@@ -1,10 +1,16 @@
 import { ImageResponse } from '@vercel/og';
+import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
-export async function GET() {
+// 캐시 무효화를 위한 revalidate 설정
+export const revalidate = 0;
+
+export async function GET(_request: NextRequest) {
   try {
-    return new ImageResponse(
+    // 버전 파라미터는 캐시 버스팅용으로 URL에만 사용됨 (v=3 등)
+    
+    const response = new ImageResponse(
       (
         <div
           style={{
@@ -161,8 +167,15 @@ export async function GET() {
       {
         width: 1200,
         height: 800, // 3:2 aspect ratio for Farcaster (min 600x400)
+        headers: {
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+          'CDN-Cache-Control': 'public, max-age=3600',
+          'Vercel-CDN-Cache-Control': 'public, max-age=3600',
+        },
       }
     );
+    
+    return response;
   } catch (error) {
     console.error('OG Image generation error:', error);
     return new Response('Failed to generate image', { status: 500 });

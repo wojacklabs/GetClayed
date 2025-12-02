@@ -49,6 +49,9 @@ const frameEmbed = {
   }
 };
 
+// OG 이미지 URL (캐시 버스팅 포함)
+const OG_IMAGE_URL = 'https://getclayed.io/api/og?v=3';
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://getclayed.io'),
   title: "GetClayed - 3D Clay Sculpting",
@@ -73,13 +76,14 @@ export const metadata: Metadata = {
     description: "Create and sculpt 3D clay objects in your browser",
     images: [
       {
-        url: '/api/og',
+        url: OG_IMAGE_URL,
         width: 1200,
-        height: 800, // 3:2 aspect ratio for Farcaster
+        height: 800,
         alt: 'GetClayed - 3D Clay Sculpting',
+        type: 'image/png',
       }
     ],
-    url: '/',
+    url: 'https://getclayed.io',
     siteName: 'GetClayed',
     type: 'website',
   },
@@ -87,7 +91,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "GetClayed - 3D Clay Sculpting",
     description: "Create and sculpt 3D clay objects in your browser",
-    images: ['/api/og'],
+    images: [OG_IMAGE_URL],
+    site: '@getclayed',
   },
   other: {
     // New Farcaster Mini App spec
