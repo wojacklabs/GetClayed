@@ -23,7 +23,7 @@ const SimpleClay = dynamic(() => import('@/components/SimpleClay'), {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Clay</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Try it!</h2>
           <div className="h-8 w-32 bg-gray-200 rounded-lg animate-pulse" />
         </div>
       </div>
